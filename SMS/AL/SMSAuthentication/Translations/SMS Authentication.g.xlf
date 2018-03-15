@@ -9,7 +9,7 @@
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>
         <trans-unit id="Codeunit 4170686321 - NamedType 246854407" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
-          <source>Mottakers mobilnr. er ikke angitt.</source>
+          <source>Recipient mobile no. is not specified.</source>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>

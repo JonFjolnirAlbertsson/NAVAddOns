@@ -6,7 +6,7 @@ codeunit 53100 "WS Management"
 
     var
         C_INC_001Txt: Label 'The message is empty.';
-        C_INC_002Txt: Label 'Mottakers mobilnr. er ikke angitt.';
+        C_INC_002Txt: Label 'Recipient mobile no. is not specified.';
         C_INC_003Txt: Label 'User ID does not exist';
         C_INC_004Txt: Label 'Salesperson %1 %2 does not have a valid email address and valid name';
 

@@ -9,7 +9,7 @@
             //"name": "localhost",
             //"server": "http://localhost",
             "serverInstance": "DynamicsNAV110",
-            "authentication": "UserPassword",
+            "authentication": "Windows",
             "startupObjectId": 53101
         }
     ]
