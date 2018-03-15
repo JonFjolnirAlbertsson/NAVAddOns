@@ -1,0 +1,86 @@
+OBJECT Page 53100 BulkSMS Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=28-01-16;
+    Time=22:19:50;
+    Modified=Yes;
+    Version List=SMS1.01;
+  }
+  PROPERTIES
+  {
+    SourceTable=Table53100;
+    PageType=Card;
+    OnOpenPage=BEGIN
+                 RESET;
+                 IF NOT GET THEN BEGIN
+                   INIT;
+                   INSERT;
+                 END;
+               END;
+
+    OnAfterGetRecord=BEGIN
+                       PasswordTemp := '';
+                       IF ("User Name" <> '') AND (NOT ISNULLGUID("Password Key")) THEN
+                         PasswordTemp := '**********';
+                     END;
+
+    ActionList=ACTIONS
+    {
+      { 3       ;    ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 4       ;1   ;Action    ;
+                      Name=GetCredits;
+                      CaptionML=ENU=Get Credits;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Currencies;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 GetCredits;
+                                 CurrPage.UPDATE;
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1000000000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1000000001;1;Group  ;
+                Name=General;
+                GroupType=Group }
+
+    { 1000000002;2;Field  ;
+                SourceExpr="User Name" }
+
+    { 1000000005;2;Field  ;
+                ExtendedDatatype=Masked;
+                CaptionML=[ENU=Password;
+                           NLD=Wachtwoord Exchange-account];
+                SourceExpr=PasswordTemp;
+                OnValidate=BEGIN
+                             SetPassword(PasswordTemp);
+                             COMMIT;
+                             CurrPage.UPDATE;
+                           END;
+                            }
+
+    { 1   ;2   ;Field     ;
+                SourceExpr=Credits }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="Credits Checked At" }
+
+  }
+  CODE
+  {
+    VAR
+      PasswordTemp@1000000000 : Text;
+
+    BEGIN
+    END.
+  }
+}
+

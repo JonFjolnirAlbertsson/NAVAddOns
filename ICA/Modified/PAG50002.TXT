@@ -1,0 +1,178 @@
+OBJECT Page 50002 Price Calculation
+{
+  OBJECT-PROPERTIES
+  {
+    Date=10.02.17;
+    Time=09.54.23;
+    Modified=Yes;
+    Version List=INC1.0;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Price Calculation;
+               NOR=Kalkyle];
+    SourceTable=Table50008;
+    PageType=Card;
+    OnNewRecord=BEGIN
+                  // FilterG := GETFILTER("Calc No.");
+                  // IF FilterG <> '' THEN
+                  //  Rec.RESET;
+                  //  VALIDATE("Calc No.",'');
+                END;
+
+    ActionList=ACTIONS
+    {
+      { 1101103020;  ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1101103021;1 ;ActionGroup }
+      { 1101103022;2 ;Action    ;
+                      Name=CopyCalculationFrom;
+                      CaptionML=[ENU=Copy Calculation From;
+                                 NOR="Kopier fra kalkyle "];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=CopyItem;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 CalcHeaderL@1101103005 : Record 50008;
+                                 CalcListL@1101103004 : Page 50004;
+                                 CopyFromCalcL@1101103003 : Code[20];
+                                 TXT001L@1101103000 : TextConst 'ENU=You cannot copy calculation to it self. Create a new calculation no?;NOR=Du kan ikke kopiere en kalkyle til seg selv. Opprett en ny kalkyle?';
+                               BEGIN
+                                 CLEAR(CalcHeaderL);
+                                 CLEAR(CalcListL);
+                                 CalcHeaderL.SETFILTER("Calc No.", '<>%1', Rec."Calc No.");
+                                 CalcListL.SETTABLEVIEW(CalcHeaderL);
+                                 CalcListL.LOOKUPMODE(TRUE);
+                                 IF CalcListL.RUNMODAL = ACTION::LookupOK THEN BEGIN
+                                   CalcListL.GETRECORD(CalcHeaderL);
+                                   CopyFromCalcL := CalcHeaderL."Calc No.";
+                                 END;
+                                 IF "Item No." = '' THEN BEGIN
+                                   IF "Calc No." = '' THEN
+                                     VALIDATE("Calc No.",'');
+                                   CopyCalculation("Calc No.",CopyFromCalcL);
+                                 END ELSE BEGIN
+                                   ERROR(TXT001L);
+                                 END;
+                               END;
+                                }
+      { 1101103006;2 ;Action    ;
+                      Name=PrintCalculation;
+                      CaptionML=[ENU=Print Item Price Calculation;
+                                 NOR=Skriv ut kalkyle];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Print;
+                      PromotedCategory=Report;
+                      OnAction=VAR
+                                 PriceCalcHeadL@1101103000 : Record 50008;
+                                 ItemPriceCalculationL@1101103001 : Report 50035;
+                               BEGIN
+                                 PriceCalcHeadL.SETRANGE("Calc No.", Rec."Calc No.");
+                                 ItemPriceCalculationL.SETTABLEVIEW(PriceCalcHeadL);
+                                 ItemPriceCalculationL.RUN();
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1101103000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1101103001;1;Group  ;
+                Name=General;
+                GroupType=Group }
+
+    { 1101103002;2;Field  ;
+                SourceExpr="Calc No." }
+
+    { 1101103003;2;Field  ;
+                SourceExpr="Order quantity" }
+
+    { 1101103004;2;Field  ;
+                SourceExpr="Item No.";
+                OnValidate=VAR
+                             ItemL@1101103000 : Record 27;
+                           BEGIN
+                             IF ItemL.GET("Item No.") THEN BEGIN
+                               Calculate("Calc. Date");
+                             END;
+                           END;
+                            }
+
+    { 1101103005;2;Field  ;
+                SourceExpr="Item Description" }
+
+    { 1101103007;2;Field  ;
+                SourceExpr="Project code" }
+
+    { 1101103014;2;Field  ;
+                SourceExpr="Calc. Date" }
+
+    { 1101103015;2;Field  ;
+                SourceExpr="Calc. by" }
+
+    { 1101103016;2;Field  ;
+                SourceExpr=Locked }
+
+    { 1101103008;2;Field  ;
+                SourceExpr="Tot. Materialcost" }
+
+    { 1101103009;2;Field  ;
+                SourceExpr="Tot. Capacity cost" }
+
+    { 1101103010;2;Field  ;
+                SourceExpr="Tot. Additional Cost" }
+
+    { 1101103011;2;Field  ;
+                SourceExpr="Tot. Cost" }
+
+    { 1101103012;2;Field  ;
+                SourceExpr=CalcFactor }
+
+    { 1101103013;2;Field  ;
+                SourceExpr="Sales price" }
+
+    { 1101103023;1;Part   ;
+                Name=PriceCalcLinesMaterial;
+                CaptionML=[ENU=Material;
+                           NOR=Materiale];
+                SubPageLink=Calc. No.=FIELD(Calc No.),
+                            Type=CONST(Material);
+                PagePartID=Page50003;
+                PartType=Page;
+                UpdatePropagation=Both }
+
+    { 1101103024;1;Part   ;
+                Name=PriceCalcRoutingLines;
+                CaptionML=[ENU=Work;
+                           NOR=Rutelinjer];
+                SubPageLink=Calc. No.=FIELD(Calc No.),
+                            Type=CONST(Capacity);
+                PagePartID=Page50050;
+                PartType=Page;
+                UpdatePropagation=Both }
+
+    { 1101103025;1;Part   ;
+                Name=PriceCalcLinesMics;
+                CaptionML=[ENU=Mics.;
+                           NOR=Diverse];
+                SubPageLink=Calc. No.=FIELD(Calc No.),
+                            Type=CONST(Additional);
+                PagePartID=Page50003;
+                PartType=Page;
+                UpdatePropagation=Both }
+
+  }
+  CODE
+  {
+    VAR
+      FilterG@1101103000 : Text;
+
+    BEGIN
+    END.
+  }
+}
+

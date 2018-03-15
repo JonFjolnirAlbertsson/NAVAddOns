@@ -1,0 +1,500 @@
+OBJECT Codeunit 70002 Compello Integr. Import Mgt.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=12.01.17;
+    Time=16:03:54;
+    Modified=Yes;
+    Version List=CMP2.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      IntegrSetup@1000 : Record 70000;
+      CompelloIntegr@1002 : DotNet "'CompelloIntegration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=09a47ba60ac3be91'.Compello.IntegrationAPI.CompelloIntegration";
+      ExportHdr@1003 : DotNet "'CompelloIntegration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=09a47ba60ac3be91'.Compello.IntegrationAPI.CompelloExport";
+      ExportLine@1001 : DotNet "'CompelloIntegration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=09a47ba60ac3be91'.Compello.IntegrationAPI.CompelloExportLine";
+      HeaderNo@1004 : GUID;
+      LineNo@1005 : Integer;
+      RestoredDocs@1008 : Integer;
+      ImportedDocs@1009 : Integer;
+      Window@1006 : Dialog;
+      Text001@1007 : TextConst 'ENU=Action: #1###############\Restored: #2#############\Imported: #3#############';
+      Text002@1010 : TextConst 'ENU=Imported: %1, Restored: %2';
+      Text003@1011 : TextConst 'ENU=Logging to Compello;NOR=Logger p† Compello';
+      Text004@1012 : TextConst 'ENU=Restoring documents';
+      Text005@1013 : TextConst 'ENU=Importing documents';
+      Text006@1014 : TextConst 'ENU=Delete record and Reactivate in Compello,Delete record';
+      Text007@1101103000 : TextConst 'ENU=Delete record and Reactivate in Compello;NOR=Slett linje og send i retur til Compello';
+      NoVAT@1101103001 : Boolean;
+
+    LOCAL PROCEDURE StartIntegrSession@3() : Boolean;
+    VAR
+      Result@1000 : Text[250];
+    BEGIN
+      IntegrSetup.GET;
+      IntegrSetup.TESTFIELD("Web Service Address");
+      IntegrSetup.TESTFIELD("Customer ID");
+
+      CompelloIntegr := CompelloIntegr.CompelloIntegration;
+      Result := COPYSTR(CompelloIntegr.Logon(IntegrSetup."User Name", IntegrSetup.Password, IntegrSetup."Customer ID", IntegrSetup."Web Service Address"), 1, 250);
+
+      IF Result = '' THEN BEGIN
+        EXIT(TRUE);
+      END;
+
+      EXIT(FALSE);
+    END;
+
+    LOCAL PROCEDURE EndIntegrSession@5() : Text[250];
+    VAR
+      ImportResult@1001 : DotNet "'CompelloIntegration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=09a47ba60ac3be91'.Compello.IntegrationAPI.ImportResult";
+      ResultArray@1000 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      i@1002 : Integer;
+      InsertedRec@1004 : Integer;
+      UpdatedRec@1003 : Integer;
+    BEGIN
+      CLEAR(CompelloIntegr);
+      CLEAR(ExportHdr);
+      CLEAR(ExportLine);
+
+      EXIT(STRSUBSTNO(Text002, ImportedDocs, RestoredDocs));
+    END;
+
+    PROCEDURE LoadDocuments@1();
+    BEGIN
+      IF GUIALLOWED THEN BEGIN
+        Window.OPEN(Text001);
+        RestoredDocs := 0;
+        ImportedDocs := 0;
+        Window.UPDATE(1, Text003);
+      END;
+
+      StartIntegrSession;
+      IF GUIALLOWED THEN BEGIN
+        Window.UPDATE(1, Text004);
+      END;
+      ReactivateOnError;
+      IF GUIALLOWED THEN BEGIN
+        Window.UPDATE(1, Text005);
+      END;
+      LoadNewDocuments;
+      IF GUIALLOWED THEN BEGIN
+        Window.CLOSE;
+        MESSAGE(EndIntegrSession);
+      END ELSE BEGIN
+        EndIntegrSession;
+      END;
+    END;
+
+    LOCAL PROCEDURE LoadNewDocuments@2();
+    VAR
+      ResultArray@1001 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      ResultArray2@1000 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      Emit@1002 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.String";
+      SuccessArray@1003 : DotNet "'mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      i@1004 : Integer;
+      j@1005 : Integer;
+      MyChar@1006 : Char;
+      CompelloMgt@1101103000 : Codeunit 70005;
+      HasSuccess@1101103001 : Boolean;
+    BEGIN
+      ResultArray := CompelloIntegr.GetDocumentsForExportArray(IntegrSetup."Client ID");
+
+      IF ResultArray.Length = 0 THEN BEGIN
+        EXIT;
+      END;
+
+      Emit := Emit.String(MyChar, 50);
+      SuccessArray := SuccessArray.CreateInstance(Emit.GetType, ResultArray.Length);
+      HasSuccess := FALSE;
+
+      FOR i := 1 TO ResultArray.Length DO BEGIN
+        IF GUIALLOWED THEN BEGIN
+          ImportedDocs := ImportedDocs + 1;
+          Window.UPDATE(3, ImportedDocs);
+        END;
+
+        ExportHdr := ResultArray.GetValue(i-1);
+        IF CompelloMgt.IsVoucherTypeValid(ExportHdr.VoucherType) THEN BEGIN
+          NoVAT := FALSE;
+          InsertHeader;
+          ResultArray2 := ExportHdr.GetCompelloExportLines();
+          FOR j := 1 TO ResultArray2.Length DO BEGIN
+            ExportLine := ResultArray2.GetValue(j-1);
+            InsertLine;
+          END;
+          HasSuccess := TRUE;
+          SuccessArray.SetValue(ExportHdr.ArchiveRef, i-1);
+        END;
+      END;
+
+      IF HasSuccess THEN
+        CompelloIntegr.UpdateExportedSuccessArray(IntegrSetup."Client ID", SuccessArray, '');
+    END;
+
+    LOCAL PROCEDURE InsertHeader@4();
+    VAR
+      CommentsArray@1002 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      ImportHdr@1000 : Record 70008;
+      ImportComment@1004 : Record 70014;
+      MyDateTime@1001 : DateTime;
+      i@1003 : Integer;
+    BEGIN
+      ImportHdr.INIT;
+      ImportHdr.GUID := CREATEGUID;
+      ImportHdr.Supplier := ExportHdr.Supplier;
+      ImportHdr."Client ID" := ExportHdr.ClientId;
+      ImportHdr."Archive Ref" := ExportHdr.ArchiveRef;
+      MyDateTime := ExportHdr.ScannedDate;
+      ImportHdr."Scanned Date" := DT2DATE(MyDateTime);
+      ImportHdr."Scanned Time" := DT2TIME(MyDateTime);
+      ImportHdr."Voucher Type" := ExportHdr.VoucherType;
+      ImportHdr."Invoice No." := ExportHdr.InvoiceNo;
+      ImportHdr."Order Ref" := ExportHdr.OrderRef;
+      MyDateTime := ExportHdr.VoucherDate;
+      ImportHdr."Voucher Date" := DT2DATE(MyDateTime);
+      ImportHdr."Voucher Time" := DT2TIME(MyDateTime);
+      MyDateTime := ExportHdr.DueDate;
+      ImportHdr."Due Date" := DT2DATE(MyDateTime);
+      ImportHdr."Due Date Time" := DT2TIME(MyDateTime);
+      ImportHdr.KID := ExportHdr.KID;
+      ImportHdr."Transaction No." := ExportHdr.TransactionNo;
+      ImportHdr."User Defined 1" := ExportHdr.UserDef1;
+      ImportHdr."User Defined 2" := ExportHdr.UserDef2;
+      ImportHdr."User Defined 3" := ExportHdr.UserDef3;
+      ImportHdr."User Defined 4" := ExportHdr.UserDef4;
+      ImportHdr."User Defined 5" := ExportHdr.UserDef5;
+      ImportHdr."User Defined 6" := ExportHdr.UserDef6;
+      ImportHdr."User Defined 7" := ExportHdr.UserDef7;
+      ImportHdr."Image GUID" := ExportHdr.GUID;
+      ImportHdr."Import Date" := CURRENTDATETIME;
+      ImportHdr.INSERT;
+
+      CommentsArray := ExportHdr.CommentsArray();
+      FOR i := 1 TO CommentsArray.Length DO BEGIN
+        ImportComment.INIT;
+        ImportComment.GUID := ImportHdr.GUID;
+        ImportComment."Line No." := i;
+        ImportComment.Comment := CommentsArray.GetValue(i-1);
+        ImportComment.INSERT;
+      END;
+
+      HeaderNo := ImportHdr.GUID;
+      LineNo := 0;
+    END;
+
+    LOCAL PROCEDURE InsertLine@7();
+    VAR
+      ImportLine@1000 : Record 70009;
+      MyDateTime@1001 : DateTime;
+      CompelloMgt@1101103000 : Codeunit 70005;
+      CompelloSetup@1101103001 : Record 70000;
+    BEGIN
+      CompelloSetup.GET;
+
+      LineNo := LineNo + 1;
+
+      ImportLine.INIT;
+      ImportLine."Header GUID" := HeaderNo;
+      ImportLine."Line No." := LineNo;
+      MyDateTime := ExportLine.UserDef7;
+      ImportLine."User Defined 7" := DT2DATE(MyDateTime);
+      ImportLine."User Defined 7 Time" := DT2TIME(MyDateTime);
+      ImportLine."Period Value" := ExportLine.PeriodValue;
+      ImportLine."Period Description" := ExportLine.PeriodDesc;
+
+      IF ExportLine.DebetValue <> '' THEN BEGIN
+        ImportLine."Debet Type" := ExportLine.DebetType;
+        ImportLine."Debet Value" := ExportLine.DebetValue;
+      END;
+      IF ExportLine.CreditValue <> '' THEN BEGIN
+        ImportLine."Credit Type" := ExportLine.CreditType;
+        ImportLine."Credit Value" := ExportLine.CreditValue;
+      END;
+
+      // Set VAT code for GL accounts when tax code is blank
+      IF (ExportLine.DebetType = 'H') AND (ExportLine.DebetTaxCode = '') AND (ExportLine.UserDef8 = '') THEN
+        ImportLine."Debet Tax Code" := CompelloSetup."Default Free VAT Code"
+      ELSE
+        ImportLine."Debet Tax Code" := ExportLine.DebetTaxCode;
+
+      IF (ExportLine.CreditType = 'H') AND (ExportLine.CreditTaxCode = '') THEN
+        ImportLine."Credit Tax Code" := CompelloSetup."Default Free VAT Code"
+      ELSE
+        ImportLine."Credit Tax Code" := ExportLine.CreditTaxCode;
+
+      // Set lines to no VAT when VAT amount from Compello is 0.
+      IF (LineNo = 1) AND (ExportLine.VatAmount = 0) AND (NOT CompelloMgt.IsVoucherType2Journal(ExportHdr.VoucherType)) THEN
+        NoVAT := TRUE;
+
+      IF (NoVAT) AND (ExportLine.DebetType = 'H') THEN
+        ImportLine."Debet Tax Code" := CompelloSetup."Default Free VAT Code";
+
+      IF (NoVAT) AND (ExportLine.CreditType = 'H') THEN
+        ImportLine."Credit Tax Code" := CompelloSetup."Default Free VAT Code";
+
+      ImportLine."No VAT" := NoVAT;
+
+      ImportLine."Debet Description" := ExportLine.DebetDesc;
+      ImportLine."Debet Tax Code Description" := ExportLine.DebetTaxCodeDesc;
+      ImportLine."Credit Description" := ExportLine.CreditDesc;
+      ImportLine."Credit Tax Code Description" := ExportLine.CreditTaxCodeDesc;
+      ImportLine."Currency Amount" := ExportLine.CurrencyAmount;
+      ImportLine."VAT Amount" := ExportLine.VatAmount;
+      ImportLine."Currency Value" := ExportLine.CurrencyValue;
+      ImportLine."Currency Description" := ExportLine.CurrencyDesc;
+      ImportLine.Discount := ExportLine.Discount;
+      MyDateTime := ExportLine.DiscountDate;
+      ImportLine."Discount Date" := DT2DATE(MyDateTime);
+      ImportLine."Discount Date Time" := DT2TIME(MyDateTime);
+      ImportLine.Text := ExportLine.Text;
+      ImportLine."User Defined 1" := ExportLine.UserDef1;
+      ImportLine."User Defined 2" := ExportLine.UserDef2;
+      ImportLine."User Defined 3" := ExportLine.UserDef3;
+      ImportLine."User Defined 4" := ExportLine.UserDef4;
+      ImportLine."User Defined 5" := ExportLine.UserDef5;
+      ImportLine."User Defined 6" := ExportLine.UserDef6;
+      ImportLine."User Defined 8" := ExportLine.UserDef8;
+      ImportLine."User Defined 9" := ExportLine.UserDef9;
+      ImportLine."User Defined 10" := ExportLine.UserDef10;
+      ImportLine."User Defined 11" := ExportLine.UserDef11;
+      ImportLine."User Defined 12" := ExportLine.UserDef12;
+      ImportLine."User Defined 13" := ExportLine.UserDef13;
+      ImportLine."User Defined 14" := ExportLine.UserDef14;
+      ImportLine."User Defined 15" := ExportLine.UserDef15;
+      ImportLine."Dimension 1 Value" := ExportLine.Dim1Value;
+      ImportLine."Dimension 1 Description" := ExportLine.Dim1Desc;
+      ImportLine."Dimension 2 Value" := ExportLine.Dim2Value;
+      ImportLine."Dimension 2 Description" := ExportLine.Dim2Desc;
+      ImportLine."Dimension 3 Value" := ExportLine.Dim3Value;
+      ImportLine."Dimension 3 Description" := ExportLine.Dim3Desc;
+      ImportLine."Dimension 4 Value" := ExportLine.Dim4Value;
+      ImportLine."Dimension 4 Description" := ExportLine.Dim4Desc;
+      ImportLine."Dimension 5 Value" := ExportLine.Dim5Value;
+      ImportLine."Dimension 5 Description" := ExportLine.Dim5Desc;
+      ImportLine."Dimension 6 Value" := ExportLine.Dim6Value;
+      ImportLine."Dimension 6 Description" := ExportLine.Dim6Desc;
+      ImportLine."Dimension 7 Value" := ExportLine.Dim7Value;
+      ImportLine."Dimension 7 Description" := ExportLine.Dim7Desc;
+      ImportLine."Dimension 8 Value" := ExportLine.Dim8Value;
+      ImportLine."Dimension 8 Description" := ExportLine.Dim8Desc;
+      ImportLine."Dimension 9 Value" := ExportLine.Dim9Value;
+      ImportLine."Dimension 9 Description" := ExportLine.Dim9Desc;
+      ImportLine."Dimension 10 Value" := ExportLine.Dim10Value;
+      ImportLine."Dimension 10 Description" := ExportLine.Dim10Desc;
+      ImportLine."Dimension 11 Value" := ExportLine.Dim11Value;
+      ImportLine."Dimension 11 Description" := ExportLine.Dim11Desc;
+      ImportLine."Dimension 12 Value" := ExportLine.Dim12Value;
+      ImportLine."Dimension 12 Description" := ExportLine.Dim12Desc;
+      ImportLine."Dimension 13 Value" := ExportLine.Dim13Value;
+      ImportLine."Dimension 13 Description" := ExportLine.Dim13Desc;
+      ImportLine."Dimension 14 Value" := ExportLine.Dim14Value;
+      ImportLine."Dimension 14 Description" := ExportLine.Dim14Desc;
+      ImportLine."Dimension 15 Value" := ExportLine.Dim15Value;
+      ImportLine."Dimension 15 Description" := ExportLine.Dim15Desc;
+      ImportLine.ProductValue := ExportLine.ProductValue;
+      ImportLine.ProductDesc := ExportLine.ProductDesc;
+      ImportLine.ProductDescriptionFree := ExportLine.ProductDescFree;
+      ImportLine.Received := ExportLine.Received;
+      ImportLine.ReceivedUnits := ExportLine.ReceivedUnits;
+
+      ImportLine.Amount := ExportLine.Amount;
+      ImportLine.UnitPrice := ExportLine.UnitPrice;
+      ImportLine.Volume := ExportLine.Volume;
+
+      IF (ImportLine.UnitPrice = 0) OR (ImportLine.Volume = 0) THEN
+      BEGIN
+        ImportLine.Volume := 1;
+        ImportLine.UnitPrice := ExportLine.Amount;
+      END;
+
+      IF CompelloMgt.IsVoucherTypeInvoice(ExportHdr.VoucherType) AND (ExportLine.CreditType = 'H') THEN
+        ImportLine.Volume := (ImportLine.Volume * -1);
+
+      IF CompelloMgt.IsVoucherTypeCreditMemo(ExportHdr.VoucherType) AND (ExportLine.DebetType = 'H') THEN
+        ImportLine.Volume := (ImportLine.Volume * -1);
+
+      CompelloMgt.CheckForReceiptLineInfo(ImportLine);
+      SetCurrencyFactor(ImportLine, ExportLine.UserDef14);
+      ClearVATCode(ImportLine);
+
+      IF ((ImportLine."Debet Value" <> '') OR (ImportLine."Credit Value" <> '')) THEN
+        ImportLine.INSERT;
+    END;
+
+    LOCAL PROCEDURE ReactivateOnError@6();
+    VAR
+      ResultArray@1000 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      ReactivateArray@1001 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      Emit@1003 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.String";
+      ErrData@1005 : DotNet "'CompelloIntegration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=09a47ba60ac3be91'.Compello.IntegrationAPI.CompelloExport";
+      i@1002 : Integer;
+      MyChar@1004 : Char;
+    BEGIN
+      ResultArray := CompelloIntegr.GetErrorDocumentsArray(IntegrSetup."Client ID", '');
+
+      IF ResultArray.Length > 0 THEN BEGIN
+        Emit := Emit.String(MyChar, 50);
+        ReactivateArray := ReactivateArray.CreateInstance(Emit.GetType, 1);
+
+        FOR i := 1 TO ResultArray.Length DO BEGIN
+          IF GUIALLOWED THEN BEGIN
+            RestoredDocs := RestoredDocs + 1;
+            Window.UPDATE(2, RestoredDocs);
+          END;
+          ErrData := ResultArray.GetValue(i-1);
+          ReactivateArray.SetValue(ErrData.ArchiveRef, 0);
+        END;
+
+        CompelloIntegr.UpdateExportedReactivateArray(IntegrSetup."Client ID", ReactivateArray, '');
+
+      END;
+    END;
+
+    LOCAL PROCEDURE ReactivateOneRecord@10(ArchiveRef@1006 : Text[30]) : Boolean;
+    VAR
+      ReactivateArray@1004 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      Emit@1003 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.String";
+      MyChar@1000 : Char;
+    BEGIN
+      StartIntegrSession;
+
+      Emit := Emit.String(MyChar, 50);
+      ReactivateArray := ReactivateArray.CreateInstance(Emit.GetType, 1);
+      ReactivateArray.SetValue(ArchiveRef, 0);
+
+      CompelloIntegr.UpdateExportedReactivateArray(IntegrSetup."Client ID", ReactivateArray, '');
+
+      EndIntegrSession;
+      EXIT(TRUE);
+    END;
+
+    PROCEDURE ReactivateArchiveImport@1101103007(VAR ImportHdrArchive@1000 : Record 70011);
+    VAR
+      ImportLineArchive@1001 : Record 70012;
+      ImportCommentArchive@1006 : Record 70015;
+    BEGIN
+      IF ImportHdrArchive.FINDFIRST THEN BEGIN
+        IF ReactivateOneRecord(ImportHdrArchive."Archive Ref") THEN BEGIN
+          ImportLineArchive.SETRANGE("Header GUID", ImportHdrArchive.GUID);
+          IF ImportLineArchive.FINDSET THEN BEGIN
+            ImportLineArchive.DELETEALL;
+          END;
+
+          ImportCommentArchive.SETRANGE(GUID, ImportHdrArchive.GUID);
+          IF ImportCommentArchive.FINDSET THEN BEGIN
+            ImportCommentArchive.DELETEALL;
+          END;
+
+          ImportHdrArchive.DELETE;
+        END;
+      END;
+    END;
+
+    PROCEDURE DeleteImportedRecord@8(VAR ImportHdr@1000 : Record 70008) : Boolean;
+    BEGIN
+
+      IF CONFIRM(Text007, FALSE) THEN BEGIN
+        IF ImportHdr."Archive Ref" <> '' THEN BEGIN
+          ReactivateOneRecord(ImportHdr."Archive Ref");
+          ArchiveImport(ImportHdr, TRUE);
+        END;
+
+        EXIT(TRUE);
+      END;
+
+      EXIT(FALSE);
+    END;
+
+    PROCEDURE ArchiveImport@9(VAR ImportHdr@1000 : Record 70008;IsDeleted@1004 : Boolean);
+    VAR
+      ImportLine@1003 : Record 70009;
+      ImportHdrArchive@1002 : Record 70011;
+      ImportLineArchive@1001 : Record 70012;
+      ImportComment@1005 : Record 70014;
+      ImportCommentArchive@1006 : Record 70015;
+    BEGIN
+      ImportHdrArchive.TRANSFERFIELDS(ImportHdr, TRUE);
+      IF IsDeleted THEN BEGIN
+        ImportHdrArchive.Status := ImportHdrArchive.Status::Deleted;
+      END ELSE BEGIN
+        ImportHdrArchive.Status := ImportHdrArchive.Status::Created;
+      END;
+      ImportHdrArchive."Last Action Date" := CURRENTDATETIME;
+      IF NOT IsDeleted THEN
+        ImportHdrArchive.INSERT;
+
+      ImportLine.SETRANGE("Header GUID", ImportHdr.GUID);
+      IF ImportLine.FINDSET THEN BEGIN
+        REPEAT
+          ImportLineArchive.TRANSFERFIELDS(ImportLine, TRUE);
+          IF NOT IsDeleted THEN
+            ImportLineArchive.INSERT;
+        UNTIL ImportLine.NEXT = 0;
+        ImportLine.DELETEALL;
+      END;
+
+      ImportComment.SETRANGE(GUID, ImportHdr.GUID);
+      IF ImportComment.FINDSET THEN BEGIN
+        REPEAT
+          ImportCommentArchive.TRANSFERFIELDS(ImportComment);
+          IF NOT IsDeleted THEN
+            ImportCommentArchive.INSERT;
+        UNTIL ImportComment.NEXT = 0;
+        ImportComment.DELETEALL;
+      END;
+
+      ImportHdr.DELETE;
+    END;
+
+    LOCAL PROCEDURE SetCurrencyFactor@1101103000(VAR ImportLine@1101103000 : Record 70009;Factor@1101103001 : Text[100]);
+    VAR
+      Currency@1101103002 : Record 4;
+      GenLedgSetup@1101103003 : Record 98;
+      FactorDec@1101103004 : Decimal;
+    BEGIN
+      GenLedgSetup.GET;
+      GenLedgSetup.TESTFIELD(GenLedgSetup."LCY Code");
+      IF ImportLine."Currency Value" = GenLedgSetup."LCY Code" THEN BEGIN
+        ImportLine."Currency Value" := '';
+        ImportLine."User Defined 14" := '';
+      END;
+
+      IF ((Factor <> '') AND (ImportLine."Currency Value" <> '')) THEN
+        IF Currency.GET(ImportLine."Currency Value") THEN BEGIN
+          Currency.TESTFIELD("Units to NOK");
+          EVALUATE(FactorDec, Factor);
+          ImportLine."User Defined 14" :=  FORMAT(Currency."Units to NOK" / FactorDec);
+        END;
+    END;
+
+    LOCAL PROCEDURE ClearVATCode@1101103001(VAR ImportLine@1101103000 : Record 70009);
+    BEGIN
+      // Delete TAX code for lines with definition for both Credit and Debet from Compello.
+      IF ((ImportLine."Credit Type" <> '') AND (ImportLine."Credit Value" <> '')) THEN
+        ImportLine."Debet Tax Code" := '';
+      IF ((ImportLine."Debet Type" <> '') AND (ImportLine."Debet Value" <> '')) THEN
+        ImportLine."Credit Tax Code" := '';
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 24.04.15 JAL Download only defined voucher types
+                       Handle Tax Code for PO match in user defined fields
+                       Set Unit Price and Volume for Purchase Invoice
+    }
+    END.
+  }
+}
+

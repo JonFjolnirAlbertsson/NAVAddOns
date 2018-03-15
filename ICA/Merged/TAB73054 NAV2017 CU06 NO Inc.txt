@@ -1,0 +1,45 @@
+OBJECT Table 73054 Routing Control by Order Qty.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=16:11:16;
+    Modified=Yes;
+    Version List=ICA2.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Routing Control by Order Qty.;
+               NOR=Rutestyring e. ordreantall];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Routing group code  ;Code20        ;TableRelation="Route Group"."Routing group code";
+                                                   CaptionML=[ENU=Routing group code;
+                                                              NOR=Rutegruppekode] }
+    { 2   ;   ;Routing No.         ;Code20        ;TableRelation="Routing Header".No.;
+                                                   CaptionML=NOR=Rutenr. }
+    { 3   ;   ;Minimum orderqty.   ;Integer       ;CaptionML=NOR=Minste ordreantall }
+  }
+  KEYS
+  {
+    {    ;Routing group code                      ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Item Calculation (Kalkyle)
+    }
+    END.
+  }
+}
+

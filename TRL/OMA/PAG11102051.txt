@@ -1,0 +1,3363 @@
+OBJECT Codeunit 11102051 OM - Translation Management
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=14:24:21;
+    Modified=Yes;
+    Version List=OMA11.00;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      BaseLanguage2@1000 : Integer;
+      CaptionEntryNo@1001 : Integer;
+      EntryNo@1002 : Integer;
+
+    PROCEDURE ImportTranslationFile@1(ServerFileName@1000 : Text);
+    VAR
+      Line@1001 : Record 11102068;
+      ImExportMgt@1002 : Codeunit 11102043;
+      Progressbar@1003 : Codeunit 11102044;
+      oFile@1004 : File;
+      Skip@1005 : Boolean;
+      ctImportingTranslationFile@1006 : TextConst 'DEU=Importing translation file...;ENU=Importing translation file...;ESP=Importing translation file...;FRA=Importing translation file...;NLD=Vertaalbestand importeren...;DEA=Importing translation file...';
+      ctObjectFile@1007 : TextConst 'DEU=This is an object file.\Please import a translation file.\\Menu - Tools - Translate - Export.;ENU=This is an object file.\Please import a translation file.\\Menu - Tools - Translate - Export.;ESP=This is an object file.\Please import a translation file.\\Menu - Tools - Translate - Export.;FRA=This is an object file.\Please import a translation file.\\Menu - Tools - Translate - Export.;NLD=Dit is een objectenbestanden.\Importeer een vertaalbestand.\\Menu - Extra - Translate - Export.;DEA=This is an object file.\Please import a translation file.\\Menu - Tools - Translate - Export.';
+    BEGIN
+      WITH Line DO BEGIN
+
+        IF ImExportMgt.IsObjectFile(ServerFileName) THEN
+          ERROR(ctObjectFile);
+
+        IF NOT ConfirmRecordsChanged THEN
+          EXIT;
+
+        SetCaptionEntryNo;
+
+        Progressbar.Open(ctImportingTranslationFile, 0);
+
+        oFile.OPEN(ServerFileName);
+
+        Progressbar.BarSize := oFile.LEN;
+
+        WHILE ReadLine(oFile, Line) DO BEGIN
+
+          Progressbar.BarPosition := oFile.POS;
+
+          Skip := FALSE;
+
+          IF Type = Type::Text THEN
+            IF NOT CharacterInText("Caption 1") THEN
+              Skip := TRUE;
+          IF "Property Id" = 42445 THEN
+            Skip := TRUE;
+
+          IF NOT Skip THEN BEGIN
+            "Added by File" := TRUE;
+            IF "Entry No." = 0 THEN BEGIN
+
+              IF Captions AND ("Caption Entry No." = 0) THEN BEGIN
+                CaptionEntryNo += 1;
+                "Caption Entry No." := CaptionEntryNo;
+              END;
+
+              INSERT(TRUE);
+            END ELSE
+              MODIFY;
+          END;
+
+        END;
+
+      END;
+    END;
+
+    LOCAL PROCEDURE ReadLine@2(VAR oFile@1000 : File;VAR Line@1001 : Record 11102068) : Boolean;
+    VAR
+      Line2@1002 : Record 11102068;
+      LineToValidate@1003 : Text;
+      ReadChar@1004 : Char;
+    BEGIN
+      Line.INIT;
+      Line."Entry No." := 0;
+
+      WHILE oFile.READ(ReadChar) > 0 DO
+        IF ReadChar <> 10 THEN
+          IF ReadChar = 13 THEN BEGIN
+            Line.ValidateTranslationFileLine(LineToValidate, Line2);
+            EXIT(TRUE);
+          END ELSE
+            LineToValidate += FORMAT(ReadChar);
+    END;
+
+    PROCEDURE ImportObjectFile@3(FileName@1000 : Text);
+    VAR
+      TmpCALHistoryObject@1001 : TEMPORARY Record 11102052;
+      TmpCALHistoryLine@1002 : TEMPORARY Record 11102053;
+      Buffer@1003 : TEMPORARY Record 11102068;
+      ImExportMgt@1004 : Codeunit 11102043;
+      Progressbar@1005 : Codeunit 11102044;
+      ctImportingObjectFile@1006 : TextConst 'DEU=Importing object file...;ENU=Importing object file...;ESP=Importing object file...;FRA=Importing object file...;NLD=Objectbestand importeren...;DEA=Importing object file...';
+      ctObjectFile@1007 : TextConst 'DEU=This is not an object file.;ENU=This is not an object file.;ESP=This is not an object file.;FRA=This is not an object file.;NLD=Dit is geen objectbestand.;DEA=This is not an object file.';
+    BEGIN
+      IF NOT ImExportMgt.IsObjectFile(FileName) THEN
+        ERROR(ctObjectFile);
+
+      Progressbar.Open(ctImportingObjectFile, 1);
+      GetCaptionsFromObjectFile(FileName, Buffer, TmpCALHistoryObject, TmpCALHistoryLine, Progressbar, 0, 100);
+      WriteBufferToLines(Buffer);
+
+      Progressbar.Close;
+    END;
+
+    PROCEDURE UpdateCalculatedCaptions@4(VAR Line@1000 : Record 11102068);
+    VAR
+      Progressbar@1001 : Codeunit 11102044;
+      ctRecalculationLines@1002 : TextConst 'DEU=Recalculating...;ENU=Recalculating...;ESP=Recalculating...;FRA=Recalculating...;NLD=Herberekenen...;DEA=Recalculating...';
+    BEGIN
+      Progressbar.Open(ctRecalculationLines, 0);
+
+      WITH Line DO BEGIN
+
+        Progressbar.BarSize := COUNT;
+
+        IF FINDSET THEN
+          REPEAT
+            Progressbar.AddToBar(1);
+            UpdateCalculatedCaption;
+            MODIFY;
+
+          UNTIL NEXT = 0;
+      END;
+
+      Progressbar.Close;
+    END;
+
+    PROCEDURE LanguageCodeOfId@5(LanguageId@1000 : Integer) : Code[10];
+    VAR
+      WindowsLanguage2@1001 : Record 2000000045;
+    BEGIN
+      IF WindowsLanguage2.GET(LanguageId) THEN
+        EXIT(WindowsLanguage2."Abbreviated Name")
+      ELSE
+        IF LanguageId = 1 THEN
+          EXIT('@@@')
+        ELSE
+          IF LanguageId <> 0 THEN
+            EXIT(FORMAT(LanguageId));
+    END;
+
+    LOCAL PROCEDURE LanguageIdOfCode@6(LanguageCode@1000 : Code[20]) : Integer;
+    VAR
+      WindowsLanguage2@1001 : Record 2000000045;
+    BEGIN
+      WindowsLanguage2.SETCURRENTKEY("Abbreviated Name");
+      WindowsLanguage2.SETRANGE("Abbreviated Name", LanguageCode);
+      IF WindowsLanguage2.FINDFIRST THEN
+        EXIT(WindowsLanguage2."Language ID");
+
+      IF LanguageCode = '@@@' THEN
+        EXIT(1);
+    END;
+
+    PROCEDURE LanguageIdOfInput@7(VAR Text@1000 : Text) LanguageId : Integer;
+    VAR
+      WindowsLanguage2@1001 : Record 2000000045;
+    BEGIN
+      IF EVALUATE(LanguageId, Text) THEN
+        EXIT;
+
+      WindowsLanguage2.SETRANGE("Abbreviated Name", Text);
+      IF WindowsLanguage2.FINDFIRST THEN BEGIN
+        Text := FORMAT(WindowsLanguage2."Language ID");
+        EXIT(WindowsLanguage2."Language ID");
+      END;
+
+      IF Text = '' THEN BEGIN
+        Text := '0';
+        EXIT(0);
+      END;
+
+      IF UPPERCASE(Text) = 'E' THEN BEGIN
+        Text := '1033';
+        EXIT(1033);
+      END;
+
+      WindowsLanguage2.SETCURRENTKEY("Language ID");
+      WindowsLanguage2.SETFILTER("Abbreviated Name", '@' + Text + '*');
+      IF WindowsLanguage2.FINDFIRST THEN BEGIN
+        Text := FORMAT(WindowsLanguage2."Language ID");
+        EXIT(WindowsLanguage2."Language ID");
+      END;
+
+      EVALUATE(LanguageId, Text);
+    END;
+
+    PROCEDURE LookupLanguageId@8(VAR Text@1000 : Text) : Boolean;
+    VAR
+      TmpUser@1001 : TEMPORARY Record 11102056;
+      WindowsLanguage2@1002 : Record 2000000045;
+      ApplicationSettings@1003 : Codeunit 11102101;
+      ctLanguages@1004 : TextConst 'DEU=Languages;ENU=Languages;ESP=Languages;FRA=Languages;NLD=Talen;DEA=Languages';
+    BEGIN
+      IF WindowsLanguage2.FINDSET THEN
+        REPEAT
+          IF NOT TmpUser.GET(WindowsLanguage2."Abbreviated Name") THEN BEGIN
+            TmpUser.Code := WindowsLanguage2."Abbreviated Name";
+            TmpUser.Name := WindowsLanguage2.Name;
+            TmpUser.INSERT;
+          END;
+        UNTIL WindowsLanguage2.NEXT = 0;
+
+      IF NOT TmpUser.GET(Text) THEN
+        IF TmpUser.FINDFIRST THEN
+          ;
+
+      ApplicationSettings.SetFormCaption(ctLanguages);
+
+      IF PAGE.RUNMODAL(PAGE::"OM - Select Users", TmpUser) = ACTION::LookupOK THEN BEGIN
+        Text := TmpUser.Code;
+        EXIT(TRUE);
+      END;
+    END;
+
+    PROCEDURE GetCopyLanguageId@9(CurrLanguageId@1000 : Integer;VAR CopyLanguageId@1001 : Integer) : Boolean;
+    VAR
+      TmpUser@1002 : TEMPORARY Record 11102056;
+      Line@1003 : Record 11102068;
+      WindowsLanguage2@1004 : Record 2000000045;
+      ApplicationSettings@1005 : Codeunit 11102101;
+      LanguageText@1006 : Text;
+      ctLanguages@1007 : TextConst 'DEU=Languages;ENU=Languages;ESP=Languages;FRA=Languages;NLD=Talen;DEA=Languages';
+      ctNoLanguage@1008 : TextConst 'DEU=No language present to copy from.;ENU=No language present to copy from.;ESP=No language present to copy from.;FRA=No language present to copy from.;NLD=Geen taal aanwezig om vanaf te kopieren.;DEA=No language present to copy from.';
+    BEGIN
+      Line.SETCURRENTKEY("Language Id");
+      WHILE Line.FINDFIRST DO BEGIN
+
+        IF NOT (Line."Language Id" IN [0, CurrLanguageId]) THEN
+          IF WindowsLanguage2.GET(Line."Language Id") THEN BEGIN
+            TmpUser.Code := WindowsLanguage2."Abbreviated Name";
+            TmpUser.Name := WindowsLanguage2.Name;
+            TmpUser.INSERT;
+          END;
+
+        Line.SETFILTER("Language Id", '>%1', Line."Language Id");
+
+      END;
+
+      IF TmpUser.ISEMPTY THEN
+        ERROR(ctNoLanguage);
+
+      ApplicationSettings.SetFormCaption(ctLanguages);
+
+      IF PAGE.RUNMODAL(PAGE::"OM - Users", TmpUser) = ACTION::LookupOK THEN BEGIN
+        LanguageText := TmpUser.Code;
+        CopyLanguageId := LanguageIdOfInput(LanguageText);
+        EXIT(TRUE);
+      END;
+    END;
+
+    PROCEDURE ExportFile@10(FileName@1000 : Text;LanguageId@1001 : Integer;All@1002 : Boolean);
+    VAR
+      Line@1003 : ARRAY [2] OF Record 11102068;
+      Progressbar@1004 : Codeunit 11102044;
+      oFile@1005 : File;
+      ctExportingTranslationFile@1006 : TextConst 'DEU=Exporting translation file...;ENU=Exporting translation file...;ESP=Exporting translation file...;FRA=Exporting translation file...;NLD=Vertaalbestand exporteren...;DEA=Exporting translation file...';
+    BEGIN
+      oFile.TEXTMODE(TRUE);
+      oFile.CREATE(FileName);
+
+      Progressbar.Open(ctExportingTranslationFile, 0);
+
+      Line[1].SETCURRENTKEY("Object Type", "Object No.", "C/AL Line No.");
+
+      IF NOT All THEN
+        Line[1].SETRANGE(Changed, TRUE);
+
+      Line[1].SETFILTER("Language Id", '0|%1', LanguageId);
+
+      Progressbar.BarSize := Line[1].COUNT;
+      AddToFile(oFile, Line, Progressbar);
+
+      Progressbar.Close;
+    END;
+
+    PROCEDURE AddToFile@11(VAR oFile@1000 : File;VAR Line@1001 : ARRAY [2] OF Record 11102068;VAR Progressbar@1002 : Codeunit 11102044);
+    VAR
+      XMLWarning@1003 : Boolean;
+      ctXMLWarning@1004 : TextConst 'DEU=Some XMLport translations are not supported by NAV.\NAV could crash when you import this transation file.;ENU=Some XMLport translations are not supported by NAV.\NAV could crash when you import this transation file.;ESP=Some XMLport translations are not supported by NAV.\NAV could crash when you import this transation file.;FRA=Some XMLport translations are not supported by NAV.\NAV could crash when you import this transation file.;NLD=Sommige XMLport vertalingen worden niet ondersteund door NAV.\NAV zou kunnen crashen wanneer dit vertaalbestand wordt ge‹mporteerd.;DEA=Some XMLport translations are not supported by NAV.\NAV could crash when you import this transation file.';
+    BEGIN
+      WITH Line[1] DO BEGIN
+
+        FINDSET;
+        REPEAT
+
+          Progressbar.AddToBar(1);
+
+          CASE "Max. Length" OF
+            30, 128, 387 :
+              IF TotalName <> '' THEN
+                oFile.WRITE("Translate File Line" + TotalName);
+
+            132 :
+              IF TotalCaption <> '' THEN
+                oFile.WRITE("Translate File Line" + TotalCaption);
+
+            256 :
+              IF TotalCaption <> '' THEN
+                oFile.WRITE("Translate File Line" + TotalCaption);
+          END;
+
+          IF Captions THEN BEGIN
+
+            Line[2].RESET;
+            Line[2].SETCURRENTKEY("Caption Entry No.");
+            Line[2].SETRANGE("Caption Entry No.", "Caption Entry No.");
+            Line[2].SETRANGE(Captions, TRUE);
+            IF Line[2].FINDSET THEN
+              REPEAT
+                IF Line[2].TotalCaption <> '' THEN
+                  oFile.WRITE(Line[2].TranslateFileLineCaption + Line[2].TotalCaption);
+              UNTIL Line[2].NEXT = 0;
+
+          END;
+
+          IF ("Object Type" = "Object Type"::XMLport) AND NOT "Added by File" THEN
+            XMLWarning := TRUE;
+
+        UNTIL NEXT = 0;
+
+      END;
+
+      IF XMLWarning THEN
+        MESSAGE(ctXMLWarning);
+    END;
+
+    PROCEDURE MarkChangedObjects@12();
+    VAR
+      Line@1000 : Record 11102068;
+      Object@1001 : Record 2000000001;
+      VersionControl@1002 : Codeunit 11102040;
+    BEGIN
+      VersionControl.CheckMarkLock;
+      VersionControl.RemoveObjectMarks(TRUE);
+
+      WITH Line DO BEGIN
+        SETCURRENTKEY(Changed);
+        SETRANGE(Changed, TRUE);
+        IF FINDSET THEN
+          REPEAT
+            IF ("Object Type" <> Object.Type) OR (Object.ID <> "Object No.") THEN
+              IF Object.GET("Object Type", '', "Object No.") THEN
+                VersionControl.MarkObject(Object, TRUE);
+          UNTIL NEXT = 0;
+
+      END;
+    END;
+
+    PROCEDURE CreateRules@13(VAR Line@1000 : Record 11102068;Overwrite@1001 : Boolean);
+    VAR
+      Progressbar@1002 : Codeunit 11102044;
+      ctCreatingRules@1003 : TextConst 'DEU=Creating rules...;ENU=Creating rules...;ESP=Creating rules...;FRA=Creating rules...;NLD=Regels aanmaken...;DEA=Creating rules...';
+    BEGIN
+      WITH Line DO BEGIN
+
+        Progressbar.Open(ctCreatingRules, 0);
+        Progressbar.BarSize := COUNT;
+
+        IF FINDSET THEN
+          REPEAT
+            Progressbar.AddToBar(1);
+            CreateRule(Line, Overwrite);
+          UNTIL NEXT = 0;
+
+        Progressbar.Close;
+
+      END;
+    END;
+
+    PROCEDURE CreateRule@14(VAR Line@1000 : Record 11102068;Overwrite@1001 : Boolean);
+    VAR
+      Caption@1002 : Record 11102068;
+      Caption2@1003 : Record 11102068;
+    BEGIN
+      WITH Line DO BEGIN
+        IF "Caption Entry No." = 0 THEN
+          EXIT;
+
+        CASE Type OF
+
+          Type::Object, Type::Field :
+            BEGIN
+              Caption.SETCURRENTKEY("Caption Entry No.");
+              Caption.SETRANGE("Caption Entry No.", "Caption Entry No.");
+              IF Caption.FINDSET THEN
+                REPEAT
+                  InsertRule(Type, Name, 0, '', FALSE, Caption."Language Id", Caption.TotalCaption, Overwrite);
+                UNTIL Caption.NEXT = 0;
+            END;
+
+          Type::"Tab Names" :
+            IF Caption.GetByCaptionEntryLanguage("Caption Entry No.", BaseLanguage) THEN BEGIN
+              Caption2.SETCURRENTKEY("Caption Entry No.", "Language Id");
+              Caption2.SETRANGE("Caption Entry No.", "Caption Entry No.");
+              Caption2.SETFILTER("Language Id", '<>' + FORMAT(BaseLanguage));
+              IF Caption2.FINDSET THEN
+                REPEAT
+                  InsertRule(
+                    Type, '', BaseLanguage, Caption.TotalCaption, TRUE, Caption2."Language Id", Caption2.TotalCaption, Overwrite);
+                UNTIL Caption2.NEXT = 0;
+            END;
+
+          Type::Option :
+            BEGIN
+              IF Caption.GetByCaptionEntryLanguage("Caption Entry No.", 0) THEN BEGIN
+                Caption2.SETCURRENTKEY("Caption Entry No.", "Language Id");
+                Caption2.SETRANGE("Caption Entry No.", "Caption Entry No.");
+                Caption2.SETFILTER("Language Id", '<>0');
+                IF Caption2.FINDSET THEN
+                  REPEAT
+                    InsertRule(Type, '', 0, Caption.TotalCaption, TRUE, Caption2."Language Id", Caption2.TotalCaption, Overwrite);
+                  UNTIL Caption2.NEXT = 0;
+              END;
+              IF Caption.GetByCaptionEntryLanguage("Caption Entry No.", BaseLanguage) THEN BEGIN
+                Caption2.SETCURRENTKEY("Caption Entry No.", "Language Id");
+                Caption2.SETRANGE("Caption Entry No.", "Caption Entry No.");
+                Caption2.SETFILTER("Language Id", '<>' + FORMAT(BaseLanguage));
+                IF Caption2.FINDSET THEN
+                  REPEAT
+                    IF Caption2."Language Id" <> 0 THEN
+                      InsertRule(
+                        Type, '', BaseLanguage, Caption.TotalCaption, TRUE, Caption2."Language Id", Caption2.TotalCaption, Overwrite);
+                  UNTIL Caption2.NEXT = 0;
+              END;
+            END;
+
+          Type::Control, Type::MenuItem, Type::"Text Constante", Type::Label, Type::"Tool Tip" :
+            IF Caption.GetByCaptionEntryLanguage("Caption Entry No.", BaseLanguage) THEN BEGIN
+              Caption2.SETCURRENTKEY("Caption Entry No.", "Language Id");
+              Caption2.SETRANGE("Caption Entry No.", "Caption Entry No.");
+              Caption2.SETFILTER("Language Id", '<>' + FORMAT(BaseLanguage));
+              IF Caption2.FINDSET THEN
+                REPEAT
+                  InsertRule(
+                    Type, '', BaseLanguage, Caption.TotalCaption, FALSE, Caption2."Language Id", Caption2.TotalCaption, Overwrite);
+                UNTIL Caption2.NEXT = 0;
+            END;
+
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE InsertRule@15(TypePar@1000 : Option;FromName@1001 : Text;FromLanguageId@1002 : Integer;FromCaption@1003 : Text;SplitParts@1004 : Boolean;ToLanguageId@1005 : Integer;ToCaption@1006 : Text;Overwrite@1007 : Boolean);
+    VAR
+      Rule@1008 : Record 11102070;
+      Mgt@1009 : Codeunit 11102035;
+      SplitFromCaption@1010 : ARRAY [100] OF Text[1024];
+      SplitToCaption@1011 : ARRAY [100] OF Text[1024];
+      i@1012 : Integer;
+      NoOfFromCaptions@1013 : Integer;
+    BEGIN
+      WITH Rule DO BEGIN
+
+        SETCURRENTKEY(Type, Name, "Language Id", "Caption 1", "Translate Language Id");
+
+        SETRANGE(Type, TypePar);
+        SETRANGE(Name, COPYSTR(FromName, 1, MAXSTRLEN(Name)));
+        SETRANGE("Language Id", FromLanguageId);
+        SETRANGE("Caption 1", DELSTR(FromCaption, 201));
+        SETRANGE("Translate Language Id", ToLanguageId);
+
+        IF Overwrite THEN
+          DELETEALL;
+
+        IF SplitParts THEN BEGIN
+
+          NoOfFromCaptions := Mgt.Split(FromCaption, ',', SplitFromCaption);
+          Mgt.Split(ToCaption, ',', SplitToCaption);
+
+          FOR i := 1 TO NoOfFromCaptions DO BEGIN
+            SETRANGE("Caption 1", DELSTR(SplitFromCaption[i], 201));
+
+            IF Overwrite THEN
+              DELETEALL;
+
+            IF ISEMPTY THEN BEGIN
+
+              CLEAR("Entry No.");
+              Type := TypePar;
+              Name := FromName;
+              "Language Id" := FromLanguageId;
+              FillCaption(SplitFromCaption[i]);
+              "Translate Language Id" := ToLanguageId;
+              FillTranslatedCaption(SplitToCaption[i]);
+              IF "Translated Caption 1" <> '' THEN
+                INSERT;
+
+            END;
+
+          END;
+
+        END ELSE
+
+          IF ISEMPTY THEN BEGIN
+
+            Type := TypePar;
+            Name := FromName;
+            "Language Id" := FromLanguageId;
+            FillCaption(FromCaption);
+            "Translate Language Id" := ToLanguageId;
+            FillTranslatedCaption(ToCaption);
+            IF "Translated Caption 1" <> '' THEN
+              INSERT;
+
+          END;
+      END;
+    END;
+
+    PROCEDURE ExportNTF@16(FileName@1000 : Text);
+    VAR
+      Rule@1001 : Record 11102070;
+      Progressbar@1002 : Codeunit 11102044;
+      oFile@1003 : File;
+      Tab@1004 : Char;
+    BEGIN
+      oFile.TEXTMODE(TRUE);
+      oFile.CREATE(FileName);
+
+      Progressbar.Open('', 0);
+
+      Tab := 9;
+
+      WITH Rule DO BEGIN
+
+        Progressbar.BarSize := COUNT;
+
+        IF FINDSET THEN
+          REPEAT
+
+            Progressbar.AddToBar(1);
+
+            oFile.WRITE(
+              FORMAT(Type) + FORMAT(Tab) +
+              Name + FORMAT(Tab) +
+              FORMAT("Language Id") + FORMAT(Tab) +
+              TotalCaption + FORMAT(Tab) +
+              FORMAT("Translate Language Id") + FORMAT(Tab) +
+              TotalTranslatedCaption);
+
+          UNTIL NEXT = 0;
+
+      END;
+
+      Progressbar.Close;
+    END;
+
+    PROCEDURE ImportNTF@17(FileName@1000 : Text);
+    VAR
+      Rule@1001 : Record 11102070;
+      Rule2@1002 : Record 11102070;
+      Progressbar@1003 : Codeunit 11102044;
+      oFile@1004 : File;
+      FieldValue@1005 : ARRAY [10] OF Text[1024];
+      Char@1006 : Char;
+      FieldCounter@1007 : Integer;
+    BEGIN
+      oFile.OPEN(FileName);
+
+      Progressbar.Open('', 0);
+      Progressbar.BarSize := oFile.LEN;
+
+      FieldCounter := 1;
+      WITH Rule DO
+
+        WHILE oFile.READ(Char) > 0 DO BEGIN
+
+          Progressbar.BarPosition := oFile.POS;
+
+          CASE Char OF
+
+            9 :
+              FieldCounter += 1;
+
+            10 :
+              ;
+
+            13 :
+              BEGIN
+                CLEAR("Entry No.");
+                EVALUATE(Type, FieldValue[1]);
+                EVALUATE(Name, FieldValue[2]);
+                EVALUATE("Language Id", FieldValue[3]);
+                FillCaption(FieldValue[4]);
+                EVALUATE("Translate Language Id", FieldValue[5]);
+                FillTranslatedCaption(FieldValue[6]);
+
+                Rule2.SETCURRENTKEY(Type, Name, "Language Id", "Caption 1", "Translate Language Id");
+                Rule2.SETRANGE(Type, Type);
+                Rule2.SETRANGE(Name, Name);
+                Rule2.SETRANGE("Language Id", "Language Id");
+                Rule2.SETRANGE("Caption 1", "Caption 1");
+                Rule2.SETRANGE("Translate Language Id", "Translate Language Id");
+                IF Rule2.FINDFIRST THEN BEGIN
+                  Rule2.FillCaption(FieldValue[4]);
+                  Rule2.FillTranslatedCaption(FieldValue[6]);
+                  Rule2.MODIFY;
+                END ELSE
+                  INSERT;
+
+                FieldCounter := 1;
+                CLEAR(FieldValue);
+              END;
+
+            ELSE
+              FieldValue[FieldCounter] += FORMAT(Char);
+
+          END;
+
+        END;
+
+      Progressbar.Close;
+    END;
+
+    PROCEDURE CaptionAfterRulesApplied@18(VAR Line@1000 : Record 11102068) ExitCaption : Text;
+    BEGIN
+      ExitCaption := GetCaptionFromRules(Line, TRUE);
+      IF ExitCaption = '' THEN
+        ExitCaption := GetCaptionFromRules(Line, FALSE);
+    END;
+
+    LOCAL PROCEDURE GetCaptionFromRules@86(VAR Line@1000 : Record 11102068;SameType@1001 : Boolean) ExitCaption : Text;
+    VAR
+      Line2@1002 : Record 11102068;
+      Rule@1003 : Record 11102070;
+      Mgt@1004 : Codeunit 11102035;
+      RecRef@1005 : RecordRef;
+      BaseCaption@1006 : Text[1024];
+      FromCaption@1007 : Text;
+      SplitFromCaption@1008 : ARRAY [100] OF Text[1024];
+      SplitToCaption@1009 : ARRAY [100] OF Text[1024];
+      i@1010 : Integer;
+      NoOfFromCaptions@1011 : Integer;
+      PartFound@1012 : Boolean;
+    BEGIN
+      ParkView(Line, Line2, RecRef);
+
+      WITH Line2 DO BEGIN
+
+        IF SameType THEN BEGIN
+          Rule.SETCURRENTKEY(Type, Name, "Language Id", "Caption 1", "Translate Language Id");
+          Rule.SETRANGE(Type, Type);
+        END ELSE
+          Rule.SETCURRENTKEY(Name, "Language Id", "Caption 1", "Translate Language Id");
+
+        Rule.SETCURRENTKEY(Type, Name, "Language Id", "Caption 1", "Translate Language Id");
+        Rule.SETRANGE(Type, Type);
+        CASE Type OF
+
+          Type::Object, Type::Field :
+            BEGIN
+              Rule.SETRANGE(Name, COPYSTR(TotalName, 1, MAXSTRLEN(Rule.Name)));
+              Rule.SETRANGE("Language Id", 0);
+              Rule.SETRANGE("Translate Language Id", "Language Id");
+              IF Rule.FINDFIRST THEN BEGIN
+                GetParkedView(Line, RecRef);
+                EXIT(Rule."Translated Caption 1");
+              END;
+            END;
+
+          Type::"Tab Names", Type::Option :
+            BEGIN
+              Line.SETCURRENTKEY("Caption Entry No.");
+              Line.SETRANGE("Caption Entry No.", "Caption Entry No.");
+              Line.SETFILTER("Caption 1", '<>%1', '');
+              IF Line.FINDSET THEN
+                REPEAT
+
+                  FromCaption := Line.TotalCaption;
+
+                  Rule.SETRANGE(Name, '');
+                  IF Line."Language Id" = BaseLanguage THEN BEGIN
+                    Rule.SETFILTER("Language Id", '0|' + FORMAT(BaseLanguage));
+                    BaseCaption := FromCaption;
+                  END ELSE
+                    Rule.SETRANGE("Language Id", Line."Language Id");
+
+                  IF BaseCaption = '' THEN
+                    BaseCaption := FromCaption;
+
+                  Rule.SETRANGE("Caption 1", COPYSTR(FromCaption, 1, 200));
+                  Rule.SETRANGE("Caption 2", COPYSTR(FromCaption, 201, 50));
+                  Rule.SETRANGE("Caption 3", COPYSTR(FromCaption, 251, 250));
+                  Rule.SETRANGE("Caption 4", COPYSTR(FromCaption, 501, 250));
+                  Rule.SETRANGE("Caption 5", COPYSTR(FromCaption, 751, 250));
+
+                  Rule.SETRANGE("Translate Language Id", "Language Id");
+                  IF Rule.FINDLAST THEN BEGIN
+                    GetParkedView(Line, RecRef);
+                    EXIT(Rule.TotalTranslatedCaption);
+                  END;
+
+                  NoOfFromCaptions := Mgt.Split(FromCaption, ',', SplitFromCaption);
+                  FOR i := 1 TO NoOfFromCaptions DO
+                    IF SplitFromCaption[i] <> '' THEN BEGIN
+                      Rule.SETRANGE("Caption 1", COPYSTR(SplitFromCaption[i], 1, 200));
+                      Rule.SETRANGE("Caption 2", COPYSTR(SplitFromCaption[i], 201, 50));
+                      Rule.SETRANGE("Caption 3", COPYSTR(SplitFromCaption[i], 251, 250));
+                      Rule.SETRANGE("Caption 4", COPYSTR(SplitFromCaption[i], 501, 250));
+                      Rule.SETRANGE("Caption 5", COPYSTR(SplitFromCaption[i], 751, 250));
+                      IF Rule.FINDLAST THEN BEGIN
+                        SplitToCaption[i] := Rule.TotalTranslatedCaption;
+                        PartFound := TRUE;
+                      END;
+                    END;
+
+                UNTIL Line.NEXT = 0;
+
+              IF PartFound THEN BEGIN
+
+                IF NOT Line.GetByCaptionEntryLanguage("Caption Entry No.", "Language Id") THEN
+                  IF NOT Line.GetByCaptionEntryLanguage("Caption Entry No.", 0) THEN BEGIN
+                    Line.SETRANGE("Language Id");
+                    Line.FINDFIRST;
+                  END;
+
+                FromCaption := Line.TotalCaption;
+
+                NoOfFromCaptions := Mgt.Split(BaseCaption, ',', SplitFromCaption);
+
+                FOR i := 1 TO NoOfFromCaptions DO BEGIN
+
+                  IF SplitToCaption[i] = '' THEN
+                    SplitToCaption[i] := SplitFromCaption[i];
+
+                  IF i = 1 THEN
+                    ExitCaption := SplitToCaption[i]
+                  ELSE
+                    ExitCaption := ExitCaption + ',' + SplitToCaption[i];
+                END;
+              END;
+            END;
+
+          Type::Control, Type::MenuItem, Type::"Text Constante", Type::Label, Type::"Tool Tip" :
+            BEGIN
+              Line.SETCURRENTKEY("Caption Entry No.");
+              Line.SETRANGE("Caption Entry No.", "Caption Entry No.");
+              IF Line.FINDSET THEN
+                REPEAT
+                  Rule.SETRANGE(Name, '');
+                  IF Line."Language Id" = BaseLanguage THEN
+                    Rule.SETFILTER("Language Id", '0|' + FORMAT(BaseLanguage))
+                  ELSE
+                    Rule.SETRANGE("Language Id", Line."Language Id");
+
+                  FromCaption := Line.TotalCaption;
+
+                  Rule.SETRANGE("Caption 1", COPYSTR(FromCaption, 1, 200));
+                  Rule.SETRANGE("Caption 2", COPYSTR(FromCaption, 201, 50));
+                  Rule.SETRANGE("Caption 3", COPYSTR(FromCaption, 251, 250));
+                  Rule.SETRANGE("Caption 4", COPYSTR(FromCaption, 501, 250));
+                  Rule.SETRANGE("Caption 5", COPYSTR(FromCaption, 751, 250));
+                  Rule.SETRANGE("Translate Language Id", "Language Id");
+                  IF Rule.FINDFIRST THEN BEGIN
+                    GetParkedView(Line, RecRef);
+                    EXIT(Rule.TotalTranslatedCaption);
+                  END;
+                UNTIL Line.NEXT = 0;
+            END;
+
+        END;
+
+      END;
+
+      GetParkedView(Line, RecRef);
+    END;
+
+    LOCAL PROCEDURE CharacterInText@19(TextWithCharacter@1000 : Text) : Boolean;
+    VAR
+      i@1001 : Integer;
+    BEGIN
+      FOR i := 1 TO STRLEN(TextWithCharacter) DO
+        IF ((TextWithCharacter[i] >= 'a') AND (TextWithCharacter[i] <= 'z')) OR
+           ((TextWithCharacter[i] >= 'A') AND (TextWithCharacter[i] <= 'Z'))
+        THEN
+          EXIT(TRUE);
+    END;
+
+    PROCEDURE ExportCSV@20(ServerFileName@1000 : Text;LanguageId@1001 : Integer);
+    VAR
+      Line@1002 : Record 11102068;
+      Progressbar@1003 : Codeunit 11102044;
+      Data@1004 : Codeunit 11102116;
+      LanguageCode@1005 : Text;
+      ctExportingCSV@1006 : TextConst 'DEU=Exporting CSV...;ENU=Exporting CSV...;ESP=Exporting CSV...;FRA=Exporting CSV...;NLD=CSV exporteren...;DEA=Exporting CSV...';
+    BEGIN
+      Data.SetResponseType('CSV');
+      Data.Open;
+
+      Progressbar.Open(ctExportingCSV, 0);
+
+      LanguageCode := LanguageCodeOfId(LanguageId);
+      WITH Line DO BEGIN
+
+        SETCURRENTKEY("Language Id");
+        SETRANGE("Language Id", LanguageId);
+        SETRANGE(Captions, TRUE);
+
+        Progressbar.BarSize := COUNT;
+
+        IF FINDSET THEN
+          REPEAT
+
+            Progressbar.AddToBar(1);
+
+            CALCFIELDS("Object Name");
+
+            Data.OpenRecord;
+            Data.WriteField(CSVHeader(1), "Translate File Line");
+            Data.WriteField(CSVHeader(2), LanguageCode);
+            Data.WriteField(CSVHeader(3), FORMAT("Object Type"));
+            Data.WriteField(CSVHeader(4), FORMAT("Object No."));
+            Data.WriteField(CSVHeader(5), "Object Name");
+            Data.WriteField(CSVHeader(6), FORMAT(Type));
+
+            IF Id = 0 THEN
+              Data.WriteField(CSVHeader(7), '')
+            ELSE
+              Data.WriteField(CSVHeader(7), FORMAT(Id));
+
+            Data.WriteField(CSVHeader(8), TotalName);
+            Data.WriteField(CSVHeader(9), TotalCalculatedCaption);
+            Data.WriteField(CSVHeader(10), TotalCaption);
+
+            Data.CloseRecord;
+          UNTIL NEXT = 0;
+      END;
+
+      Progressbar.Close;
+
+      Data.SaveToFile(ServerFileName);
+    END;
+
+    PROCEDURE ImportCSV@21(ServerFileName@1000 : Text);
+    VAR
+      Line@1001 : Record 11102068;
+      Progressbar@1002 : Codeunit 11102044;
+      oFile@1003 : File;
+      FieldValue@1004 : ARRAY [10] OF Text[1024];
+      i@1005 : Integer;
+      LanguageId@1006 : Integer;
+      ctImportingCSV@1007 : TextConst 'DEU=Importing CSV...;ENU=Importing CSV...;ESP=Importing CSV...;FRA=Importing CSV...;NLD=CSV importeren...;DEA=Importing CSV...';
+      ctWrongHeaders@1008 : TextConst 'DEU=Headers not compatible.;ENU=Headers not compatible.;ESP=Headers not compatible.;FRA=Headers not compatible.;NLD=De koppen van dit csv wijken af.;DEA=Headers not compatible.';
+    BEGIN
+      WITH Line DO BEGIN
+
+        Progressbar.Open(ctImportingCSV, 0);
+
+        oFile.OPEN(ServerFileName);
+
+        Progressbar.BarSize := oFile.LEN;
+
+        FOR i := 1 TO 10 DO BEGIN
+          GetNextCSVValue(oFile, FieldValue[i]);
+          IF FieldValue[i] <> CSVHeader(i) THEN
+            ERROR(ctWrongHeaders);
+        END;
+
+        WHILE GotoNextLine(oFile) DO BEGIN
+          FOR i := 1 TO 10 DO
+            GetNextCSVValue(oFile, FieldValue[i]);
+
+          Progressbar.BarPosition := oFile.POS;
+
+          LanguageId := LanguageIdOfInput(FieldValue[2]);
+          SETCURRENTKEY("Translate File Line", "Language Id");
+          SETRANGE("Translate File Line", FieldValue[1]);
+          SETRANGE("Language Id", LanguageId);
+
+          IF FINDFIRST THEN BEGIN
+
+            IF TotalCaption <> FieldValue[10] THEN
+              ValidateCaption(FieldValue[10]);
+
+            IF TotalName <> FieldValue[8] THEN BEGIN
+              ValidateName(FieldValue[8]);
+              MODIFY;
+            END;
+
+          END;
+        END;
+
+        Progressbar.Close;
+
+      END;
+    END;
+
+    LOCAL PROCEDURE CSVHeader@22(ColumnNo@1000 : Integer) : Text[1024];
+    VAR
+      Line@1001 : Record 11102068;
+    BEGIN
+      WITH Line DO
+        CASE ColumnNo OF
+          1 : EXIT(FIELDNAME("Translate File Line"));
+          2 : EXIT(FIELDNAME("Language Id"));
+          3 : EXIT(FIELDNAME("Object Type"));
+          4 : EXIT(FIELDNAME("Object No."));
+          5 : EXIT(FIELDNAME("Object Name"));
+          6 : EXIT(FIELDNAME(Type));
+          7 : EXIT(FIELDNAME(Id));
+          8 : EXIT(FIELDNAME(Name));
+          9 : EXIT('Calculated Caption');
+          10 : EXIT('Caption');
+        END;
+    END;
+
+    PROCEDURE ShowExistingTranslations@23(VAR Line@1000 : Record 11102068);
+    VAR
+      Caption2@1001 : Record 11102068;
+      Caption3@1002 : Record 11102068;
+      Line2@1003 : Record 11102068;
+      TmpCaption@1004 : TEMPORARY Record 11102068;
+      TmpCaption2@1005 : TEMPORARY Record 11102068;
+    BEGIN
+      WITH Line DO
+
+        IF Type IN [Type::Object, Type::Field] THEN BEGIN
+          Line2.SETCURRENTKEY("Language Id", Type, Name);
+          Line2.SETFILTER("Language Id", '0|%1', "Language Id");
+          Line2.SETRANGE(Name, Name);
+          Line2.SETRANGE(Type, Type);
+          IF Line2.FINDSET THEN
+            REPEAT
+              TmpCaption := Line2;
+              TmpCaption.INSERT;
+            UNTIL Line2.NEXT = 0;
+
+        END ELSE BEGIN
+
+          Caption2.SETRANGE("Caption Entry No.", "Caption Entry No.");
+          Caption2.SETFILTER("Language Id", '<>%1', "Language Id");
+          IF Caption2.FINDSET THEN
+            REPEAT
+              Caption3.SETRANGE("Language Id", Caption2."Language Id");
+              Caption3.SETRANGE("Caption 1", Caption2."Caption 1");
+              Caption3.SETRANGE("Caption 2", Caption2."Caption 2");
+              Caption3.SETRANGE("Caption 3", Caption2."Caption 3");
+              Caption3.SETRANGE("Caption 4", Caption2."Caption 4");
+              IF Caption3.FINDSET THEN
+                REPEAT
+                  IF NOT TmpCaption.GET(Caption3."Entry No.") THEN BEGIN
+                    TmpCaption := Caption3;
+                    TmpCaption.INSERT;
+                  END;
+                UNTIL Caption3.NEXT = 0;
+
+            UNTIL Caption2.NEXT = 0;
+
+        END;
+
+      TmpCaption.SETFILTER("Caption 1", '<>%1', '');
+      IF TmpCaption.FINDSET THEN
+        REPEAT
+          TmpCaption2.SETRANGE("Language Id", TmpCaption."Language Id");
+          TmpCaption2.SETRANGE("Caption 1", TmpCaption."Caption 1");
+          TmpCaption2.SETRANGE("Caption 2", TmpCaption."Caption 2");
+          TmpCaption2.SETRANGE("Caption 3", TmpCaption."Caption 3");
+          TmpCaption2.SETRANGE("Caption 4", TmpCaption."Caption 4");
+          IF TmpCaption2.ISEMPTY THEN BEGIN
+            TmpCaption2 := TmpCaption;
+            TmpCaption2."No. of Times" := 1;
+            TmpCaption2.INSERT;
+          END ELSE BEGIN
+            TmpCaption2.FINDFIRST;
+            TmpCaption2."No. of Times" += 1;
+            TmpCaption2.MODIFY;
+          END;
+          TmpCaption2.RESET;
+        UNTIL TmpCaption.NEXT = 0;
+
+      TmpCaption2.FILTERGROUP(10);
+      TmpCaption2.SETFILTER("No. of Times", '>0');
+      TmpCaption2.FILTERGROUP(0);
+
+      PAGE.RUN(PAGE::"OM - Translation Tool Captions", TmpCaption2);
+    END;
+
+    PROCEDURE BaseLanguage@24() : Integer;
+    VAR
+      Language@1000 : Record 8;
+      Setting@1001 : Codeunit 11102114;
+    BEGIN
+      IF BaseLanguage2 = 0 THEN
+        IF Language.GET(Setting.BaseLanguage) THEN
+          BaseLanguage2 := Language."Windows Language ID"
+        ELSE
+          BaseLanguage2 := 1033;
+
+      EXIT(BaseLanguage2);
+    END;
+
+    PROCEDURE ImportObject@25(VAR Object@1000 : Record 2000000001;VAR Buffer@1001 : TEMPORARY Record 11102068);
+    VAR
+      TmpCALHistoryLine@1002 : TEMPORARY Record 11102053;
+      SourceControl@1003 : Codeunit 11102050;
+    BEGIN
+      SetCaptionEntryNo;
+      SourceControl.AddObject(Object, 0, FALSE, FALSE, 3, FALSE);
+      SourceControl.FillCALLineBufferWithLatest(TmpCALHistoryLine, Object.Type, Object.ID);
+      ImportCALLines(Object, TmpCALHistoryLine, Buffer, FALSE);
+    END;
+
+    PROCEDURE ImportCALLines@26(VAR Object@1000 : Record 2000000001;VAR TmpCALHistoryLine@1001 : TEMPORARY Record 11102053;VAR Buffer@1002 : TEMPORARY Record 11102068;GetAllAnchors@1003 : Boolean);
+    VAR
+      CodeLine@1004 : Text;
+      CurrentId@1005 : Text;
+      FieldName2@1006 : Text;
+      FoundIdentifier@1007 : Text;
+      LabelName@1008 : Text;
+      ObjectId@1009 : Text;
+      OptionString@1010 : Text;
+      SectionId@1011 : ARRAY [50] OF Text[1024];
+      SectionNo@1012 : ARRAY [50] OF Text[1024];
+      TrimmedLine@1013 : Text;
+      LastOptionCaptionLineNo@1014 : Integer;
+      Level@1015 : Integer;
+      SectionCounter@1016 : ARRAY [50] OF Boolean;
+    BEGIN
+      CASE Object.Type OF
+        Object.Type::Table : ObjectId := 'T';
+        Object.Type::"2" : ObjectId := 'F';
+        Object.Type::Report : ObjectId := 'R';
+        Object.Type::"4" : ObjectId := 'D';
+        Object.Type::XMLport : ObjectId := 'X';
+        Object.Type::Codeunit : ObjectId := 'C';
+        Object.Type::MenuSuite : ObjectId := 'M';
+        Object.Type::Page : ObjectId := 'N';
+        Object.Type::Query : ObjectId := 'Q';
+      END;
+
+      Level := 1;
+      SectionId[1] := ObjectId;
+      SectionNo[1] := FORMAT(Object.ID);
+
+      IF TmpCALHistoryLine.FINDSET THEN
+        REPEAT
+
+          CodeLine := CompleteLine(TmpCALHistoryLine);
+          TrimmedLine := DELCHR(CodeLine, '<>');
+
+          IF CodeLine = '  PROPERTIES' THEN
+            SaveName(Buffer, ObjectId + FORMAT(Object.ID), 2818, 30, Object.Name, TmpCALHistoryLine."Line No." + 1);
+
+          FoundIdentifier := GetSectionId(Object, TrimmedLine);
+          IF FoundIdentifier <> '' THEN BEGIN
+            SectionId[Level] := FoundIdentifier;
+            SectionNo[Level] := '';
+            SectionCounter[Level] := FoundIdentifier IN ['D', 'S'];
+          END;
+
+          CASE TrimmedLine OF
+            'CODE' :
+              BEGIN
+                SectionId[Level] := '';
+                CurrentId := CreateId(SectionId, SectionNo, Level);
+                ParseCodeSection(Buffer, TmpCALHistoryLine, CodeLine, CurrentId);
+              END;
+
+            'KEYS' :
+              BEGIN
+                SkipSection(TmpCALHistoryLine);
+                TrimmedLine := '}';
+              END;
+
+            'RDLDATA' :
+              EXIT;
+
+          END;
+
+          IF TrimmedLine <> '' THEN
+            IF TrimmedLine[1] = '{' THEN BEGIN
+
+              Level += 1;
+              SectionId[Level] := '';
+              SectionNo[Level] := '';
+              SectionCounter[Level] := FALSE;
+
+              IF Level > 2 THEN
+                FillSectionNo(CodeLine, SectionNo[Level - 2], STRPOS(CodeLine, '{'), SectionCounter[Level - 2], SectionId[2]);
+
+              ReplaceSectionIdIfNew(Object, CodeLine, SectionId[Level]);
+
+              CurrentId := CreateId(SectionId, SectionNo, Level);
+
+              IF GetAllAnchors THEN
+                SaveName(Buffer, CurrentId, 0, 128, '', TmpCALHistoryLine."Line No.");
+
+              IF (Level = 4) AND (SectionId[2] = 'F') THEN BEGIN
+                FieldName2 := GetFieldName(CodeLine);
+                IF FieldName2 <> '' THEN
+                  SaveName(Buffer, CurrentId, 2818, 128, FieldName2, TmpCALHistoryLine."Line No.");
+              END;
+
+              IF (Level = 4) AND (SectionId[2] = 'T') THEN BEGIN
+                LabelName := GetLabelName(CodeLine);
+                IF LabelName <> '' THEN
+                  SaveName(Buffer, CurrentId, 57601, 256, LabelName, TmpCALHistoryLine."Line No.");
+              END;
+
+            END;
+
+          IF STRPOS(CodeLine, 'ML') > 0 THEN
+            IF ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'OptionCaptionML', 8632) THEN
+              LastOptionCaptionLineNo := TmpCALHistoryLine."Line No."
+            ELSE
+              IF NOT ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'CaptionML', 8629) THEN BEGIN
+                ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'PageNamesML', 8630);
+                ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'ReqFilterHeadingML', 18490);
+                ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'ToolTipML', 8631);
+                ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'InstructionalTextML', 55119);
+                ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'PromotedActionCategoriesML', 55132);
+                IF FALSE THEN BEGIN
+                  ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'ConstValueML', 9999);
+                  ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'PropBaseML', 9999);
+                  ParseCaption(Buffer, TmpCALHistoryLine, CodeLine, CurrentId, 'PromotedActionCategoriesML', 9999);
+                END;
+              END;
+
+          IF STRPOS(CodeLine, 'OptionString=') > 0 THEN BEGIN
+            OptionString := COPYSTR(CodeLine, STRPOS(CodeLine, 'OptionString=') + 13);
+            OptionString := DELCHR(OptionString, '<>', '[];} ');
+            IF TmpCALHistoryLine."Line No." - 1 = LastOptionCaptionLineNo THEN
+              SaveName(Buffer, CurrentId, 10340, 999, OptionString, TmpCALHistoryLine."Line No." - 1)
+            ELSE
+              SaveName(Buffer, CurrentId, 10340, 999, OptionString, TmpCALHistoryLine."Line No.");
+          END;
+
+          IF STRLEN(CodeLine) > 5 THEN
+            IF (COPYSTR(CodeLine, STRLEN(CodeLine) - 5) = '=BEGIN') OR
+               (COPYSTR(CodeLine, STRLEN(CodeLine) - 3) = '=VAR')
+            THEN
+              ParseTrigger(Buffer, Object.Type, SectionId[2], TmpCALHistoryLine, CodeLine, CurrentId);
+
+          IF CodeLine <> '' THEN
+            IF CodeLine[STRLEN(CodeLine)] = '}' THEN BEGIN
+              Level -= 1;
+              CurrentId := CreateId(SectionId, SectionNo, Level);
+            END;
+
+        UNTIL TmpCALHistoryLine.NEXT = 0;
+    END;
+
+    PROCEDURE WriteBufferToLines@27(VAR Buffer@1000 : TEMPORARY Record 11102068);
+    VAR
+      Line@1001 : Record 11102068;
+      Line2@1002 : Record 11102068;
+    BEGIN
+      WITH Line DO
+        IF Buffer.FINDSET THEN
+          REPEAT
+            INIT;
+            "Entry No." := 0;
+            ValidateTranslationFileLine(Buffer."Translate File Line" + Buffer.TotalCaption, Line2);
+            "C/AL Line No." := Buffer."C/AL Line No.";
+            UpdateCalculatedCaption;
+            IF "Entry No." = 0 THEN BEGIN
+
+              IF Captions AND ("Caption Entry No." = 0) THEN BEGIN
+                CaptionEntryNo += 1;
+                "Caption Entry No." := CaptionEntryNo;
+              END;
+
+              INSERT(TRUE);
+            END ELSE
+              MODIFY;
+
+          UNTIL Buffer.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE FillSectionNo@28(VAR CodeLine@1000 : Text;VAR SectionNo@1001 : Text;BracketPos@1002 : Integer;SectionCounter@1003 : Boolean;SectionId2@1004 : Text);
+    VAR
+      FindId@1005 : Text;
+    BEGIN
+      FindId := COPYSTR(CodeLine, BracketPos + 2);
+
+      IF FindId <> '' THEN BEGIN
+
+        IF SectionId2 = 'I' THEN
+          IF STRPOS(FindId, ';') > 0 THEN
+            FindId := COPYSTR(FindId, STRPOS(FindId, ';') + 1);
+
+        IF STRPOS(FindId, ';') > 0 THEN
+          FindId := DELSTR(FindId, STRPOS(FindId, ';'));
+        IF COPYSTR(FindId, 1, 3) = 'ID=' THEN
+          FindId := COPYSTR(FindId, 4);
+        IF STRPOS(FindId, '@') > 0 THEN
+          FindId := COPYSTR(FindId, STRPOS(FindId, '@') + 1);
+        FindId := DELCHR(FindId, '<>', '{} ;');
+        IF IsNumeric(FindId) THEN
+          SectionNo := FindId
+        ELSE
+          IF IsGuid(FindId) THEN
+            SectionNo := DELCHR(FindId, '=', '[]{}-');
+      END;
+
+      IF SectionCounter THEN
+        IF SectionNo = '' THEN
+          SectionNo := '0'
+        ELSE
+          SectionNo := INCSTR(SectionNo);
+    END;
+
+    LOCAL PROCEDURE GetFieldName@29(VAR CodeLine@1000 : Text) ExitValue : Text;
+    VAR
+      Mgt@1001 : Codeunit 11102035;
+      DummyText@1002 : Text;
+      Position@1003 : Integer;
+    BEGIN
+      Position := 7;
+      Mgt.NextValue(CodeLine, Position, ';', '[', ']', DummyText);
+      Mgt.NextValue(CodeLine, Position, ';', '[', ']', DummyText);
+      Mgt.NextValue(CodeLine, Position, ';', '[', ']', ExitValue);
+    END;
+
+    LOCAL PROCEDURE GetLabelName@88(VAR CodeLine@1000 : Text) ExitValue : Text;
+    VAR
+      Mgt@1001 : Codeunit 11102035;
+      DummyText@1002 : Text;
+      Position@1003 : Integer;
+    BEGIN
+      Position := 7;
+      Mgt.NextValue(CodeLine, Position, ';', '[', ']', DummyText);
+      Mgt.NextValue(CodeLine, Position, ';', '[', ']', ExitValue);
+    END;
+
+    LOCAL PROCEDURE ReplaceSectionIdIfNew@31(VAR Object@1000 : Record 2000000001;CodeLine@1001 : Text;VAR SectionId@1002 : Text);
+    VAR
+      FoundIdentifier@1003 : Text;
+    BEGIN
+      IF STRPOS(CodeLine, ';') > 0 THEN BEGIN
+        WHILE STRPOS(CodeLine, ';') > 0 DO
+          CodeLine := COPYSTR(CodeLine, STRPOS(CodeLine, ';') + 1);
+        FoundIdentifier := GetSectionId(Object, DELCHR(CodeLine, '<>'));
+        IF FoundIdentifier <> '' THEN
+          SectionId := FoundIdentifier;
+      END;
+    END;
+
+    LOCAL PROCEDURE CompleteLine@32(VAR CALHistoryLine@1000 : Record 11102053) ExitValue : Text;
+    VAR
+      Trimmed@1001 : Boolean;
+    BEGIN
+      IF CALHistoryLine."Sub Line No." <> 1 THEN BEGIN
+        CALHistoryLine."Sub Line No." := 1;
+        CALHistoryLine.FIND('=');
+      END;
+
+      ExitValue := CALHistoryLine.Code;
+
+      CALHistoryLine.SETRANGE("Line No.", CALHistoryLine."Line No.");
+      CALHistoryLine.SETFILTER("Sub Line No.", '>1');
+      IF NOT CALHistoryLine.ISEMPTY THEN BEGIN
+        CALHistoryLine.FINDSET;
+        REPEAT
+          IF STRLEN(ExitValue + CALHistoryLine.Code) > 1024 THEN
+            Trimmed := TRUE
+          ELSE
+            ExitValue += CALHistoryLine.Code;
+        UNTIL (CALHistoryLine.NEXT = 0) OR Trimmed;
+        IF Trimmed THEN BEGIN
+          CALHistoryLine.FINDLAST;
+          CASE CALHistoryLine.Code[STRLEN(CALHistoryLine.Code)] OF
+            '}' : ExitValue := COPYSTR(ExitValue, 1, 1022) + ' }';
+            ';' : ExitValue := COPYSTR(ExitValue, 1, 1022) + ' ;';
+          END;
+        END;
+      END;
+
+      CALHistoryLine.SETRANGE("Line No.");
+      CALHistoryLine.SETRANGE("Sub Line No.", 1);
+    END;
+
+    PROCEDURE ParseCaption@33(VAR Buffer@1000 : TEMPORARY Record 11102068;VAR CALHistoryLine@1001 : Record 11102053;VAR CodeLine@1002 : Text;CurrentId@1003 : Text;CaptionProperty@1004 : Text;PropertyId@1005 : Integer) : Boolean;
+    VAR
+      Caption@1006 : Text;
+      LanguageCode@1007 : Code[10];
+      CALLineNo@1008 : Integer;
+      CaptionPos@1009 : Integer;
+      StopLoop@1010 : Boolean;
+      WithBrackets@1011 : Boolean;
+    BEGIN
+      CaptionPos := STRPOS(CodeLine, CaptionProperty + '=');
+      IF CaptionPos = 0 THEN
+        EXIT;
+
+      CaptionPos := CaptionPos + STRLEN(CaptionProperty) + 1;
+      IF CodeLine[CaptionPos] = '[' THEN BEGIN
+        CaptionPos += 1;
+        WithBrackets := TRUE;
+      END;
+
+      CALLineNo := CALHistoryLine."Line No.";
+
+      REPEAT
+        CodeLine := CompleteLine(CALHistoryLine);
+        LanguageCode := COPYSTR(CodeLine, CaptionPos, 3);
+        Caption := COPYSTR(CodeLine, CaptionPos + 4);
+        Caption := DELCHR(Caption, '>', ';] }');
+        IF Caption[1] = '"' THEN
+          Caption := RemoveDoubleChar(DELCHR(Caption, '<>', '"'), '"');
+
+        SaveCaption(Buffer, LanguageCode, Caption, CurrentId, PropertyId, CALLineNo);
+
+        StopLoop := EndOfCaptionBlock(CodeLine, CaptionPos, WithBrackets);
+        IF NOT StopLoop THEN
+          StopLoop := CALHistoryLine.NEXT = 0;
+
+      UNTIL StopLoop;
+
+      CodeLine := CompleteLine(CALHistoryLine);
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE EndOfCaptionBlock@84(VAR CodeLine@1000 : Text[1024];CaptionPos@1001 : Integer;WithBrackets@1002 : Boolean) ExitValue : Boolean;
+    BEGIN
+      IF CodeLine <> '' THEN
+        IF WithBrackets THEN BEGIN
+          ExitValue := CodeLine[STRLEN(CodeLine)] = '}';
+          IF COPYSTR(CodeLine, STRLEN(CodeLine) - 1) = '];' THEN BEGIN
+            ExitValue := TRUE;
+            IF COPYSTR(CodeLine, STRLEN(CodeLine) - 2) = ']];' THEN
+              IF NoOfChars(COPYSTR(CodeLine, CaptionPos), ']') MOD 2 = 0 THEN
+                ExitValue := FALSE;
+          END;
+        END ELSE
+          ExitValue :=
+            (CodeLine[STRLEN(CodeLine)] = ';') OR
+            (CodeLine[STRLEN(CodeLine)] = '}');
+    END;
+
+    LOCAL PROCEDURE NoOfChars@83(CodeLine@1000 : Text[1024];Char@1001 : Char) ExitValue : Integer;
+    VAR
+      i@1002 : Integer;
+    BEGIN
+      FOR i := 1 TO STRLEN(CodeLine) DO
+        IF CodeLine[i] = Char THEN
+          ExitValue += 1;
+    END;
+
+    LOCAL PROCEDURE IsNumeric@34(Text@1000 : Text) : Boolean;
+    VAR
+      NumericValue@1001 : Integer;
+    BEGIN
+      EXIT(EVALUATE(NumericValue, Text));
+    END;
+
+    LOCAL PROCEDURE IsGuid@35(Text@1000 : Text) : Boolean;
+    VAR
+      Guid@1001 : GUID;
+    BEGIN
+      EXIT(EVALUATE(Guid, DELCHR(Text, '<>', '[]')));
+    END;
+
+    LOCAL PROCEDURE GetSectionId@36(VAR Object@1000 : Record 2000000001;Full@1001 : Text) : Text;
+    BEGIN
+      CASE Full OF
+        'ActionList=ACTIONS' : EXIT('P55242-G');
+        'CONTROLS' : EXIT('C');
+        'DATAITEMS' : EXIT('D');
+        'ELEMENTS' : EXIT('EL');
+        'EVENTS' : EXIT('EV');
+        'FIELDS' :
+          IF Object.Type = Object.Type::"4" THEN
+            EXIT('S')
+          ELSE
+            EXIT('F');
+        'FIELDGROUPS' : EXIT('FG');
+        'LABELS' : EXIT('T');
+        'Menu=MENUITEMS' : EXIT('P8672-M');
+        'MENUNODES' : EXIT('I');
+        'REQUESTFORM' : EXIT('F1');
+        'REQUESTPAGE' : EXIT('N2');
+        'SECTIONS' : EXIT('S');
+        'DATASET' : EXIT('C');
+      END;
+    END;
+
+    LOCAL PROCEDURE CreateId@37(VAR SectionId@1000 : ARRAY [50] OF Text[1024];VAR SectionNo@1001 : ARRAY [50] OF Text[1024];Level@1002 : Integer) ExitValue : Text;
+    VAR
+      i@1003 : Integer;
+    BEGIN
+      ExitValue := SectionId[1] + SectionNo[1];
+
+      FOR i := 2 TO Level DO
+        IF SectionId[i] <> '' THEN
+          ExitValue += '-' + SectionId[i] + SectionNo[i];
+    END;
+
+    LOCAL PROCEDURE ParseTrigger@38(VAR Buffer@1000 : TEMPORARY Record 11102068;ObjectType2@1001 : ',Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query';SectionId@1002 : Text;VAR CALHistoryLine@1003 : Record 11102053;VAR CodeLine@1004 : Text;CurrentId@1005 : Text);
+    VAR
+      BeginCode@1006 : Text;
+      EndCode@1007 : Text;
+      ExtraId@1008 : Text;
+      FunctionName@1009 : Text;
+      SectionName@1010 : Text;
+      StartPos@1011 : Integer;
+      StopLoop@1012 : Boolean;
+      VarSectionOpen@1013 : Boolean;
+    BEGIN
+      IF COPYSTR(CodeLine, STRLEN(CodeLine) - 3) = '=VAR' THEN BEGIN
+        StartPos := STRLEN(CodeLine) - 3;
+        VarSectionOpen := TRUE;
+      END ELSE
+        StartPos := STRLEN(CodeLine) - 5;
+
+      EndCode := PADSTR('', StartPos) + 'END;';
+      BeginCode := PADSTR('', StartPos) + 'BEGIN';
+
+      FunctionName := COPYSTR(CodeLine, 1, StartPos - 1);
+      WHILE STRPOS(FunctionName, ';') > 0 DO
+        FunctionName := COPYSTR(FunctionName, STRPOS(FunctionName, ';') + 1);
+      FunctionName := DELCHR(FunctionName);
+
+      ExtraId := ExtraPropertyId(ObjectType2, SectionId, FunctionName);
+
+      REPEAT
+
+        StopLoop := CALHistoryLine.NEXT = 0;
+        CodeLine := CompleteLine(CALHistoryLine);
+
+        IF CodeLine = BeginCode THEN BEGIN
+          SectionName := '';
+          VarSectionOpen := FALSE;
+        END;
+
+        IF VarSectionOpen THEN
+          ParseTextConstants(Buffer, CALHistoryLine, CodeLine, CurrentId + ExtraId + '-Q');
+
+      UNTIL (CodeLine = EndCode) OR StopLoop;
+    END;
+
+    LOCAL PROCEDURE ParseCodeSection@39(VAR Buffer@1000 : TEMPORARY Record 11102068;VAR CALHistoryLine@1001 : Record 11102053;VAR CodeLine@1002 : Text;CurrentId@1003 : Text);
+    VAR
+      CurrentId2@1004 : Text;
+      FunctionId@1005 : Text;
+      StopLoop@1006 : Boolean;
+      VarSectionOpen@1007 : Boolean;
+    BEGIN
+      CurrentId2 := CurrentId;
+
+      REPEAT
+        CASE TRUE OF
+
+          CodeLine = '    VAR' :
+            VarSectionOpen := TRUE;
+
+          (COPYSTR(CodeLine, 5, 9) = 'PROCEDURE') OR
+          (COPYSTR(CodeLine, 5, 15) = 'LOCAL PROCEDURE') OR
+          (COPYSTR(CodeLine, 5, 5) = 'EVENT') :
+            BEGIN
+              FunctionId := CodeLine;
+
+              IF STRPOS(FunctionId, '@') > 0 THEN
+                FunctionId := COPYSTR(FunctionId, STRPOS(FunctionId, '@') + 1);
+
+              IF STRPOS(FunctionId, '(') > 0 THEN
+                FunctionId := DELSTR(FunctionId, STRPOS(FunctionId, '('));
+
+              CurrentId2 := CurrentId + '-U' + FunctionId;
+
+            END;
+
+          CodeLine = '    BEGIN' :
+            VarSectionOpen := FALSE;
+
+          CodeLine = '    END;' :
+            BEGIN
+              CALHistoryLine.NEXT;
+              CodeLine := CompleteLine(CALHistoryLine);
+            END;
+
+        END;
+
+        IF VarSectionOpen THEN
+          ParseTextConstants(Buffer, CALHistoryLine, CodeLine, CurrentId2 + '-Q');
+
+        StopLoop := CALHistoryLine.NEXT = 0;
+        CodeLine := CompleteLine(CALHistoryLine);
+
+      UNTIL StopLoop OR (CodeLine = '  }');
+    END;
+
+    LOCAL PROCEDURE RemoveDoubleChar@40(Value@1000 : Text;Char@1001 : Char) ExitValue : Text;
+    VAR
+      i@1002 : Integer;
+    BEGIN
+      FOR i := 1 TO STRLEN(Value) DO
+        IF (Value[i] <> Char) OR (Value[i + 1] <> Char) THEN
+          ExitValue += FORMAT(Value[i]);
+    END;
+
+    PROCEDURE ParseTextConstants@41(VAR Buffer@1000 : TEMPORARY Record 11102068;VAR CALHistoryLine@1001 : Record 11102053;VAR CodeLine@1002 : Text;CurrentId@1003 : Text);
+    VAR
+      TmpCALHistoryLine@1004 : TEMPORARY Record 11102053;
+      CodeLine2@1005 : Text;
+      CodeLine3@1006 : Text;
+      IdString@1007 : Text;
+      Name@1008 : Text;
+      NameId@1009 : Text;
+      CALLineNo@1010 : Integer;
+      CaptionPos@1011 : Integer;
+      Id@1012 : Integer;
+      Position@1013 : Integer;
+      SplitPos@1014 : Integer;
+      FirstLine@1015 : Boolean;
+    BEGIN
+      CaptionPos := STRPOS(CodeLine, ' : TextConst');
+      IF CaptionPos = 0 THEN
+        EXIT;
+
+      SplitPos := STRPOS(CodeLine, ' : ');
+      IF SplitPos = 0 THEN
+        EXIT;
+
+      NameId := COPYSTR(CodeLine, 1, SplitPos - 1);
+      SplitPos := STRPOS(NameId, '@');
+      IF SplitPos = 0 THEN
+        EXIT;
+
+      Name := DELCHR(COPYSTR(NameId, 1, SplitPos - 1), '<>');
+      IdString := COPYSTR(NameId, SplitPos + 1);
+      IF NOT EVALUATE(Id, IdString) THEN
+        EXIT;
+      CurrentId := CurrentId + IdString;
+
+      SaveName(Buffer, CurrentId, 2818, 128, Name, CALHistoryLine."Line No.");
+      CALLineNo := CALHistoryLine."Line No.";
+
+      GetAllTextConstantLines(CALHistoryLine, TmpCALHistoryLine);
+
+      FirstLine := TRUE;
+
+      IF TmpCALHistoryLine.FINDSET THEN
+        REPEAT
+          CodeLine2 += TmpCALHistoryLine.Code;
+
+          IF FirstLine THEN BEGIN
+            CodeLine2 := COPYSTR(CodeLine2, CaptionPos + 13);
+            FirstLine := FALSE;
+            Position := 1;
+          END;
+
+        UNTIL TmpCALHistoryLine.NEXT = 0;
+
+      WHILE ReadText(CodeLine2, Position, '''', CodeLine3) DO
+        ParseTextConstant(Buffer, CodeLine3, CurrentId, CALHistoryLine."Line No.");
+    END;
+
+    LOCAL PROCEDURE ParseTextConstant@42(VAR Buffer@1000 : TEMPORARY Record 11102068;VAR TextConstantLine@1001 : Text;CurrentId@1002 : Text;LineNo@1003 : Integer);
+    VAR
+      Caption@1004 : Text;
+      LanguageCode@1005 : Text;
+      Pos@1006 : Integer;
+      Position@1007 : Integer;
+      StopLoop@1008 : Boolean;
+    BEGIN
+      REPEAT
+
+        LanguageCode := COPYSTR(TextConstantLine, 1, 3);
+        TextConstantLine := COPYSTR(TextConstantLine, 5);
+        IF TextConstantLine[1] = '"' THEN BEGIN
+          Position := 1;
+          IF NOT ReadText(TextConstantLine, Position, '"', Caption) THEN
+            StopLoop := TRUE;
+          TextConstantLine := COPYSTR(TextConstantLine, Position);
+
+        END ELSE BEGIN
+          Pos := STRPOS(TextConstantLine, ';');
+          IF Pos = 0 THEN BEGIN
+            Caption := TextConstantLine;
+            TextConstantLine := '';
+          END ELSE BEGIN
+            Caption := COPYSTR(TextConstantLine, 1, Pos - 1);
+            TextConstantLine := COPYSTR(TextConstantLine, Pos + 1);
+          END;
+        END;
+
+        IF NOT StopLoop THEN
+          IF LanguageCode <> '' THEN
+            SaveCaption(Buffer, LanguageCode, Caption, CurrentId, 26171, LineNo);
+
+        StopLoop := STRLEN(TextConstantLine) < 4;
+      UNTIL StopLoop;
+    END;
+
+    LOCAL PROCEDURE GetAllTextConstantLines@43(VAR CALHistoryLine@1000 : Record 11102053;VAR CALHistoryLine2@1001 : Record 11102053);
+    VAR
+      PreviousLine@1002 : Record 11102053;
+      LastLinePassed@1003 : Boolean;
+      NextFound@1004 : Boolean;
+      StopLoop@1005 : Boolean;
+    BEGIN
+      CALHistoryLine.SETRANGE("Line No.", CALHistoryLine."Line No.");
+      CALHistoryLine.SETRANGE("Sub Line No.", 1);
+      CALHistoryLine.FINDFIRST;
+      CALHistoryLine.SETRANGE("Sub Line No.");
+      CALHistoryLine.SETRANGE("Line No.");
+
+      REPEAT
+
+        CALHistoryLine2 := CALHistoryLine;
+        CALHistoryLine2.INSERT;
+
+        PreviousLine := CALHistoryLine;
+        NextFound := CALHistoryLine.NEXT <> 0;
+
+        LastLinePassed :=
+          (CALHistoryLine."Line No." <> PreviousLine."Line No.") AND
+          (PreviousLine.Code[STRLEN(PreviousLine.Code)] = ';');
+
+        IF LastLinePassed THEN BEGIN
+          StopLoop := TRUE;
+          CALHistoryLine := PreviousLine;
+        END;
+
+        IF NOT NextFound THEN
+          StopLoop := TRUE;
+
+      UNTIL StopLoop;
+
+      CALHistoryLine.SETRANGE("Line No.");
+      CALHistoryLine.SETRANGE("Sub Line No.", 1);
+    END;
+
+    LOCAL PROCEDURE ReadText@44(VAR TextLine@1000 : Text;VAR Position@1001 : Integer;TextIndicator@1002 : Char;VAR ExitValue@1003 : Text) : Boolean;
+    VAR
+      Mgt@1004 : Codeunit 11102035;
+      Char@1005 : Char;
+      Stop@1006 : Boolean;
+      TextStarted@1007 : Boolean;
+    BEGIN
+      ExitValue := '';
+
+      IF Position > STRLEN(TextLine) THEN
+        EXIT(FALSE);
+
+      WHILE NOT Stop DO
+
+        IF Mgt.NextChar(TextLine, Position, Char) THEN
+
+          CASE Char OF
+
+            TextIndicator :
+              IF TextStarted THEN BEGIN
+                IF Mgt.NextChar(TextLine, Position, Char) THEN
+                  IF Char = TextIndicator THEN
+                    ExitValue += FORMAT(Char)
+                  ELSE
+                    Stop := TRUE;
+              END ELSE
+                TextStarted := TRUE;
+
+            ELSE
+              IF TextStarted THEN
+                ExitValue += FORMAT(Char);
+          END
+
+        ELSE
+          Stop := TRUE;
+
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE SaveName@46(VAR Buffer@1000 : TEMPORARY Record 11102068;CurrentId@1001 : Text;PropertyId@1002 : Integer;Length@1003 : Integer;Name2@1004 : Text;LineNo@1005 : Integer);
+    VAR
+      ctNameTag@1006 : TextConst 'DEU=%1-P%2-L%3:;ENU=%1-P%2-L%3:;ESP=%1-P%2-L%3:;FRA=%1-P%2-L%3:;NLD=%1-P%2-L%3:;DEA=%1-P%2-L%3:';
+    BEGIN
+      WITH Buffer DO BEGIN
+        "Entry No." += 1;
+        "Translate File Line" := STRSUBSTNO(ctNameTag, CurrentId, PropertyId, Length);
+        FillCaption(Name2);
+        "C/AL Line No." := LineNo;
+        INSERT;
+      END;
+    END;
+
+    LOCAL PROCEDURE SaveCaption@47(VAR Buffer@1000 : TEMPORARY Record 11102068;LanguageCode@1001 : Code[20];Caption@1002 : Text;CurrentId@1003 : Text;PropertyId@1004 : Integer;LineNo@1005 : Integer);
+    BEGIN
+      WITH Buffer DO BEGIN
+        "Entry No." += 1;
+        "Translate File Line" := CurrentId + '-P' + FORMAT(PropertyId) + '-A' + FORMAT(LanguageIdOfCode(LanguageCode)) + '-L999:';
+        FillCaption(Caption);
+        "C/AL Line No." := LineNo;
+        INSERT;
+      END;
+    END;
+
+    LOCAL PROCEDURE SkipSection@48(VAR CALHistoryLine@1000 : Record 11102053);
+    VAR
+      StopCode@1001 : Text;
+      BracketPos@1002 : Integer;
+      StopLoop@1003 : Boolean;
+    BEGIN
+      CALHistoryLine.SETRANGE("Sub Line No.", 1);
+      CALHistoryLine.NEXT;
+      BracketPos := STRPOS(CALHistoryLine.Code, '{');
+      IF BracketPos <> 0 THEN BEGIN
+        StopCode := PADSTR('', BracketPos - 1) + '}';
+        REPEAT
+          StopLoop := CALHistoryLine.NEXT = 0;
+        UNTIL StopLoop OR (CALHistoryLine.Code = StopCode);
+      END;
+      CALHistoryLine.SETRANGE("Sub Line No.");
+    END;
+
+    LOCAL PROCEDURE ExtraPropertyId@49(ObjectType2@1000 : ',Table,,Report,,Codeunit,XMLport,MenuSuite,Page';SectionId@1001 : Text;FunctionName@1002 : Text) : Text;
+    BEGIN
+      IF ObjectType2 = ObjectType2::Report THEN
+        CASE SectionId OF
+          'N2' : ObjectType2 := ObjectType2::Page;
+        END;
+
+      CASE ObjectType2 OF
+        ObjectType2::Table :
+          CASE FunctionName OF
+            'OnInsert' : EXIT('-P4958');
+            'OnModify' : EXIT('-P4959');
+            'OnDelete' : EXIT('-P4960');
+            'OnRename' : EXIT('-P4961');
+            'OnValidate' : EXIT('-P4962');
+            'OnLookup' : EXIT('-P4963');
+          END;
+
+        ObjectType2::Report :
+          CASE FunctionName OF
+            'OnInitReport' : EXIT('-P18512');
+            'OnPreReport' : EXIT('-P18513');
+            'OnPostReport' : EXIT('-P18514');
+            'OnPreSection' : EXIT('-P18518');
+            'OnPostSection' : EXIT('-P18519');
+            'OnPreDataItem' : EXIT('-P18515');
+            'OnPostDataItem' : EXIT('-P18517');
+            'OnAfterGetRecord' : EXIT('-P18516');
+            'OnCreateHyperlink' : EXIT('-P18522');
+            'OnHyperlink' : EXIT('-P18523');
+          END;
+
+        ObjectType2::Codeunit :
+          CASE FunctionName OF
+            'OnRun' : EXIT('-P26369');
+          END;
+
+        ObjectType2::XMLport :
+          CASE FunctionName OF
+            'OnInitXMLport' : EXIT('-P91800');
+            'OnPreXMLport' : EXIT('-P91801');
+            'OnPostXMLport' : EXIT('-P91802');
+            'Import::OnAfterInitRecord' : EXIT('-P91803');
+            'Import::OnBeforeInsertRecord' : EXIT('-P91804');
+            'Import::OnAfterInsertRecord' : EXIT('-P91805');
+            'Import::OnAfterAssignField' : EXIT('-P91806');
+            'Export::OnPreXMLItem' : EXIT('-P91807');
+            'Export::OnAfterGetRecord' : EXIT('-P91808');
+            'Export::OnBeforePassField' : EXIT('-P91809');
+          END;
+
+        ObjectType2::Page :
+          CASE FunctionName OF
+            'OnOpenPage' : EXIT('-P55141');
+            'OnClosePage' : EXIT('-P55142');
+            'OnQueryClosePage' : EXIT('-P55150');
+            'OnAction' : EXIT('-P55160');
+            'OnControlAddIn' : EXIT('-P55174');
+            'OnInit' : EXIT('-P55140');
+            'OnAfterGetRecord' : EXIT('-P55145');
+            'OnValidate' : EXIT('-P55170');
+            'OnLookup' : EXIT('-P55171');
+            'OnDrillDown' : EXIT('-P55172');
+            'OnAssistEdit' : EXIT('-P55173');
+            'OnFindRecord' : EXIT('-P55143');
+            'OnNextRecord' : EXIT('-P55144');
+            'OnNewRecord' : EXIT('-P55146');
+            'OnInsertRecord' : EXIT('-P55147');
+            'OnModifyRecord' : EXIT('-P55148');
+            'OnDeleteRecord' : EXIT('-P55149');
+          END;
+      END;
+    END;
+
+    LOCAL PROCEDURE SetCaptionEntryNo@50();
+    VAR
+      Line@1000 : Record 11102068;
+    BEGIN
+      WITH Line DO BEGIN
+        SETCURRENTKEY("Caption Entry No.");
+        IF FINDLAST THEN
+          CaptionEntryNo := "Caption Entry No.";
+      END;
+    END;
+
+    PROCEDURE CreateMissingCaptions@51(VAR Line@1000 : ARRAY [2] OF Record 11102068;LanguageId@1001 : Integer;TempRecord@1002 : Boolean);
+    VAR
+      Progressbar@1003 : Codeunit 11102044;
+      LastEntryNo@1004 : Integer;
+      PrevCaptionEntryNo@1005 : Integer;
+      ctCreatingLanguage@1006 : TextConst 'DEU=Create missing language...;ENU=Create missing language...;ESP=Create missing language...;FRA=Create missing language...;NLD=Onbrekende captions aanmaken...;DEA=Create missing language...';
+    BEGIN
+      IF LanguageId = 0 THEN
+        EXIT;
+
+      IF TempRecord THEN BEGIN
+        Line[1].RESET;
+        IF Line[1].FINDLAST THEN
+          LastEntryNo := Line[1]."Entry No.";
+      END;
+
+      Line[1].SETCURRENTKEY("Caption Entry No.");
+      Line[1].SETFILTER("Caption Entry No.", '<>0');
+      Line[1].SETFILTER("Language Id", '<>%1', LanguageId);
+
+      IF NOT TempRecord THEN BEGIN
+        Progressbar.Open(ctCreatingLanguage, 0);
+        Progressbar.BarSize := Line[1].COUNT;
+      END;
+
+      IF Line[1].FINDSET THEN
+        REPEAT
+
+          IF NOT TempRecord THEN
+            Progressbar.AddToBar(1);
+
+          IF Line[1]."Caption Entry No." <> PrevCaptionEntryNo THEN BEGIN
+
+            Line[2].RESET;
+            Line[2].SETCURRENTKEY("Caption Entry No.");
+            Line[2].SETRANGE("Caption Entry No.", Line[1]."Caption Entry No.");
+            Line[2].SETRANGE("Language Id", LanguageId);
+            IF Line[2].ISEMPTY THEN
+              IF Line[1]."Language Id" = 0 THEN BEGIN
+                Line[1]."Language Id" := LanguageId;
+                Line[1].FillCaption('');
+                Line[1].UpdateCalculatedCaption;
+                Line[1].MODIFY;
+              END ELSE BEGIN
+                Line[2] := Line[1];
+
+                IF TempRecord THEN BEGIN
+                  LastEntryNo += 1;
+                  Line[2]."Entry No." := LastEntryNo;
+                END ELSE
+                  Line[2]."Entry No." := 0;
+
+                Line[2]."Language Id" := LanguageId;
+                Line[2].FillCaption('');
+                Line[2].UpdateCalculatedCaption;
+                Line[2].INSERT(TRUE);
+              END;
+
+            PrevCaptionEntryNo := Line[1]."Caption Entry No.";
+          END;
+
+        UNTIL Line[1].NEXT = 0;
+
+      IF NOT TempRecord THEN
+        Progressbar.Close;
+    END;
+
+    PROCEDURE WriteToDatabase@52(VAR Line@1000 : ARRAY [2] OF Record 11102068;All@1001 : Boolean);
+    VAR
+      CALHistoryObject@1002 : Record 11102052;
+      CALHistoryLine@1003 : Record 11102053;
+      TmpCALHistoryLine@1004 : ARRAY [2] OF TEMPORARY Record 11102053;
+      ObjectLock@1005 : Record 11102054;
+      Buffer@1006 : TEMPORARY Record 11102068;
+      Object@1007 : Record 2000000001;
+      TmpObject@1008 : TEMPORARY Record 2000000001;
+      Progressbar@1009 : Codeunit 11102044;
+      ObjectMgt@1010 : Codeunit 11102046;
+      SourceControl@1011 : Codeunit 11102050;
+      FileHandler@1012 : Codeunit 11102097;
+      Setting@1013 : Codeunit 11102114;
+      StartDate@1014 : Date;
+      StartTime@1015 : Time;
+      Directory@1016 : Text;
+      FileName@1017 : Text;
+      LanguageId@1018 : Integer;
+      ShowNameWarning@1019 : Boolean;
+      ctCheckingObjects@1020 : TextConst 'DEU=Checking objects...;ENU=Checking objects...;ESP=Checking objects...;FRA=Checking objects...;NLD=Objecten controleren...;DEA=Checking objects...';
+      ctCompilingObjects@1021 : TextConst 'DEU=Compiling objects...;ENU=Compiling objects...;ESP=Compiling objects...;FRA=Compiling objects...;NLD=Objecten compileren...;DEA=Compiling objects...';
+      ctNamesCannotBeChanged@1022 : TextConst 'DEU=Names can only be changed by ex- and importing a translation file.;ENU=Names can only be changed by ex- and importing a translation file.;ESP=Names can only be changed by ex- and importing a translation file.;FRA=Names can only be changed by ex- and importing a translation file.;NLD=Namen kunnen alleen aangepast worden door een vertaalbestand te ex- en importeren.;DEA=Names can only be changed by ex- and importing a translation file.';
+      ctNothingChanged@1023 : TextConst 'DEU=No changed captions found.;ENU=No changed captions found.;ESP=No changed captions found.;FRA=No changed captions found.;NLD=Geen gewijzigde captions gevonden.;DEA=No changed captions found.';
+      ctUpdateFileName@1024 : TextConst 'DEU=UpdatingCaptions.txt;ENU=UpdatingCaptions.txt;ESP=UpdatingCaptions.txt;FRA=UpdatingCaptions.txt;NLD=UpdatingCaptions.txt;DEA=UpdatingCaptions.txt';
+      ctUpdatingCALHistory@1025 : TextConst 'DEU=Updating C/AL history...;ENU=Updating C/AL history...;ESP=Updating C/AL history...;FRA=Updating C/AL history...;NLD=C/AL Historie bijwerken...;DEA=Updating C/AL history...';
+      ctWritingCaptions@1026 : TextConst 'DEU=Updating captions...;ENU=Updating captions...;ESP=Updating captions...;FRA=Updating captions...;NLD=Captions bijwerken...;DEA=Updating captions...';
+      _INC__@1000000002 : Integer;
+      RecFilterL@1000000000 : Record 11102068;
+      TranslationSetupL@1000000001 : Record 88000;
+    BEGIN
+      Directory := FileHandler.TempDirectory;
+      FileName := Directory + ctUpdateFileName;
+
+      StartDate := TODAY;
+      StartTime := TIME;
+      //01. 23.08.17 JAL -->
+      TranslationSetupL.GET();
+      IF TranslationSetupL."Use Page Filter in OMA" THEN BEGIN
+        Line[2].COPYFILTERS(Line[1]);
+        RecFilterL.COPYFILTERS(Line[1]);
+      END;
+      //01. 23.08.17 JAL <--
+      LanguageId := Line[1]."Language Id";
+      IF LanguageId = 0 THEN BEGIN
+        Line[1].RESET;
+        Line[1].SETFILTER("Language Id", '<>0');
+        Line[1].FINDFIRST;
+        LanguageId := Line[1]."Language Id";
+        Line[1].RESET;
+      END;
+
+      //01. 23.08.17 JAL -->
+      IF NOT TranslationSetupL."Use Page Filter in OMA" THEN
+      Line[2].RESET;
+      //01. 23.08.17 JAL <--
+      Line[2].SETRANGE(Captions, TRUE);
+      IF NOT All THEN BEGIN
+        Line[2].SETCURRENTKEY(Changed);
+        Line[2].SETFILTER("Language Id", '%1|0', LanguageId);
+        Line[2].SETRANGE(Changed, TRUE);
+        IF Line[2].ISEMPTY THEN
+          ERROR(ctNothingChanged);
+      END;
+
+      Line[2].FINDSET;
+      REPEAT
+        IF NOT TmpObject.GET(Line[2]."Object Type", '', Line[2]."Object No.") THEN
+          IF Object.GET(Line[2]."Object Type", '', Line[2]."Object No.") THEN BEGIN
+            TmpObject := Object;
+            TmpObject.INSERT;
+          END;
+      UNTIL Line[2].NEXT = 0;
+
+      Progressbar.Open(ctWritingCaptions, 1);
+      Progressbar.BarSize := Line[2].COUNT + (TmpObject.COUNT * 7);
+
+      Progressbar.Text1 := ctCheckingObjects;
+      IF TmpObject.FINDSET THEN
+        REPEAT
+          Object.GET(TmpObject.Type, '', TmpObject.ID);
+          IF NOT SourceControl.CheckObjectBeforeChanging(Object, Progressbar) THEN
+            EXIT;
+          IF Setting.LockObjectAtDesign THEN
+            ObjectLock.InsertLock(Object);
+        UNTIL TmpObject.NEXT = 0;
+
+      Progressbar.Text1 := ctWritingCaptions;
+      IF TmpObject.FINDSET THEN
+        REPEAT
+
+          Progressbar.Text1Object := TmpObject;
+          Progressbar.AddToBar(1);
+
+          Buffer.RESET;
+          Buffer.DELETEALL;
+          ImportObject(TmpObject, Buffer);
+
+          IF Buffer.FINDSET THEN
+            REPEAT
+              Line[1].RESET;
+              Line[1].SETCURRENTKEY("Translate File Line");
+              Line[1].SETFILTER("Translate File Line", Buffer.CompareTranslateFileLine + '*');
+              IF Line[1].FINDSET THEN
+                REPEAT
+                  Line[1]."C/AL Line No." := Buffer."C/AL Line No.";
+                  Line[1].MODIFY;
+                UNTIL Line[1].NEXT = 0;
+              Line[1].RESET;
+            UNTIL Buffer.NEXT = 0;
+
+          CALHistoryObject.GoToLastRecord(TmpObject.Type, TmpObject.ID);
+          FillCALLineBuffer(CALHistoryLine, TmpCALHistoryLine[1], CALHistoryObject."Entry No.");
+
+          Line[1].RESET;
+          Line[1].SETCURRENTKEY("Object Type", "Object No.");
+          Line[1].SETRANGE("Object Type", TmpObject.Type);
+          Line[1].SETRANGE("Object No.", TmpObject.ID);
+          Line[1].SETRANGE(Captions, TRUE);
+          Line[1].SETFILTER("Language Id", '%1|0', LanguageId);
+          Line[1].SETFILTER("C/AL Line No.", '<>0');
+          IF NOT All THEN
+            Line[1].SETRANGE(Changed, TRUE);
+          IF Line[1].FINDSET THEN
+            REPEAT
+              Progressbar.AddToBar(1);
+              WriteLineToCAL(Line, TmpCALHistoryLine);
+              TmpCALHistoryLine[1].RESET;
+            UNTIL Line[1].NEXT = 0;
+
+          SourceControl.ExportTextFile(FileName, TmpCALHistoryLine[1]);
+
+          ObjectMgt.ImportObject(FileName);
+
+        UNTIL TmpObject.NEXT = 0;
+
+      Progressbar.Text1 := ctCompilingObjects;
+      IF TmpObject.FINDSET THEN
+        REPEAT
+          Progressbar.AddToBar(1);
+          Progressbar.Text1Object := TmpObject;
+
+          ObjectMgt.CompileObject(TmpObject);
+
+          Object.GET(TmpObject.Type, '', TmpObject.ID);
+          Object.Date := StartDate;
+          Object.Time := StartTime;
+          Object.Modified := TRUE;
+          ObjectMgt.UpdateObject(Object, FALSE);
+
+        UNTIL TmpObject.NEXT = 0;
+
+      Progressbar.Text1 := ctUpdatingCALHistory;
+      IF TmpObject.FINDSET THEN
+        REPEAT
+          Progressbar.AddToBar(1);
+          Progressbar.Text1Object := TmpObject;
+          Object.GET(TmpObject.Type, '', TmpObject.ID);
+          SourceControl.AddObject(Object, 0, FALSE, FALSE, 1, FALSE);
+        UNTIL TmpObject.NEXT = 0;
+
+      Progressbar.Close;
+
+      Line[1].RESET;
+      //01. 23.08.17 JAL -->
+      IF TranslationSetupL."Use Page Filter in OMA" THEN
+        Line[1].COPYFILTERS(RecFilterL);
+      //01. 23.08.17 JAL <--
+      Line[1].SETRANGE(Changed, TRUE);
+      IF Line[1].FINDSET THEN
+        REPEAT
+          Line[2].SETCURRENTKEY("Caption Entry No.");
+          Line[2].SETRANGE("Caption Entry No.", Line[1]."Caption Entry No.");
+          IF Line[2].FINDSET THEN
+            REPEAT
+              Line[2].VALIDATE("Caption Changed", FALSE);
+              Line[2].MODIFY;
+              IF Line[2]."Name Changed" THEN
+                ShowNameWarning := TRUE;
+            UNTIL Line[2].NEXT = 0;
+        UNTIL Line[1].NEXT = 0;
+
+      IF ShowNameWarning THEN
+        MESSAGE(ctNamesCannotBeChanged);
+    END;
+
+    PROCEDURE WriteLineToCAL@53(VAR Line@1000 : ARRAY [2] OF Record 11102068;VAR CALHistoryLine@1001 : ARRAY [2] OF Record 11102053);
+    BEGIN
+      IF Line[1].Type = Line[1].Type::"Text Constante" THEN
+        WriteTextConstToCAL(Line, CALHistoryLine)
+      ELSE
+        WriteCaptionToCAL(Line, CALHistoryLine);
+    END;
+
+    LOCAL PROCEDURE WriteCaptionToCAL@54(VAR Line@1000 : ARRAY [2] OF Record 11102068;VAR CALHistoryLine@1001 : ARRAY [2] OF Record 11102053);
+    VAR
+      CaptionArray@1002 : ARRAY [20] OF Text[1024];
+      CodeLine@1003 : Text;
+      FullTag@1004 : Text;
+      LineToWrite@1005 : Text;
+      PrevLine@1006 : Text;
+      StartOfFirstLine@1007 : Text;
+      LanguageCodeArray2@1008 : ARRAY [20] OF Code[10];
+      DeleteFromLineNo@1009 : Integer;
+      EqPos@1010 : Integer;
+      FromCALLineNo@1011 : Integer;
+      i@1012 : Integer;
+      LineNoToWrite@1013 : Integer;
+      MinLength@1014 : Integer;
+      NoOCaptions2@1015 : Integer;
+      StartPos@1016 : Integer;
+      TillCALLineNo@1017 : Integer;
+      AfterCodeSection@1018 : Boolean;
+      EndWithCurlyBracket@1019 : Boolean;
+      StopLoop@1020 : Boolean;
+      WithBrackets@1021 : Boolean;
+    BEGIN
+      WITH Line[1] DO BEGIN
+
+        GetCaptionFromTillLine(Line[1], CALHistoryLine[1], FromCALLineNo, TillCALLineNo);
+
+        FullTag := FullTagOfCaptionType(Line[1]);
+        StartPos := StartPosOfCaption(Line[1]);
+
+        IF FullTag = '' THEN
+          EXIT;
+
+        IF FromCALLineNo = 0 THEN BEGIN
+
+          CALHistoryLine[1].FINDSET;
+          REPEAT
+            EqPos := STRPOS(CALHistoryLine[1].Code, '=');
+            IF EqPos > StartPos THEN
+              IF CALHistoryLine[1].Code[StartPos] <> ' ' THEN
+
+                IF NOT BeforeCaptionTag(FullTag, COPYSTR(CALHistoryLine[1].Code, StartPos, EqPos - StartPos), "Character Identifiers")
+                THEN BEGIN
+                  StopLoop := TRUE;
+                  FromCALLineNo := CALHistoryLine[1]."Line No.";
+                  TillCALLineNo := CALHistoryLine[1]."Line No.";
+
+                  IF DELCHR(COPYSTR(CALHistoryLine[1].Code, 1, StartPos - 1)) = '' THEN BEGIN
+                    MoveUp(CALHistoryLine[2], CALHistoryLine[1]."Line No.");
+                    WriteCALLine(CALHistoryLine[2], CALHistoryLine[1]."Line No.", '');
+                  END ELSE BEGIN
+                    CodeLine := CompleteLine(CALHistoryLine[1]);
+                    WriteCALLine(CALHistoryLine[2], CALHistoryLine[1]."Line No.", COPYSTR(CodeLine, 1, StartPos - 1));
+                    MoveUp(CALHistoryLine[2], CALHistoryLine[1]."Line No." + 1);
+                    WriteCALLine(
+                      CALHistoryLine[2], CALHistoryLine[1]."Line No." + 1,
+                      PADSTR('', StartPos - 1) + COPYSTR(CodeLine, StartPos));
+                  END;
+                END;
+            IF DELCHR(CALHistoryLine[1].Code) = '}' THEN BEGIN
+              IF CALHistoryLine[1].Code[StartPos - 2] = '}' THEN BEGIN
+                FromCALLineNo := CALHistoryLine[1]."Line No.";
+                TillCALLineNo := CALHistoryLine[1]."Line No.";
+                MoveUp(CALHistoryLine[2], CALHistoryLine[1]."Line No.");
+                WriteCALLine(CALHistoryLine[2], CALHistoryLine[1]."Line No.", '');
+                StopLoop := TRUE;
+              END;
+            END ELSE
+              PrevLine := CALHistoryLine[1].Code;
+          UNTIL (CALHistoryLine[1].NEXT = 0) OR StopLoop;
+
+          IF FromCALLineNo = 0 THEN BEGIN
+
+            MinLength := MinLengthOfCaption(Line[1]);
+
+            CodeLine := CompleteLine(CALHistoryLine[1]);
+            IF DELCHR(COPYSTR(CodeLine, StartPos - 1), '>', ' };') = '' THEN BEGIN
+
+              FromCALLineNo := CALHistoryLine[1]."Line No.";
+              TillCALLineNo := CALHistoryLine[1]."Line No.";
+
+              IF STRPOS(CodeLine, '}') > 0 THEN
+                EndWithCurlyBracket := TRUE;
+
+              IF DELCHR(COPYSTR(CodeLine, 1, StartPos)) = '' THEN BEGIN
+
+                WriteCALLine(CALHistoryLine[2], CALHistoryLine[1]."Line No.", '');
+
+                IF DELCHR(PrevLine) = 'END;' THEN BEGIN
+                  FromCALLineNo := CALHistoryLine[1]."Line No." + 1;
+                  TillCALLineNo := CALHistoryLine[1]."Line No." + 1;
+                  MoveUp(CALHistoryLine[2], CALHistoryLine[1]."Line No." + 1);
+                  WriteCALLine(CALHistoryLine[2], CALHistoryLine[1]."Line No." + 1, '');
+                END;
+              END ELSE
+                WriteCALLine(CALHistoryLine[2], CALHistoryLine[1]."Line No.", COPYSTR(CodeLine, 1, MinLength - 2) + ';');
+
+            END ELSE BEGIN
+
+              IF STRPOS(CodeLine, '}') > 0 THEN
+                EndWithCurlyBracket := TRUE;
+
+              LineToWrite := DELCHR(CodeLine, '>', ' };');
+              IF STRLEN(LineToWrite) < MinLength THEN
+                LineToWrite := PADSTR(LineToWrite, MinLength - 1) + ';'
+              ELSE
+                LineToWrite += ';';
+
+              WriteCALLine(CALHistoryLine[2], CALHistoryLine[1]."Line No.", LineToWrite);
+              MoveUp(CALHistoryLine[2], CALHistoryLine[1]."Line No." + 1);
+              WriteCALLine(CALHistoryLine[2], CALHistoryLine[1]."Line No." + 1, '');
+
+              FromCALLineNo := CALHistoryLine[1]."Line No." + 1;
+              TillCALLineNo := CALHistoryLine[1]."Line No." + 1;
+
+            END;
+          END;
+        END ELSE
+          IF STRPOS(CALHistoryLine[1].Code, '}') > 0 THEN
+            EndWithCurlyBracket := TRUE;
+
+        CALHistoryLine[1].SETRANGE("Line No.", FromCALLineNo, TillCALLineNo);
+        CALHistoryLine[1].FINDFIRST;
+
+        StartOfFirstLine := COPYSTR(CALHistoryLine[1].Code, 1, StartPos - 1);
+
+        Line[2].RESET;
+        Line[2].SETCURRENTKEY("Caption Entry No.");
+        Line[2].SETRANGE("Caption Entry No.", "Caption Entry No.");
+        Line[2].SETRANGE(Captions, TRUE);
+        Line[2].SETFILTER("Language Id", '<>0');
+        IF Line[2].FINDSET THEN
+          REPEAT
+            IF Line[2].TotalCaption <> '' THEN BEGIN
+              NoOCaptions2 += 1;
+              LanguageCodeArray2[NoOCaptions2] := LanguageCodeOfId(Line[2]."Language Id");
+              CaptionArray[NoOCaptions2] := Line[2].TotalCaption;
+              IF QuotesNeeded(CaptionArray[NoOCaptions2]) THEN
+                CaptionArray[NoOCaptions2] := '"' + DoubleChar(CaptionArray[NoOCaptions2], '"') + '"';
+            END;
+          UNTIL Line[2].NEXT = 0;
+
+        IF NoOCaptions2 > 1 THEN
+          WithBrackets := TRUE
+        ELSE
+          FOR i := 1 TO NoOCaptions2 DO
+            IF BracketsNeeded(LanguageCodeArray2[NoOCaptions2] + '=' + CaptionArray[NoOCaptions2]) THEN
+              WithBrackets := TRUE;
+
+        IF NoOCaptions2 = 0 THEN BEGIN
+          LineNoToWrite := FromCALLineNo;
+          IF DELCHR(StartOfFirstLine) = '' THEN BEGIN
+            DeleteCALLine(CALHistoryLine[2], LineNoToWrite);
+            IF EndWithCurlyBracket THEN BEGIN
+              CALHistoryLine[1].SETFILTER("Line No.", '<%1', FromCALLineNo);
+              IF CALHistoryLine[1].FINDLAST THEN BEGIN
+                LineNoToWrite := CALHistoryLine[1]."Line No.";
+                LineToWrite := CompleteLine(CALHistoryLine[1]);
+                LineToWrite := DELCHR(LineToWrite, '>', '; }');
+                IF DELCHR(LineToWrite) = '' THEN
+                  IF CALHistoryLine[1].NEXT(-1) <> 0 THEN
+                    AfterCodeSection := DELCHR(CALHistoryLine[1].Code) = 'END;';
+
+                MinLength := MinLengthOfCaption(Line[1]);
+
+                IF AfterCodeSection THEN
+                  LineToWrite := PADSTR(LineToWrite, STRPOS(CALHistoryLine[1].Code, 'END;')) + '}'
+                ELSE
+                  IF STRLEN(LineToWrite) < MinLength THEN
+                    LineToWrite := PADSTR(LineToWrite, MinLength) + '}'
+                  ELSE
+                    LineToWrite += ' }';
+
+                WriteCALLine(CALHistoryLine[2], LineNoToWrite, LineToWrite);
+              END;
+            END;
+          END ELSE BEGIN
+            MinLength := MinLengthOfCaption(Line[1]);
+            LineToWrite := PADSTR(StartOfFirstLine, MinLength - 2);
+            IF EndWithCurlyBracket THEN
+              LineToWrite += ' }'
+            ELSE BEGIN
+              LineToWrite += ';';
+              CALHistoryLine[1].SETFILTER("Line No.", '>%1', TillCALLineNo);
+              IF CALHistoryLine[1].FINDFIRST THEN
+                IF DELCHR(DELSTR(CALHistoryLine[1].Code, StartPos)) = '' THEN BEGIN
+                  LineToWrite += COPYSTR(CompleteLine(CALHistoryLine[1]), StartPos);
+                  DeleteCALLine(CALHistoryLine[2], CALHistoryLine[1]."Line No.");
+                  MoveOtherLines(Line[1], Line[2], CALHistoryLine[1]."Line No.", LineNoToWrite);
+                END;
+            END;
+
+            WriteCALLine(CALHistoryLine[2], LineNoToWrite, LineToWrite);
+
+          END;
+        END;
+
+        FOR i := 1 TO NoOCaptions2 DO BEGIN
+
+          IF i = 1 THEN
+            IF WithBrackets THEN
+              LineToWrite := PADSTR(StartOfFirstLine, StartPos - 1) + FullTag + '=['
+            ELSE
+              LineToWrite := PADSTR(StartOfFirstLine, StartPos - 1) + FullTag + '='
+          ELSE
+            IF WithBrackets THEN
+              LineToWrite := PADSTR('', StartPos + STRLEN(FullTag) + 1)
+            ELSE
+              LineToWrite := PADSTR('', StartPos + STRLEN(FullTag));
+
+          IF WithBrackets THEN
+            LineToWrite += LanguageCodeArray2[i] + '=' + DoubleChar(CaptionArray[i], ']')
+          ELSE
+            LineToWrite += LanguageCodeArray2[i] + '=' + CaptionArray[i];
+
+          IF i = NoOCaptions2 THEN BEGIN
+            IF WithBrackets THEN
+              LineToWrite += ']';
+            IF EndWithCurlyBracket THEN
+              LineToWrite += ' }'
+            ELSE
+              LineToWrite += ';';
+          END ELSE
+            LineToWrite += ';';
+
+          LineNoToWrite := FromCALLineNo + i - 1;
+
+          IF LineNoToWrite > TillCALLineNo THEN BEGIN
+            MoveUp(CALHistoryLine[2], LineNoToWrite);
+            TillCALLineNo := LineNoToWrite;
+          END;
+
+          WriteCALLine(CALHistoryLine[2], LineNoToWrite, LineToWrite);
+
+        END;
+
+        IF LineNoToWrite < FromCALLineNo THEN
+          DeleteFromLineNo := FromCALLineNo
+        ELSE
+          DeleteFromLineNo := LineNoToWrite + 1;
+
+        CALHistoryLine[1].SETRANGE("Sub Line No.");
+        CALHistoryLine[1].SETRANGE("Line No.", DeleteFromLineNo, TillCALLineNo);
+        CALHistoryLine[1].DELETEALL;
+
+        CALHistoryLine[1].RESET;
+
+      END;
+    END;
+
+    LOCAL PROCEDURE WriteTextConstToCAL@55(VAR Line@1000 : ARRAY [2] OF Record 11102068;VAR CALHistoryLine@1001 : ARRAY [2] OF Record 11102053);
+    VAR
+      CaptionArray@1002 : ARRAY [20] OF Text[1024];
+      LineToWrite@1003 : Text;
+      LanguageCodeArray2@1004 : ARRAY [20] OF Code[10];
+      FromCALLineNo@1005 : Integer;
+      i@1006 : Integer;
+      LineNoToWrite@1007 : Integer;
+      NoOCaptions2@1008 : Integer;
+      StartPos@1009 : Integer;
+      TillCALLineNo@1010 : Integer;
+      TotalLengthOfLine@1011 : Integer;
+    BEGIN
+      WITH Line[1] DO BEGIN
+
+        GetTextConstFromTillLine(Line[1], CALHistoryLine[1], FromCALLineNo, TillCALLineNo);
+
+        CALHistoryLine[1].SETRANGE("Line No.", FromCALLineNo, TillCALLineNo);
+        CALHistoryLine[1].FINDFIRST;
+
+        StartPos := STRPOS(CALHistoryLine[1].Code, ' : TextConst');
+        TotalLengthOfLine := StartPos + 16;
+
+        Line[2].RESET;
+        Line[2].SETCURRENTKEY("Translate File Line");
+        Line[2].SETFILTER("Translate File Line", CompareTranslateFileLine + '*');
+        Line[2].SETRANGE(Captions, TRUE);
+        Line[2].SETFILTER("Language Id", '<>0');
+        IF Line[2].FINDSET THEN
+          REPEAT
+            IF Line[2].TotalCaption <> '' THEN BEGIN
+              NoOCaptions2 += 1;
+              LanguageCodeArray2[NoOCaptions2] := LanguageCodeOfId(Line[2]."Language Id");
+              CaptionArray[NoOCaptions2] := Line[2].TotalCaption;
+              IF QuotesNeeded(CaptionArray[NoOCaptions2]) THEN
+                CaptionArray[NoOCaptions2] := '"' + DoubleChar(CaptionArray[NoOCaptions2], '"') + '"';
+              TotalLengthOfLine += 4 + STRLEN(CaptionArray[NoOCaptions2]);
+            END;
+          UNTIL Line[2].NEXT = 0;
+
+        IF NoOCaptions2 > 1 THEN
+          TotalLengthOfLine += NoOCaptions2 - 1;
+
+        IF TotalLengthOfLine > 1024 THEN BEGIN
+
+          LineNoToWrite := FromCALLineNo;
+          LineToWrite := PADSTR(CALHistoryLine[1].Code, StartPos + 11);
+          WriteCALLine(CALHistoryLine[2], LineNoToWrite, LineToWrite);
+
+          StartPos := 0;
+          i := 0;
+          WHILE (StartPos = 0) AND (i < STRLEN(CALHistoryLine[1].Code)) DO BEGIN
+            i += 1;
+            IF CALHistoryLine[1].Code[i] <> ' ' THEN
+              StartPos := i + 1;
+          END;
+          IF StartPos = 0 THEN
+            StartPos := 8;
+
+          FOR i := 1 TO NoOCaptions2 DO BEGIN
+
+            LineNoToWrite := FromCALLineNo + i;
+            LineToWrite := PADSTR('', StartPos) + '''' + DoubleChar(LanguageCodeArray2[i] + '=' + CaptionArray[i], '''') + '''';
+            IF i = NoOCaptions2 THEN
+              LineToWrite += ';'
+            ELSE
+              LineToWrite += ',';
+
+            IF LineNoToWrite > TillCALLineNo THEN BEGIN
+              MoveUp(CALHistoryLine[2], LineNoToWrite);
+              TillCALLineNo := LineNoToWrite;
+            END;
+
+            WriteCALLine(CALHistoryLine[2], LineNoToWrite, LineToWrite);
+          END;
+
+        END ELSE BEGIN
+
+          LineNoToWrite := FromCALLineNo;
+          IF NoOCaptions2 = 0 THEN
+            LineToWrite := PADSTR(CALHistoryLine[1].Code, StartPos + 11) + ';'
+          ELSE BEGIN
+            LineToWrite := PADSTR(CALHistoryLine[1].Code, StartPos + 11) + ' ''';
+
+            FOR i := 1 TO NoOCaptions2 DO BEGIN
+              LineToWrite += DoubleChar(LanguageCodeArray2[i] + '=' + CaptionArray[i], '''');
+              IF i < NoOCaptions2 THEN
+                LineToWrite += ';';
+            END;
+
+            LineToWrite += ''';';
+          END;
+
+          WriteCALLine(CALHistoryLine[2], LineNoToWrite, LineToWrite);
+
+        END;
+
+        CALHistoryLine[1].SETRANGE("Sub Line No.");
+        CALHistoryLine[1].SETRANGE("Line No.", LineNoToWrite + 1, TillCALLineNo);
+        CALHistoryLine[1].DELETEALL;
+
+      END;
+    END;
+
+    LOCAL PROCEDURE GetCaptionFromTillLine@56(VAR Line@1000 : Record 11102068;VAR CALHistoryLine@1001 : Record 11102053;VAR FromCALLineNo@1002 : Integer;VAR TillCALLineNo@1003 : Integer);
+    VAR
+      CodeLine@1004 : Text;
+      FullTag@1005 : Text;
+      StartPos@1006 : Integer;
+      CaptionStarted@1007 : Boolean;
+      StopLoop@1008 : Boolean;
+      WithBrackets@1009 : Boolean;
+    BEGIN
+      FromCALLineNo := 0;
+      TillCALLineNo := 0;
+
+      FullTag := FullTagOfCaptionType(Line);
+      StartPos := StartPosOfCaption(Line);
+
+      CALHistoryLine.SETRANGE("Sub Line No.", 1);
+      CALHistoryLine.SETFILTER("Line No.", '>=%1', Line."C/AL Line No." * 10);
+      IF CALHistoryLine.FINDSET THEN
+        REPEAT
+
+          IF STRLEN(CALHistoryLine.Code) > 5 THEN
+            IF (COPYSTR(CALHistoryLine.Code, STRLEN(CALHistoryLine.Code) - 5) = '=BEGIN') OR
+               (COPYSTR(CALHistoryLine.Code, STRLEN(CALHistoryLine.Code) - 3) = '=VAR')
+            THEN
+              SkipCode(CALHistoryLine);
+
+          IF CALHistoryLine.Code <> '' THEN
+            IF COPYSTR(CALHistoryLine.Code, StartPos, STRLEN(FullTag)) = FullTag THEN BEGIN
+              CaptionStarted := TRUE;
+              WithBrackets := CALHistoryLine.Code[StartPos + STRLEN(FullTag) + 1] = '[';
+            END;
+
+          IF CaptionStarted THEN BEGIN
+
+            IF FromCALLineNo = 0 THEN
+              FromCALLineNo := CALHistoryLine."Line No.";
+
+            TillCALLineNo := CALHistoryLine."Line No.";
+
+            CodeLine := CompleteLine(CALHistoryLine);
+            StopLoop := EndOfCaptionBlock(CodeLine, StartPos, WithBrackets);
+
+          END ELSE
+            IF CALHistoryLine.Code <> '' THEN
+              IF CALHistoryLine.Code[STRLEN(CALHistoryLine.Code)] = '}' THEN BEGIN
+                StopLoop := TRUE;
+                CALHistoryLine.SETRANGE("Line No.", Line."C/AL Line No." * 10, CALHistoryLine."Line No.");
+              END;
+
+          IF NOT StopLoop THEN
+            StopLoop := CALHistoryLine.NEXT = 0;
+
+        UNTIL StopLoop;
+    END;
+
+    LOCAL PROCEDURE SkipCode@57(VAR CALHistoryLine@1000 : Record 11102053);
+    VAR
+      EndCode@1001 : Text;
+      StartPos@1002 : Integer;
+      StopLoop@1003 : Boolean;
+    BEGIN
+      WITH CALHistoryLine DO BEGIN
+        IF COPYSTR(Code, STRLEN(Code) - 3) = '=VAR' THEN
+          StartPos := STRLEN(Code) - 3
+        ELSE
+          StartPos := STRLEN(Code) - 5;
+        EndCode := PADSTR('', StartPos) + 'END;';
+        REPEAT
+          StopLoop := NEXT = 0;
+        UNTIL (Code = EndCode) OR StopLoop;
+      END;
+    END;
+
+    LOCAL PROCEDURE GetTextConstFromTillLine@58(VAR Line@1000 : Record 11102068;VAR CALHistoryLine@1001 : Record 11102053;VAR FromCALLineNo@1002 : Integer;VAR TillCALLineNo@1003 : Integer);
+    VAR
+      CodeLine@1004 : Text;
+      StopLoop@1005 : Boolean;
+    BEGIN
+      FromCALLineNo := 0;
+      TillCALLineNo := 0;
+
+      CALHistoryLine.SETRANGE("Sub Line No.", 1);
+      CALHistoryLine.SETFILTER("Line No.", '>=%1', Line."C/AL Line No." * 10);
+      IF CALHistoryLine.FINDSET THEN
+        REPEAT
+
+          IF FromCALLineNo = 0 THEN
+            FromCALLineNo := CALHistoryLine."Line No.";
+
+          TillCALLineNo := CALHistoryLine."Line No.";
+
+          CodeLine := CompleteLine(CALHistoryLine);
+
+          IF CodeLine <> '' THEN
+            StopLoop :=
+              (CodeLine[STRLEN(CodeLine)] = ';') OR
+              (CodeLine[STRLEN(CodeLine)] = '}');
+
+          IF NOT StopLoop THEN
+            StopLoop := CALHistoryLine.NEXT = 0;
+
+        UNTIL StopLoop;
+    END;
+
+    LOCAL PROCEDURE FullTagOfCaptionType@59(Line@1000 : Record 11102068) : Text;
+    VAR
+      ctNoTag@1001 : TextConst 'DEU=Full tag not known for property %1.;ENU=Full tag not known for property %1.;ESP=Full tag not known for property %1.;FRA=Full tag not known for property %1.;NLD=Volledige tag niet bekend voor eigenschap %1.;DEA=Full tag not known for property %1.';
+    BEGIN
+      CASE Line."Caption Property Id" OF
+        0 : EXIT('');
+        8629 : EXIT('CaptionML');
+        8630 : EXIT('PageNamesML');
+        8631 : EXIT('ToolTipML');
+        8632 : EXIT('OptionCaptionML');
+        18490 : EXIT('ReqFilterHeadingML');
+        55119 : EXIT('InstructionalTextML');
+        55132 : EXIT('PromotedActionCategoriesML');
+        ELSE
+          ERROR(ctNoTag, Line."Caption Property Id");
+      END;
+    END;
+
+    LOCAL PROCEDURE StartPosOfCaption@60(VAR Line@1000 : Record 11102068) : Integer;
+    VAR
+      ctNoStartPos@1001 : TextConst 'DEU=Start position is not known for identifier %1.;ENU=Start position is not known for identifier %1.;ESP=Start position is not known for identifier %1.;FRA=Start position is not known for identifier %1.;NLD=Startpositie voor identifier %1 is niet bekend.;DEA=Start position is not known for identifier %1.';
+    BEGIN
+      CASE COPYSTR(Line."Character Identifiers", 2) OF
+        '' : EXIT(5);
+
+        'C' :
+          CASE Line."Character Identifiers" OF
+            'NC' :
+              EXIT(17);
+            'RC' :
+              EXIT(16);
+            ELSE
+              EXIT(50);
+          END;
+
+        'N' : EXIT(7);
+        'D' : EXIT(9);
+        'CPM' : EXIT(54);
+        'DSC' : EXIT(58);
+
+        'F' :
+          IF Line."Character Identifiers" = 'RF' THEN
+            EXIT(7)
+          ELSE
+            EXIT(52);
+
+        'FG' : EXIT(74);
+        'I' : EXIT(65);
+        'FC' : EXIT(52);
+        'NC' : EXIT(19);
+        'PG' : EXIT(23);
+        'CPG' : EXIT(35);
+        'T' : EXIT(33);
+
+        ELSE
+          ERROR(ctNoStartPos, COPYSTR(Line."Character Identifiers", 2));
+
+      END;
+    END;
+
+    LOCAL PROCEDURE BeforeCaptionTag@61(CaptionTag@1000 : Text;PropertyTag@1001 : Text;Identifier@1002 : Text) ExitValue : Boolean;
+    BEGIN
+      IF PropertyTag = 'Editable' THEN
+        IF Identifier <> 'TF' THEN
+          EXIT(TRUE);
+
+      IF PropertyTag = 'Visible' THEN
+        IF Identifier IN ['MI', 'NPG'] THEN
+          EXIT(FALSE);
+
+      IF PropertyTag = 'Enabled' THEN
+        IF Identifier = 'NPG' THEN
+          EXIT(FALSE);
+
+      IF CaptionTag = 'InstructionalTextML' THEN BEGIN
+        CASE PropertyTag OF
+          'OnOpenPage' : EXIT(FALSE);
+          'OnInit' : EXIT(FALSE);
+          'OnAfterGetRecord' : EXIT(FALSE);
+        END;
+        EXIT(TRUE);
+      END;
+
+      CASE PropertyTag OF
+        'DataCaptionFields' : ExitValue := TRUE;
+        'OnDelete' : ExitValue := TRUE;
+        'OnInsert' : ExitValue := TRUE;
+        'OnRename' : ExitValue := TRUE;
+        'OnModify' : ExitValue := TRUE;
+        'OnLookup' : ExitValue := TRUE;
+        'TableRelation' : ExitValue := TRUE;
+        'OnValidate' : ExitValue := TRUE;
+        'CaptionML' : ExitValue := TRUE;
+        'InitValue' : ExitValue := TRUE;
+        'FieldClass' : ExitValue := TRUE;
+        'TableRelation' : ExitValue := TRUE;
+        'CalcFormula' : ExitValue := TRUE;
+        'ExtendedDatatype' : ExitValue := TRUE;
+        'AltSearchField' : ExitValue := TRUE;
+        'TestTableRelation' : ExitValue := TRUE;
+        'ValidateTableRelation' : ExitValue := TRUE;
+        'Permissions' : ExitValue := TRUE;
+        'Width' : ExitValue := TRUE;
+        'Height' : ExitValue := TRUE;
+        'HorzGlue' : ExitValue := TRUE;
+        'VertGlue' : ExitValue := TRUE;
+        'ID' : ExitValue := TRUE;
+        'PushAction' : ExitValue := TRUE;
+        'ParentControl' : ExitValue := TRUE;
+        'Name' : ExitValue := TRUE;
+        'InPage' : ExitValue := TRUE;
+        'DrillDown' : ExitValue := TRUE;
+        'Ellipsis' : ExitValue := TRUE;
+        'ShortCutKey' : ExitValue := TRUE;
+        'FontSize' : ExitValue := TRUE;
+        'FontBold' : ExitValue := TRUE;
+        'Visible' : ExitValue := TRUE;
+        'ForeColor' : ExitValue := TRUE;
+        'HorzAlign' : ExitValue := TRUE;
+        'ShowCaption' : ExitValue := TRUE;
+        'FocusOnClick' : ExitValue := TRUE;
+        'InFrame' : ExitValue := TRUE;
+        'LeaderDots' : ExitValue := TRUE;
+        'MenuLevel' : ExitValue := TRUE;
+        'BackTransparent' : ExitValue := TRUE;
+        'Lookup' : ExitValue := TRUE;
+        'VertAlign' : ExitValue := TRUE;
+        'MenuItemType' : ExitValue := TRUE;
+        'DataPerCompany' : ExitValue := TRUE;
+        'BackColor' : ExitValue := TRUE;
+        'InColumn' : ExitValue := TRUE;
+        'PermanentAssist' : ExitValue := TRUE;
+        'MultiLine' : ExitValue := TRUE;
+        'TopLineOnly' : ExitValue := TRUE;
+        'DataItemIndent' : ExitValue := TRUE;
+        'DataItemTable' : ExitValue := TRUE;
+        'DataItemTableView' : ExitValue := TRUE;
+        'Border' : ExitValue := TRUE;
+        'Bitmap' : ExitValue := TRUE;
+        'AutoIncrement' : ExitValue := TRUE;
+        'NewPagePerRecord' : ExitValue := TRUE;
+        'Focusable' : ExitValue := TRUE;
+        'PermanentAssist' : ExitValue := TRUE;
+        'InMatrixHeading' : ExitValue := TRUE;
+        'Cancel' : ExitValue := TRUE;
+        'AssistEdit' : ExitValue := TRUE;
+        'InMatrix' : ExitValue := TRUE;
+        'DataItemVarName' : ExitValue := TRUE;
+        'Enabled' : ExitValue := TRUE;
+      END;
+
+      IF ExitValue THEN
+        EXIT;
+
+      IF CaptionTag = 'ToolTipML' THEN
+        CASE PropertyTag OF
+          'ShowCaption' : ExitValue := TRUE;
+          'Bitmap' : ExitValue := TRUE;
+          'BitmapPos' : ExitValue := TRUE;
+          'AutoRepeat' : ExitValue := TRUE;
+        END;
+
+      IF CaptionTag = 'OptionCaptionML' THEN
+        CASE PropertyTag OF
+          'ToolTipML' : ExitValue := TRUE;
+        END;
+    END;
+
+    LOCAL PROCEDURE MoveUp@62(VAR CALHistoryLine@1000 : Record 11102053;LineNo@1001 : Integer);
+    VAR
+      GapNo@1002 : Integer;
+      GapFound@1003 : Boolean;
+    BEGIN
+      WITH CALHistoryLine DO BEGIN
+        RESET;
+        SETRANGE("Line No.", LineNo);
+        IF FINDFIRST THEN BEGIN
+
+          SETRANGE("Line No.");
+          SETRANGE("Sub Line No.", 1);
+          GapNo := LineNo;
+          REPEAT
+            GapNo += 1;
+            NEXT;
+            GapFound := "Line No." <> GapNo;
+          UNTIL GapFound;
+
+          SETRANGE("Line No.", LineNo, GapNo);
+          SETRANGE("Sub Line No.");
+          IF FINDLAST THEN
+            REPEAT
+              DELETE;
+              "Line No." += 1;
+              INSERT;
+            UNTIL NEXT(-1) = 0;
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE WriteCALLine@63(VAR CALHistoryLine@1000 : Record 11102053;LineNo@1001 : Integer;CodeLine@1002 : Text);
+    VAR
+      SubLineCounter@1003 : Integer;
+      InsertLine@1004 : Boolean;
+    BEGIN
+      WITH CALHistoryLine DO BEGIN
+        RESET;
+        SETRANGE("Line No.", LineNo);
+        DELETEALL;
+
+        "Line No." := LineNo;
+
+        InsertLine := TRUE;
+
+        WHILE InsertLine DO BEGIN
+          SubLineCounter += 1;
+          "Line No." := LineNo;
+          "Sub Line No." := SubLineCounter;
+          Code := DELSTR(CodeLine, 251);
+          INSERT;
+          CodeLine := COPYSTR(CodeLine, 251);
+          InsertLine := CodeLine <> '';
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE MinLengthOfCaption@64(VAR Line@1000 : Record 11102068) : Integer;
+    BEGIN
+      CASE COPYSTR(Line."Character Identifiers", 2) OF
+
+        'C' :
+          CASE Line."Object Type" OF
+            Line."Object Type"::Page : EXIT(27);
+          END;
+
+        'NC' : EXIT(29);
+        'PG' : EXIT(33);
+
+      END;
+
+      EXIT(StartPosOfCaption(Line));
+    END;
+
+    LOCAL PROCEDURE QuotesNeeded@65(Value@1000 : Text) : Boolean;
+    BEGIN
+      IF Value = '' THEN
+        EXIT(TRUE);
+
+      IF (Value[1] IN [' ', '"']) OR (Value[STRLEN(Value)] = ' ') THEN
+        EXIT(TRUE);
+
+      IF STRPOS(Value, ';') > 0 THEN
+        EXIT(TRUE);
+
+      IF STRPOS(Value, '=') > 0 THEN
+        EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE DoubleChar@66(Value@1000 : Text;Char@1001 : Char) ExitValue : Text;
+    VAR
+      i@1002 : Integer;
+    BEGIN
+      IF STRPOS(Value, FORMAT(Char)) = 0 THEN
+        ExitValue := Value
+      ELSE
+        FOR i := 1 TO STRLEN(Value) DO BEGIN
+          ExitValue += FORMAT(Value[i]);
+          IF Value[i] = Char THEN
+            ExitValue += FORMAT(Char);
+        END;
+    END;
+
+    LOCAL PROCEDURE BracketsNeeded@67(Value@1000 : Text) : Boolean;
+    BEGIN
+      IF Value = '' THEN
+        EXIT(FALSE);
+
+      IF (Value[1] IN [' ', '[']) OR (Value[STRLEN(Value)] = ' ') THEN
+        EXIT(TRUE);
+
+      IF STRPOS(Value, ';') > 0 THEN
+        EXIT(TRUE);
+
+      IF STRPOS(Value, '}') > 0 THEN
+        EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE DeleteCALLine@68(VAR CALHistoryLine@1000 : Record 11102053;LineNo@1001 : Integer);
+    BEGIN
+      WITH CALHistoryLine DO BEGIN
+        RESET;
+        SETRANGE("Line No.", LineNo);
+        DELETEALL;
+      END;
+    END;
+
+    PROCEDURE ConfirmRecordsChanged@69() : Boolean;
+    VAR
+      Line@1000 : Record 11102068;
+      ctRecordsChanged@1001 : TextConst 'DEU=Overwrite existing changes?;ENU=Overwrite existing changes?;ESP=Overwrite existing changes?;FRA=Overwrite existing changes?;NLD=Bestaande wijzigingen overschrijven?;DEA=Overwrite existing changes?';
+    BEGIN
+      WITH Line DO BEGIN
+        SETCURRENTKEY(Changed);
+        SETRANGE(Changed, TRUE);
+        IF ISEMPTY THEN
+          EXIT(TRUE);
+
+        EXIT(CONFIRM(ctRecordsChanged));
+      END;
+    END;
+
+    LOCAL PROCEDURE MoveOtherLines@70(VAR Line@1000 : Record 11102068;VAR Line2@1001 : Record 11102068;VAR FromLineNo@1002 : Integer;VAR ToLineNo@1003 : Integer);
+    BEGIN
+      Line2.RESET;
+
+      Line2 := Line;
+      Line2.COPYFILTERS(Line);
+
+      Line.RESET;
+      Line.SETCURRENTKEY("Object Type", "Object No.", "C/AL Line No.");
+      Line.SETRANGE("Object Type", Line."Object Type");
+      Line.SETRANGE("Object No.", Line."Object No.");
+      Line.SETRANGE("C/AL Line No.", ROUND(FromLineNo / 10, 1));
+      Line.MODIFYALL("C/AL Line No.", ROUND(ToLineNo / 10, 1));
+
+      Line.RESET;
+      Line := Line2;
+      Line.COPYFILTERS(Line2);
+    END;
+
+    LOCAL PROCEDURE GetCaptionsFromObjectFile@71(VAR FileName@1000 : Text;VAR Buffer@1001 : TEMPORARY Record 11102068;VAR TmpCALHistoryObject@1002 : TEMPORARY Record 11102052;VAR TmpCALHistoryLine@1003 : TEMPORARY Record 11102053;VAR Progressbar@1004 : Codeunit 11102044;ProgressFrom@1005 : Integer;ProgressTill@1006 : Integer);
+    VAR
+      TmpObject@1007 : TEMPORARY Record 2000000001;
+      ImExportMgt@1008 : Codeunit 11102043;
+      SourceControl@1009 : Codeunit 11102050;
+    BEGIN
+      Progressbar.BarSize := ImExportMgt.LengthOfFile(FileName);
+      Progressbar.UseRange(ProgressFrom, ProgressFrom + ProgressTill * 0.75);
+
+      SourceControl.ImportTextFile2(FileName, 1, Progressbar, 0, TmpCALHistoryObject, TmpCALHistoryLine, TRUE);
+
+      Progressbar.BarSize := TmpCALHistoryObject.COUNT;
+      Progressbar.UseRange(ProgressFrom + ProgressTill * 0.75, ProgressTill);
+      IF TmpCALHistoryObject.FINDSET THEN
+        REPEAT
+
+          TmpCALHistoryObject.FillObjectFields(TmpObject);
+          Progressbar.Text1Object := TmpObject;
+          Progressbar.AddToBar(1);
+
+          TmpCALHistoryLine.RESET;
+          TmpCALHistoryLine.SETRANGE("Entry No.", TmpCALHistoryObject."Entry No.");
+          ImportCALLines(TmpObject, TmpCALHistoryLine, Buffer, FALSE);
+
+        UNTIL TmpCALHistoryObject.NEXT = 0;
+    END;
+
+    PROCEDURE FinalizeBuffer@72(VAR Buffer@1000 : TEMPORARY Record 11102068;VAR TmpLine@1001 : ARRAY [2] OF TEMPORARY Record 11102068;ObjectType2@1002 : ' ,Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query';ObjectNo@1003 : Integer);
+    BEGIN
+      IF ObjectType2 <> ObjectType2::" " THEN BEGIN
+        Buffer.SETCURRENTKEY("Translate File Line");
+        Buffer.SETFILTER("Translate File Line", CharacterOfObjectType(ObjectType2) + FORMAT(ObjectNo) + '-*');
+      END;
+
+      WITH TmpLine[1] DO
+        IF Buffer.FINDSET THEN
+          REPEAT
+
+            INIT;
+            "Entry No." := 0;
+            ValidateTranslationFileLine(Buffer."Translate File Line" + Buffer.TotalCaption, TmpLine[2]);
+            "C/AL Line No." := Buffer."C/AL Line No.";
+            IF "Entry No." = 0 THEN BEGIN
+
+              IF Captions AND ("Caption Entry No." = 0) THEN BEGIN
+
+                CaptionEntryNo += 1;
+                "Caption Entry No." := CaptionEntryNo;
+              END;
+
+              EntryNo += 1;
+              "Entry No." := EntryNo;
+              INSERT(TRUE);
+            END ELSE
+              MODIFY;
+
+          UNTIL Buffer.NEXT = 0;
+      TmpLine[1].RESET;
+    END;
+
+    PROCEDURE FillCALLineBuffer@73(VAR TmpFromCALHistoryLine@1000 : Record 11102053;VAR TmpToCALHistoryLine@1001 : Record 11102053;EntryNo@1002 : Integer);
+    BEGIN
+      TmpToCALHistoryLine.RESET;
+      TmpToCALHistoryLine.DELETEALL;
+
+      TmpFromCALHistoryLine.RESET;
+      TmpFromCALHistoryLine.SETRANGE("Entry No.", EntryNo);
+      IF TmpFromCALHistoryLine.FINDSET THEN
+        REPEAT
+          TmpToCALHistoryLine := TmpFromCALHistoryLine;
+          TmpToCALHistoryLine."Entry No." := 0;
+          TmpToCALHistoryLine."Line No." *= 10;
+          TmpToCALHistoryLine.INSERT;
+        UNTIL TmpFromCALHistoryLine.NEXT = 0;
+    END;
+
+    PROCEDURE ObjectTypeOfCharacter@74(Character@1000 : Text) : Integer;
+    VAR
+      Object@1001 : Record 2000000001;
+    BEGIN
+      CASE Character OF
+        'T' : EXIT(Object.Type::Table);
+        'R' : EXIT(Object.Type::Report);
+        'X' : EXIT(Object.Type::XMLport);
+        'C' : EXIT(Object.Type::Codeunit);
+        'M' : EXIT(Object.Type::MenuSuite);
+        'N' : EXIT(Object.Type::Page);
+        'Q' : EXIT(Object.Type::Query);
+      END;
+    END;
+
+    LOCAL PROCEDURE CharacterOfObjectType@75(ObjectType2@1000 : ',Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query') : Text;
+    BEGIN
+      CASE ObjectType2 OF
+        ObjectType2::Table : EXIT('T');
+        ObjectType2::Report : EXIT('R');
+        ObjectType2::XMLport : EXIT('X');
+        ObjectType2::Codeunit : EXIT('C');
+        ObjectType2::MenuSuite : EXIT('M');
+        ObjectType2::Page : EXIT('N');
+        ObjectType2::Query : EXIT('Q');
+      END;
+    END;
+
+    PROCEDURE LanguageIdOfLine@76(VAR TranslateFileLine@1000 : Text) LanguageId : Integer;
+    VAR
+      LanguageIdString@1001 : Text;
+      Pos@1002 : Integer;
+    BEGIN
+      Pos := STRPOS(TranslateFileLine, '-A');
+      IF Pos > 0 THEN BEGIN
+        LanguageIdString := COPYSTR(TranslateFileLine, Pos + 2);
+        Pos := STRPOS(LanguageIdString, '-');
+        IF Pos > 0 THEN BEGIN
+          LanguageIdString := DELSTR(LanguageIdString, Pos);
+          IF EVALUATE(LanguageId, LanguageIdString) THEN
+            ;
+        END;
+      END;
+    END;
+
+    PROCEDURE ParkView@77(VAR FromRec@1000 : Record 11102068;VAR ToRec@1001 : Record 11102068;VAR RecRef@1002 : RecordRef);
+    BEGIN
+      RecRef.GETTABLE(FromRec);
+      ToRec := FromRec;
+      FromRec.RESET;
+    END;
+
+    PROCEDURE GetParkedView@78(VAR ToRec@1000 : Record 11102068;VAR RecRef@1001 : RecordRef);
+    BEGIN
+      RecRef.SETTABLE(ToRec);
+    END;
+
+    PROCEDURE UpdateWithComments@79(VAR CheckGuidelinesComment@1000 : Record 11102081) : Boolean;
+    VAR
+      TmpCALHistoryLine@1001 : TEMPORARY Record 11102053;
+      Buffer@1002 : TEMPORARY Record 11102068;
+      TmpLine@1003 : ARRAY [2] OF TEMPORARY Record 11102068;
+      Object@1004 : Record 2000000001;
+      TmpObject@1005 : TEMPORARY Record 2000000001;
+      SourceControl@1006 : Codeunit 11102050;
+      ctWriteChangesToDatabase@1007 : TextConst 'DEU=Write changes to database?;ENU=Write changes to database?;ESP=Write changes to database?;FRA=Write changes to database?;NLD=Wilt u de wijzigingen naar de database wegschrijven?;DEA=Write changes to database?';
+    BEGIN
+      WITH CheckGuidelinesComment DO
+        IF FINDSET THEN
+          REPEAT
+            IF NOT TmpObject.GET("Object Type", '', "Object No.") THEN
+              IF Object.GET("Object Type", '', "Object No.") THEN BEGIN
+                TmpObject := Object;
+                TmpObject.INSERT;
+              END;
+          UNTIL NEXT = 0;
+
+      IF TmpObject.FINDSET THEN
+        REPEAT
+          SourceControl.FillCALLineBufferWithLatest(TmpCALHistoryLine, TmpObject.Type, TmpObject.ID);
+          Buffer.DELETEALL;
+          ImportCALLines(TmpObject, TmpCALHistoryLine, Buffer, FALSE);
+          FinalizeBuffer(Buffer, TmpLine, TmpObject.Type, TmpObject.ID);
+        UNTIL TmpObject.NEXT = 0;
+
+      DeleteIfNotComment(TmpLine, CheckGuidelinesComment);
+      AddMandatoryLanguages(TmpLine);
+
+      TmpLine[1].SETCURRENTKEY("Object Type", "Object No.", "C/AL Line No.");
+      IF PAGE.RUNMODAL(PAGE::"OM - Update Captions", TmpLine[1]) IN [ACTION::OK, ACTION::LookupOK] THEN BEGIN
+        TmpLine[1].RESET;
+        TmpLine[1].SETRANGE(Changed, TRUE);
+        IF NOT TmpLine[1].ISEMPTY THEN
+          IF CONFIRM(ctWriteChangesToDatabase, TRUE) THEN BEGIN
+            WriteToDatabase(TmpLine, TRUE);
+            EXIT(TRUE);
+          END;
+      END;
+    END;
+
+    PROCEDURE UpdateFromCALLines@80(VAR Object@1000 : Record 2000000001;VAR TmpCALHistoryLine@1001 : Record 11102053;VAR CheckGuidelinesComment@1002 : Record 11102081;AllCaptions@1003 : Boolean) : Boolean;
+    VAR
+      TmpCALHistoryLine2@1004 : ARRAY [2] OF TEMPORARY Record 11102053;
+      Buffer@1005 : TEMPORARY Record 11102068;
+      TmpLine@1006 : ARRAY [2] OF TEMPORARY Record 11102068;
+      LineCounter@1007 : Integer;
+    BEGIN
+      ImportCALLines(Object, TmpCALHistoryLine, Buffer, FALSE);
+      FinalizeBuffer(Buffer, TmpLine, Object.Type, Object.ID);
+      AddMandatoryLanguages(TmpLine);
+
+      IF NOT AllCaptions THEN
+        DeleteIfReady(TmpLine);
+
+      TmpLine[1].SETCURRENTKEY("Object Type", "Object No.", "C/AL Line No.");
+      IF PAGE.RUNMODAL(PAGE::"OM - Update Captions", TmpLine[1]) IN [ACTION::OK, ACTION::LookupOK] THEN BEGIN
+
+        FillCALLineBuffer(TmpCALHistoryLine, TmpCALHistoryLine2[1], TmpCALHistoryLine."Entry No.");
+
+        TmpLine[1].RESET;
+        TmpLine[1].SETCURRENTKEY("Caption Entry No.");
+        IF TmpLine[1].FINDSET THEN
+          REPEAT
+            WriteLineToCAL(TmpLine, TmpCALHistoryLine2);
+            TmpLine[1].SETFILTER("Caption Entry No.", '>%1', TmpLine[1]."Caption Entry No.");
+          UNTIL TmpLine[1].NEXT = 0;
+
+        TmpCALHistoryLine.RESET;
+        TmpCALHistoryLine.DELETEALL;
+
+        TmpCALHistoryLine2[1].RESET;
+        IF TmpCALHistoryLine2[1].FINDSET THEN
+          REPEAT
+            IF TmpCALHistoryLine2[1]."Sub Line No." = 1 THEN
+              LineCounter += 1;
+            TmpCALHistoryLine := TmpCALHistoryLine2[1];
+            TmpCALHistoryLine."Line No." := LineCounter;
+            TmpCALHistoryLine.INSERT;
+          UNTIL TmpCALHistoryLine2[1].NEXT = 0;
+
+        EXIT(TRUE);
+      END;
+    END;
+
+    PROCEDURE AddMandatoryLanguages@81(VAR TmpLine@1000 : ARRAY [2] OF Record 11102068);
+    VAR
+      WindowsLanguage2@1001 : Record 2000000045;
+      Setting@1002 : Codeunit 11102114;
+    BEGIN
+      IF Setting.MandatoryLanguages <> '' THEN BEGIN
+        WindowsLanguage2.SETFILTER("Abbreviated Name", Setting.MandatoryLanguages);
+        IF WindowsLanguage2.FINDSET THEN
+          REPEAT
+            CreateMissingCaptions(TmpLine, WindowsLanguage2."Language ID", TRUE);
+            TmpLine[1].RESET;
+          UNTIL WindowsLanguage2.NEXT = 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE DeleteIfNotComment@82(VAR TmpLine@1000 : ARRAY [2] OF Record 11102068;VAR CheckGuidelinesComment@1001 : Record 11102081);
+    BEGIN
+      WITH TmpLine[1] DO BEGIN
+        RESET;
+        IF FINDSET THEN
+          REPEAT
+            IF NOT CommentExist(TmpLine, CheckGuidelinesComment) THEN
+              DELETE;
+          UNTIL NEXT = 0;
+      END;
+
+      CheckGuidelinesComment.RESET;
+    END;
+
+    LOCAL PROCEDURE CommentExist@90(VAR TmpLine@1000 : ARRAY [2] OF Record 11102068;VAR CheckGuidelinesComment@1001 : Record 11102081) : Boolean;
+    BEGIN
+      WITH TmpLine[2] DO BEGIN
+        RESET;
+        SETCURRENTKEY("Translate File Line");
+        SETRANGE("Translate File Line", TmpLine[1]."Translate File Line");
+        IF FINDSET THEN
+          REPEAT
+            CheckGuidelinesComment.RESET;
+            CheckGuidelinesComment.SETRANGE("Object Type", "Object Type");
+            CheckGuidelinesComment.SETRANGE("Object No.", "Object No.");
+            CheckGuidelinesComment.SETRANGE("C/AL Line No.", "C/AL Line No.");
+            CheckGuidelinesComment.SETRANGE(Type, CheckGuidelinesComment.Type::Captions);
+            IF NOT CheckGuidelinesComment.ISEMPTY THEN
+              EXIT(TRUE);
+          UNTIL NEXT = 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE DeleteIfReady@89(VAR TmpLine@1000 : ARRAY [2] OF Record 11102068);
+    BEGIN
+      TmpLine[1].RESET;
+      TmpLine[2].RESET;
+
+      IF TmpLine[1].FINDSET THEN
+        REPEAT
+          TmpLine[2].SETCURRENTKEY("Caption Entry No.");
+          TmpLine[2].SETRANGE("Caption Entry No.", TmpLine[1]."Caption Entry No.");
+          TmpLine[2].SETRANGE("Missing Caption", TRUE);
+          IF TmpLine[2].ISEMPTY THEN BEGIN
+            TmpLine[2].SETRANGE("Missing Caption");
+            TmpLine[2].DELETEALL;
+          END;
+        UNTIL TmpLine[1].NEXT = 0;
+    END;
+
+    PROCEDURE MergeCaptionBuffers@85(VAR TmpLine@1000 : Record 11102068;VAR TmpCaption@1001 : TEMPORARY Record 11102068;AddMethod@1002 : 'AddAndOverwrite,Add,Overwrite');
+    VAR
+      TranslateFileLine@1003 : Text;
+      CALLineNo@1004 : Integer;
+      CaptionEntryNo2@1005 : Integer;
+      LastCaptionEntryNo@1006 : Integer;
+      LastEntryNo@1007 : Integer;
+      Action2@1008 : ' ,Update,Add';
+    BEGIN
+      TmpLine.RESET;
+      IF TmpLine.FINDLAST THEN
+        LastEntryNo := TmpLine."Entry No.";
+
+      TmpLine.SETCURRENTKEY("Caption Entry No.");
+      IF TmpLine.FINDLAST THEN
+        LastCaptionEntryNo := TmpLine."Caption Entry No.";
+
+      TmpCaption.SETFILTER("Caption 1", '<>%1', '');
+      IF TmpCaption.FINDSET THEN
+        REPEAT
+          Action2 := Action2::" ";
+          CaptionEntryNo2 := 0;
+
+          TmpLine.SETCURRENTKEY("Translate File Line Part 1");
+          TmpLine.SETRANGE("Translate File Line Part 1", TmpCaption."Translate File Line Part 1");
+          TmpLine.SETRANGE("Property Id", TmpCaption."Property Id");
+          TmpLine.SETRANGE("Caption Property Id", TmpCaption."Caption Property Id");
+          TmpLine.SETFILTER("Language Id", '%1|0', TmpCaption."Language Id");
+          IF TmpLine.FINDFIRST THEN BEGIN
+
+            IF AddMethod <> AddMethod::Add THEN
+              Action2 := Action2::Update;
+
+          END ELSE BEGIN
+            TmpLine.SETRANGE("Language Id");
+            IF TmpLine.FINDFIRST THEN
+              CaptionEntryNo2 := TmpLine."Caption Entry No.";
+
+            TmpLine.SETRANGE("Caption Property Id");
+            TmpLine.SETRANGE("Property Id");
+            IF TmpLine.FINDFIRST THEN
+              IF AddMethod IN [AddMethod::AddAndOverwrite, AddMethod::Add] THEN
+                Action2 := Action2::Add;
+          END;
+
+          CASE Action2 OF
+            Action2::Add :
+              BEGIN
+                CALLineNo := TmpLine."C/AL Line No.";
+                TranslateFileLine := TmpLine."Translate File Line";
+                LastEntryNo += 1;
+
+                TmpLine := TmpCaption;
+                TmpLine."Entry No." := LastEntryNo;
+
+                IF CaptionEntryNo2 = 0 THEN BEGIN
+                  LastCaptionEntryNo += 1;
+                  CaptionEntryNo2 := LastCaptionEntryNo;
+                END;
+
+                TmpLine."Translate File Line" := TranslateFileLine;
+                TmpLine."Caption Entry No." := CaptionEntryNo2;
+                TmpLine."C/AL Line No." := CALLineNo;
+                TmpLine.INSERT;
+              END;
+
+            Action2::Update :
+              BEGIN
+                TmpLine."Translate File Line" := TmpCaption."Translate File Line";
+                TmpLine."Language Id" := TmpCaption."Language Id";
+                TmpLine."Max. Length" := TmpCaption."Max. Length";
+                TmpLine."Caption 1" := TmpCaption."Caption 1";
+                TmpLine."Caption 2" := TmpCaption."Caption 2";
+                TmpLine."Caption 3" := TmpCaption."Caption 3";
+                TmpLine."Caption 4" := TmpCaption."Caption 4";
+                TmpLine.MODIFY;
+              END;
+          END;
+
+        UNTIL TmpCaption.NEXT = 0;
+
+      TmpLine.RESET;
+    END;
+
+    PROCEDURE AddCaptionsToCALLines@87(VAR TmpCALHistoryLine@1000 : Record 11102053;VAR TmpCaption@1001 : Record 11102068;VAR Object@1002 : Record 2000000001);
+    VAR
+      TmpCALHistoryLine2@1003 : ARRAY [2] OF TEMPORARY Record 11102053;
+      Buffer@1004 : TEMPORARY Record 11102068;
+      TmpLine@1005 : ARRAY [2] OF TEMPORARY Record 11102068;
+      TranslationMgt@1006 : Codeunit 11102051;
+      AddMethod@1007 : 'AddAndOverwrite,Add,Overwrite';
+    BEGIN
+      ImportCALLines(Object, TmpCALHistoryLine, Buffer, TRUE);
+      TranslationMgt.FinalizeBuffer(Buffer, TmpLine, Object.Type, Object.ID);
+
+      MergeCaptionBuffers(TmpLine[1], TmpCaption, AddMethod::AddAndOverwrite);
+
+      IF TmpCALHistoryLine.FINDSET THEN
+        REPEAT
+          TmpCALHistoryLine2[1] := TmpCALHistoryLine;
+          TmpCALHistoryLine2[1]."Line No." *= 10;
+          TmpCALHistoryLine2[1].INSERT;
+        UNTIL TmpCALHistoryLine.NEXT = 0;
+
+      TmpLine[1].RESET;
+      TmpLine[1].SETCURRENTKEY("Object Type", "Object No.", "Caption Entry No.");
+      TmpLine[1].SETRANGE("Object Type", Object.Type);
+      TmpLine[1].SETRANGE("Object No.", Object.ID);
+      TmpLine[1].SETRANGE(Captions, TRUE);
+      IF TmpLine[1].FINDSET THEN
+        REPEAT
+          TranslationMgt.WriteLineToCAL(TmpLine, TmpCALHistoryLine2);
+          TmpLine[1].SETFILTER("Caption Entry No.", '>%1', TmpLine[1]."Caption Entry No.");
+        UNTIL TmpLine[1].NEXT = 0;
+
+      TmpCALHistoryLine.DELETEALL;
+      IF TmpCALHistoryLine2[1].FINDSET THEN
+        REPEAT
+          TmpCALHistoryLine := TmpCALHistoryLine2[1];
+          TmpCALHistoryLine.INSERT;
+        UNTIL TmpCALHistoryLine2[1].NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE GetNextCSVValue@91(VAR oFile@1000 : File;VAR ExitValue@1001 : Text) : Boolean;
+    VAR
+      Char@1002 : Char;
+      FirstCharacter@1003 : Boolean;
+      QuotesOpened@1004 : Boolean;
+      Stop@1005 : Boolean;
+    BEGIN
+      ExitValue := '';
+      FirstCharacter := TRUE;
+
+      WHILE NOT Stop DO
+
+        IF oFile.READ(Char) = 0 THEN
+
+          EXIT(FALSE)
+
+        ELSE BEGIN
+
+          CASE Char OF
+
+            13 :
+              Stop := TRUE;
+
+            10 :
+              Stop := TRUE;
+
+            ';' :
+              IF QuotesOpened THEN
+                ExitValue += FORMAT(Char)
+              ELSE
+                Stop := TRUE;
+
+            '"' :
+              IF FirstCharacter THEN
+                QuotesOpened := TRUE
+              ELSE
+                IF QuotesOpened THEN BEGIN
+                  oFile.READ(Char);
+                  IF (Char = 10) OR (Char = 13) OR (Char = ';') THEN
+                    Stop := TRUE
+                  ELSE
+                    ExitValue += FORMAT(Char);
+                END;
+            ELSE
+              ExitValue += FORMAT(Char);
+          END;
+
+          FirstCharacter := FALSE;
+
+        END;
+
+      IF (Char = 13) OR (Char = 10) THEN
+        oFile.SEEK(oFile.POS - 1);
+
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE GotoNextLine@92(VAR oFile@1000 : File) : Boolean;
+    VAR
+      Char@1001 : Char;
+      Stop@1002 : Boolean;
+    BEGIN
+      WHILE NOT Stop DO
+
+        IF oFile.READ(Char) = 0 THEN
+
+          EXIT(FALSE)
+
+        ELSE
+
+          CASE Char OF
+
+            13 :
+              Stop := TRUE;
+
+            10 :
+              Stop := TRUE;
+
+          END;
+
+      oFile.READ(Char);
+      IF (Char <> 10) AND (Char <> 13) THEN
+        oFile.SEEK(oFile.POS - 1);
+
+      IF oFile.READ(Char) = 0 THEN
+        EXIT(FALSE)
+      ELSE BEGIN
+        oFile.SEEK(oFile.POS - 1);
+        EXIT(TRUE);
+      END;
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 23.08.17 JAL Keep page filter on table
+    }
+    END.
+  }
+}
+

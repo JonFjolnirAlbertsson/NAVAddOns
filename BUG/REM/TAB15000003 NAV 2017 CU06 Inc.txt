@@ -1,0 +1,189 @@
+OBJECT Table 15000003 Remittance Account
+{
+  OBJECT-PROPERTIES
+  {
+    Date=12.05.17;
+    Time=17:54:58;
+    Modified=Yes;
+    Version List=NAVNO7.00,INCBF1.4;
+  }
+  PROPERTIES
+  {
+    OnInsert=BEGIN
+               // Default if it's only an agreement.
+               IF RemittanceAgreement.COUNT = 1 THEN BEGIN
+                 RemittanceAgreement.FINDFIRST;
+                 VALIDATE("Remittance Agreement Code",RemittanceAgreement.Code);
+               END;
+             END;
+
+    CaptionML=[ENU=Remittance Account;
+               NOR=Remitteringskonto];
+    LookupPageID=Page15000006;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Code                ;Code10        ;CaptionML=[ENU=Code;
+                                                              NOR=Kode] }
+    { 2   ;   ;Remittance Agreement Code;Code10   ;TableRelation="Remittance Agreement".Code;
+                                                   CaptionML=[ENU=Remittance Agreement Code;
+                                                              NOR=Remitteringsavtalekode] }
+    { 5   ;   ;Description         ;Text30        ;CaptionML=[ENU=Description;
+                                                              NOR=Beskrivelse] }
+    { 14  ;   ;Type                ;Option        ;OnValidate=BEGIN
+                                                                RemittanceAgreement.GET("Remittance Agreement Code");
+                                                                IF (Type = Type::Foreign) AND (RemittanceAgreement."Payment System" = RemittanceAgreement."Payment System"::BBS) THEN
+                                                                  ERROR(InvalidTypeErr);
+                                                              END;
+
+                                                   CaptionML=[ENU=Type;
+                                                              NOR=Type];
+                                                   OptionCaptionML=[ENU=Domestic,Foreign,Payment Instr.;
+                                                                    NOR=Innland,Utland,Bet. Inst.];
+                                                   OptionString=Domestic,Foreign,Payment Instr. }
+    { 21  ;   ;BBS Agreement ID    ;Code9         ;CaptionML=[ENU=BBS Agreement ID;
+                                                              NOR=BBS Avtale ID] }
+    { 22  ;   ;Bank Account No.    ;Code20        ;OnValidate=BEGIN
+                                                                IF "Bank Account No." <> '' THEN BEGIN
+                                                                  ErrorMess := RemTools.CheckAccountNo("Bank Account No.",Type::Domestic);
+                                                                  IF ErrorMess <> '' THEN
+                                                                    ERROR(ErrorMess);
+                                                                END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Bank Account No.;
+                                                              NOR=Bankkontonr.] }
+    { 25  ;   ;Account No.         ;Code20        ;TableRelation=IF (Account Type=CONST(Finance account)) "G/L Account".No.
+                                                                 ELSE IF (Account Type=CONST(Bank account)) "Bank Account".No.;
+                                                   CaptionML=[ENU=Account No.;
+                                                              NOR=Kontonr.] }
+    { 26  ;   ;Document No. Series ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=[ENU=Document No. Series;
+                                                              NOR="Bilagsnr.serie "] }
+    { 27  ;   ;Account Type        ;Option        ;OnValidate=BEGIN
+                                                                IF "Account Type" <> xRec."Account Type" THEN
+                                                                  VALIDATE("Account No.",'');
+                                                              END;
+
+                                                   CaptionML=[ENU=Account Type;
+                                                              NOR=Kontotype];
+                                                   OptionCaptionML=[ENU=Finance account,,,Bank account;
+                                                                    NOR=Finanskonto,,,Bankkonto];
+                                                   OptionString=Finance account,,,Bank account }
+    { 28  ;   ;New Document Per.   ;Option        ;CaptionML=[ENU=New Document Per.;
+                                                              NOR=Nytt bilag pr.];
+                                                   OptionCaptionML=[ENU=Date,Vendor;
+                                                                    NOR=Dato,Leverand›r];
+                                                   OptionString=Date,Vendor }
+    { 29  ;   ;Return Journal Template Name;Code10;TableRelation="Gen. Journal Template".Name WHERE (Type=CONST(Payments));
+                                                   CaptionML=[ENU=Return Journal Template Name;
+                                                              NOR=Returkladd malnavn] }
+    { 30  ;   ;Return Journal Name ;Code10        ;TableRelation="Gen. Journal Batch".Name WHERE (Journal Template Name=FIELD(Return Journal Template Name));
+                                                   CaptionML=[ENU=Return Journal Name;
+                                                              NOR=Returkladd navn] }
+    { 40  ;   ;Recipient ref. 1 - Invoice;Code80  ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 1 - Invoice");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 1 - Invoice;
+                                                              NOR=Mottaker ref. 1 - fak.] }
+    { 41  ;   ;Recipient ref. 2 - Invoice;Code80  ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 2 - Invoice");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 2 - Invoice;
+                                                              NOR=Mottaker ref. 2 - fak.] }
+    { 42  ;   ;Recipient ref. 3 - Invoice;Code80  ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 3 - Invoice");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 3 - Invoice;
+                                                              NOR=Mottaker ref. 3 - fakt.] }
+    { 43  ;   ;Recipient ref. 1 - Cr. Memo;Code80 ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 1 - Cr. Memo");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 1 - Cr. Memo;
+                                                              NOR=Mottaker ref. 1 - kred.] }
+    { 44  ;   ;Recipient ref. 2 - Cr. Memo;Code80 ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 2 - Cr. Memo");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 2 - Cr. Memo;
+                                                              NOR=Mottaker ref. 2 - kred.] }
+    { 45  ;   ;Recipient ref. 3 - Cr. Memo;Code80 ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 3 - Cr. Memo");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 3 - Cr. Memo;
+                                                              NOR=Mottaker ref. 3 - kred.] }
+    { 46  ;   ;Futures Contract No.;Code6         ;CaptionML=[ENU=Futures Contract No.;
+                                                              NOR=Terminskontraktnr.] }
+    { 47  ;   ;Futures Contract Exch. Rate;Decimal;CaptionML=[ENU=Futures Contract Exch. Rate;
+                                                              NOR=Terminskontraktkurs];
+                                                   DecimalPlaces=5:5;
+                                                   BlankZero=Yes }
+    { 51  ;   ;Recipient Ref. Abroad;Code35       ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient Ref. Abroad");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient Ref. Abroad;
+                                                              NOR=Mottaker ref. utland] }
+    { 52  ;   ;Currency Code       ;Code10        ;TableRelation=Currency.Code;
+                                                   CaptionML=[ENU=Currency Code;
+                                                              NOR=Valutakode] }
+    { 53  ;   ;Charge Account Type ;Option        ;OnValidate=BEGIN
+                                                                IF "Charge Account Type" <> xRec."Charge Account Type" THEN
+                                                                  VALIDATE("Charge Account No.",'');
+                                                              END;
+
+                                                   CaptionML=[ENU=Charge Account Type;
+                                                              NOR=Gebyrkontotype];
+                                                   OptionCaptionML=[ENU=Finance account,,,Bank account;
+                                                                    NOR=Finanskonto,,,Bankkonto];
+                                                   OptionString=Finance account,,,Bank account }
+    { 54  ;   ;Charge Account No.  ;Code20        ;TableRelation=IF (Charge Account Type=CONST(Finance account)) "G/L Account".No.
+                                                                 ELSE IF (Charge Account Type=CONST(Bank account)) "Bank Account".No.;
+                                                   CaptionML=[ENU=Charge Account No.;
+                                                              NOR=Gebyrkontonr.] }
+    { 55  ;   ;Round off/Divergence Acc. No.;Code20;
+                                                   TableRelation="G/L Account".No.;
+                                                   CaptionML=[ENU=Round off/Divergence Acc. No.;
+                                                              NOR=Avrunding/Avvikkontonr.] }
+    { 56  ;   ;Max. Round off/Diverg. (LCY);Decimal;
+                                                   CaptionML=[ENU=Max. Round off/Diverg. (LCY);
+                                                              NOR=Maks. avrunding/avvik (NOK)] }
+    { 50000;  ;Signer Id           ;Code20        ;CaptionML=[ENU=Signer ID;
+                                                              NOR=Signer ID] }
+    { 50001;  ;Aggreement No.      ;Code20        ;CaptionML=[ENU=Aggreement No.;
+                                                              NOR=Avtalenummer] }
+  }
+  KEYS
+  {
+    {    ;Code                                    ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      RemittanceAgreement@1080000 : Record 15000000;
+      RemTools@1080001 : Codeunit 15000002;
+      ErrorMess@1080002 : Text[250];
+      InvalidTypeErr@1080003 : TextConst 'ENU=The type Foreign cannot be used with the BBS payment system.;NOR=Typen Utenlands kan ikke brukes med BBS-betalingssystemet.';
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.05.17 JAL Nordea has another XML format and NAV is missing fields for bank references.
+                       New field :: Yes50000Signer IDCode20Normal
+                       New field :: Yes50001Aggreement No.Code20Normal
+    }
+    END.
+  }
+}
+

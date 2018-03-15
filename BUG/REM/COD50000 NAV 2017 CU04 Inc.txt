@@ -1,0 +1,41 @@
+OBJECT Codeunit 50000 COD Events
+{
+  OBJECT-PROPERTIES
+  {
+    Date=12.05.17;
+    Time=17.57.10;
+    Modified=Yes;
+    Version List=INCBF1.4;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+
+    [EventSubscriber(Codeunit,1221,OnBeforeValidatePaymentExportData)]
+    LOCAL PROCEDURE COD1221OnBeforeValidatePaymentExportData@1101103000(VAR PaymentExportData@1101103000 : Record 1226;VAR GenJnlLine@1101103001 : Record 81);
+    BEGIN
+      PaymentExportData."General Journal Template"   := GenJnlLine."Journal Template Name";
+      PaymentExportData."General Journal Batch Name" := GenJnlLine."Journal Batch Name";
+      PaymentExportData."General Journal Line No."   := GenJnlLine."Line No.";
+
+
+
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.05.17 JAL SEPA Nordea has another XML format and NAV is missing fields for bank references.
+    }
+    END.
+  }
+}
+

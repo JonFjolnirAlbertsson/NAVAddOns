@@ -1,0 +1,1926 @@
+OBJECT Table 15000003 Remittance Account
+{
+  OBJECT-PROPERTIES
+  {
+    Date=12.05.17;
+    Time=17.54.58;
+    Modified=Yes;
+    Version List=NAVNO7.00,INCBF1.4;
+  }
+  PROPERTIES
+  {
+    OnInsert=BEGIN
+               // Default if it's only an agreement.
+               IF RemittanceAgreement.COUNT = 1 THEN BEGIN
+                 RemittanceAgreement.FINDFIRST;
+                 VALIDATE("Remittance Agreement Code",RemittanceAgreement.Code);
+               END;
+             END;
+
+    CaptionML=[ENU=Remittance Account;
+               NOR=Remitteringskonto];
+    LookupPageID=Page15000006;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Code                ;Code10        ;CaptionML=[ENU=Code;
+                                                              NOR=Kode] }
+    { 2   ;   ;Remittance Agreement Code;Code10   ;TableRelation="Remittance Agreement".Code;
+                                                   CaptionML=[ENU=Remittance Agreement Code;
+                                                              NOR=Remitteringsavtalekode] }
+    { 5   ;   ;Description         ;Text30        ;CaptionML=[ENU=Description;
+                                                              NOR=Beskrivelse] }
+    { 14  ;   ;Type                ;Option        ;OnValidate=BEGIN
+                                                                RemittanceAgreement.GET("Remittance Agreement Code");
+                                                                IF (Type = Type::Foreign) AND (RemittanceAgreement."Payment System" = RemittanceAgreement."Payment System"::BBS) THEN
+                                                                  ERROR(InvalidTypeErr);
+                                                              END;
+
+                                                   CaptionML=[ENU=Type;
+                                                              NOR=Type];
+                                                   OptionCaptionML=[ENU=Domestic,Foreign,Payment Instr.;
+                                                                    NOR=Innland,Utland,Bet. Inst.];
+                                                   OptionString=Domestic,Foreign,Payment Instr. }
+    { 21  ;   ;BBS Agreement ID    ;Code9         ;CaptionML=[ENU=BBS Agreement ID;
+                                                              NOR=BBS Avtale ID] }
+    { 22  ;   ;Bank Account No.    ;Code20        ;OnValidate=BEGIN
+                                                                IF "Bank Account No." <> '' THEN BEGIN
+                                                                  ErrorMess := RemTools.CheckAccountNo("Bank Account No.",Type::Domestic);
+                                                                  IF ErrorMess <> '' THEN
+                                                                    ERROR(ErrorMess);
+                                                                END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Bank Account No.;
+                                                              NOR=Bankkontonr.] }
+    { 25  ;   ;Account No.         ;Code20        ;TableRelation=IF (Account Type=CONST(Finance account)) "G/L Account".No.
+                                                                 ELSE IF (Account Type=CONST(Bank account)) "Bank Account".No.;
+                                                   CaptionML=[ENU=Account No.;
+                                                              NOR=Kontonr.] }
+    { 26  ;   ;Document No. Series ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=[ENU=Document No. Series;
+                                                              NOR="Bilagsnr.serie "] }
+    { 27  ;   ;Account Type        ;Option        ;OnValidate=BEGIN
+                                                                IF "Account Type" <> xRec."Account Type" THEN
+                                                                  VALIDATE("Account No.",'');
+                                                              END;
+
+                                                   CaptionML=[ENU=Account Type;
+                                                              NOR=Kontotype];
+                                                   OptionCaptionML=[ENU=Finance account,,,Bank account;
+                                                                    NOR=Finanskonto,,,Bankkonto];
+                                                   OptionString=Finance account,,,Bank account }
+    { 28  ;   ;New Document Per.   ;Option        ;CaptionML=[ENU=New Document Per.;
+                                                              NOR=Nytt bilag pr.];
+                                                   OptionCaptionML=[ENU=Date,Vendor;
+                                                                    NOR=Dato,Leverand›r];
+                                                   OptionString=Date,Vendor }
+    { 29  ;   ;Return Journal Template Name;Code10;TableRelation="Gen. Journal Template".Name WHERE (Type=CONST(Payments));
+                                                   CaptionML=[ENU=Return Journal Template Name;
+                                                              NOR=Returkladd malnavn] }
+    { 30  ;   ;Return Journal Name ;Code10        ;TableRelation="Gen. Journal Batch".Name WHERE (Journal Template Name=FIELD(Return Journal Template Name));
+                                                   CaptionML=[ENU=Return Journal Name;
+                                                              NOR=Returkladd navn] }
+    { 40  ;   ;Recipient ref. 1 - Invoice;Code80  ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 1 - Invoice");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 1 - Invoice;
+                                                              NOR=Mottaker ref. 1 - fak.] }
+    { 41  ;   ;Recipient ref. 2 - Invoice;Code80  ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 2 - Invoice");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 2 - Invoice;
+                                                              NOR=Mottaker ref. 2 - fak.] }
+    { 42  ;   ;Recipient ref. 3 - Invoice;Code80  ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 3 - Invoice");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 3 - Invoice;
+                                                              NOR=Mottaker ref. 3 - fakt.] }
+    { 43  ;   ;Recipient ref. 1 - Cr. Memo;Code80 ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 1 - Cr. Memo");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 1 - Cr. Memo;
+                                                              NOR=Mottaker ref. 1 - kred.] }
+    { 44  ;   ;Recipient ref. 2 - Cr. Memo;Code80 ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 2 - Cr. Memo");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 2 - Cr. Memo;
+                                                              NOR=Mottaker ref. 2 - kred.] }
+    { 45  ;   ;Recipient ref. 3 - Cr. Memo;Code80 ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient ref. 3 - Cr. Memo");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient ref. 3 - Cr. Memo;
+                                                              NOR=Mottaker ref. 3 - kred.] }
+    { 46  ;   ;Futures Contract No.;Code6         ;CaptionML=[ENU=Futures Contract No.;
+                                                              NOR=Terminskontraktnr.] }
+    { 47  ;   ;Futures Contract Exch. Rate;Decimal;CaptionML=[ENU=Futures Contract Exch. Rate;
+                                                              NOR=Terminskontraktkurs];
+                                                   DecimalPlaces=5:5;
+                                                   BlankZero=Yes }
+    { 51  ;   ;Recipient Ref. Abroad;Code35       ;OnValidate=BEGIN
+                                                                RemTools.CheckMessage("Remittance Agreement Code","Recipient Ref. Abroad");
+                                                              END;
+
+                                                   CaptionML=[ENU=Recipient Ref. Abroad;
+                                                              NOR=Mottaker ref. utland] }
+    { 52  ;   ;Currency Code       ;Code10        ;TableRelation=Currency.Code;
+                                                   CaptionML=[ENU=Currency Code;
+                                                              NOR=Valutakode] }
+    { 53  ;   ;Charge Account Type ;Option        ;OnValidate=BEGIN
+                                                                IF "Charge Account Type" <> xRec."Charge Account Type" THEN
+                                                                  VALIDATE("Charge Account No.",'');
+                                                              END;
+
+                                                   CaptionML=[ENU=Charge Account Type;
+                                                              NOR=Gebyrkontotype];
+                                                   OptionCaptionML=[ENU=Finance account,,,Bank account;
+                                                                    NOR=Finanskonto,,,Bankkonto];
+                                                   OptionString=Finance account,,,Bank account }
+    { 54  ;   ;Charge Account No.  ;Code20        ;TableRelation=IF (Charge Account Type=CONST(Finance account)) "G/L Account".No.
+                                                                 ELSE IF (Charge Account Type=CONST(Bank account)) "Bank Account".No.;
+                                                   CaptionML=[ENU=Charge Account No.;
+                                                              NOR=Gebyrkontonr.] }
+    { 55  ;   ;Round off/Divergence Acc. No.;Code20;
+                                                   TableRelation="G/L Account".No.;
+                                                   CaptionML=[ENU=Round off/Divergence Acc. No.;
+                                                              NOR=Avrunding/Avvikkontonr.] }
+    { 56  ;   ;Max. Round off/Diverg. (LCY);Decimal;
+                                                   CaptionML=[ENU=Max. Round off/Diverg. (LCY);
+                                                              NOR=Maks. avrunding/avvik (NOK)] }
+    { 50000;  ;Signer Id           ;Code20        ;CaptionML=[ENU=Signer ID;
+                                                              NOR=Signer ID] }
+    { 50001;  ;Aggreement No.      ;Code20        ;CaptionML=[ENU=Aggreement No.;
+                                                              NOR=Avtalenummer] }
+  }
+  KEYS
+  {
+    {    ;Code                                    ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      RemittanceAgreement@1080000 : Record 15000000;
+      RemTools@1080001 : Codeunit 15000002;
+      ErrorMess@1080002 : Text[250];
+      InvalidTypeErr@1080003 : TextConst 'ENU=The type Foreign cannot be used with the BBS payment system.;NOR=Typen Utenlands kan ikke brukes med BBS-betalingssystemet.';
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.05.17 JAL Nordea has another XML format and NAV is missing fields for bank references.
+                       New field :: Yes50000Signer IDCode20Normal
+                       New field :: Yes50001Aggreement No.Code20Normal
+    }
+    END.
+  }
+}
+
+OBJECT Report 15000001 Suggest Remittance Payments
+{
+  OBJECT-PROPERTIES
+  {
+    Date=18.05.17;
+    Time=15.33.40;
+    Modified=Yes;
+    Version List=NAVNO10.00,INCBF1.4;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Suggest Remittance Payments;
+               NOR=Remitteringsforslag];
+    ProcessingOnly=Yes;
+  }
+  DATASET
+  {
+    { 3182;    ;DataItem;                    ;
+               DataItemTable=Table23;
+               DataItemTableView=SORTING(Remittance,No.)
+                                 WHERE(Remittance=CONST(Yes));
+               OnPreDataItem=BEGIN
+                               IF LastDueDateToPayReq = 0D THEN
+                                 ERROR(Text000);
+                               IF (PostingDate = 0D) AND NOT ReplacePostingDateWithDueDate THEN
+                                 ERROR(Text001);
+
+                               BankPmtType := GenJnlLine."Bank Payment Type";
+                               BalAccType := GenJnlLine."Bal. Account Type";
+                               BalAccNo := GenJnlLine."Bal. Account No.";
+                               GenJnlLineInserted := FALSE;
+                               SeveralCurrencies := FALSE;
+                               MessageText := '';
+
+                               IF BankPmtType = BankPmtType::"Manual Check" THEN
+                                 ERROR(Text017,SELECTSTR(BankPmtType + 1,Text023));
+
+                               IF ReplacePostingDateWithDueDate THEN
+                                 PostingDate := 0D;
+
+                               IF UsePaymentDisc AND (LastDueDateToPayReq < WORKDATE) THEN
+                                 IF NOT CONFIRM(Text003,FALSE,WORKDATE) THEN
+                                   ERROR(Text005);
+
+                               Vend2.COPYFILTERS(Vendor);
+
+                               OriginalAmtAvailable := AmountAvailable;
+                               IF UsePriority THEN BEGIN
+                                 SETCURRENTKEY(Priority);
+                                 SETRANGE(Priority,1,2147483647);
+                                 UsePriority := TRUE;
+                               END;
+                               Window.OPEN(Text006);
+
+                               NextEntryNo := 1;
+                             END;
+
+               OnAfterGetRecord=BEGIN
+                                  IF StopPayments THEN
+                                    CurrReport.BREAK;
+                                  Window.UPDATE(1,"No.");
+                                  RemAccount.GET("Remittance Account Code");
+                                  IF NOT OnlyInvoice THEN
+                                    GetVendLedgEntries(TRUE,FALSE);
+                                  GetVendLedgEntries(FALSE,FALSE);
+                                  CheckAmounts(FALSE);
+                                END;
+
+               OnPostDataItem=BEGIN
+                                IF UsePriority AND NOT StopPayments THEN BEGIN
+                                  RESET;
+                                  COPYFILTERS(Vend2);
+                                  SETCURRENTKEY(Priority);
+                                  SETRANGE(Priority,0);
+                                  IF FIND('-') THEN
+                                    REPEAT
+                                      Window.UPDATE(1,"No.");
+                                      GetVendLedgEntries(TRUE,FALSE);
+                                      GetVendLedgEntries(FALSE,FALSE);
+                                      CheckAmounts(FALSE);
+                                    UNTIL (NEXT = 0) OR StopPayments;
+                                END;
+
+                                IF UsePaymentDisc AND NOT StopPayments THEN BEGIN
+                                  RESET;
+                                  COPYFILTERS(Vend2);
+                                  Window.OPEN(Text007);
+                                  IF FIND('-') THEN
+                                    REPEAT
+                                      Window.UPDATE(1,"No.");
+                                      PayableVendLedgEntry.SETRANGE("Vendor No.","No.");
+                                      GetVendLedgEntries(TRUE,TRUE);
+                                      GetVendLedgEntries(FALSE,TRUE);
+                                      CheckAmounts(TRUE);
+                                    UNTIL (NEXT = 0) OR StopPayments;
+                                END;
+
+                                GenJnlLine.LOCKTABLE;
+                                GenJnlTemplate.GET(GenJnlLine."Journal Template Name");
+                                GenJnlBatch.GET(GenJnlLine."Journal Template Name",GenJnlLine."Journal Batch Name");
+                                GenJnlLine.SETRANGE("Journal Template Name",GenJnlLine."Journal Template Name");
+                                GenJnlLine.SETRANGE("Journal Batch Name",GenJnlLine."Journal Batch Name");
+                                IF GenJnlLine.FINDLAST THEN BEGIN
+                                  LastLineNo := GenJnlLine."Line No.";
+                                  GenJnlLine.INIT;
+                                END;
+
+                                Window.OPEN(Text008);
+
+                                PayableVendLedgEntry.RESET;
+                                PayableVendLedgEntry.SETRANGE(Priority,1,2147483647);
+                                MakeGenJnlLines;
+                                PayableVendLedgEntry.RESET;
+                                PayableVendLedgEntry.SETRANGE(Priority,0);
+                                MakeGenJnlLines;
+                                PayableVendLedgEntry.RESET;
+                                PayableVendLedgEntry.DELETEALL;
+
+                                Window.CLOSE;
+                                ShowMessage(MessageText);
+                              END;
+
+               ReqFilterFields=Remittance Account Code,No.,Payment Method Code }
+
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+      SaveValues=Yes;
+      OnOpenPage=BEGIN
+                   IF PostingDate = 0D THEN
+                     PostingDate := WORKDATE;
+                 END;
+
+    }
+    CONTROLS
+    {
+      { 1900000001;0;Container;
+                  ContainerType=ContentArea }
+
+      { 1900000002;1;Group  ;
+                  CaptionML=[ENU=Options;
+                             NOR=Alternativer] }
+
+      { 1   ;2   ;Field     ;
+                  CaptionML=[ENU=Last Payment Date;
+                             NOR=Siste betalingsdato];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=LastDueDateToPayReq }
+
+      { 2   ;2   ;Field     ;
+                  CaptionML=[ENU=Find Payment Discounts;
+                             NOR=S›k etter kontantrabatter];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=UsePaymentDisc;
+                  MultiLine=Yes }
+
+      { 3   ;2   ;Field     ;
+                  CaptionML=[ENU=Use Vendor Priority;
+                             NOR=Bruk leverand›rprioritet];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=UsePriority;
+                  OnValidate=BEGIN
+                               IF NOT UsePriority AND (AmountAvailable <> 0) THEN
+                                 ERROR(Text011);
+                             END;
+                              }
+
+      { 4   ;2   ;Field     ;
+                  CaptionML=[ENU=Available Amount (LCY);
+                             NOR=Disponibelt bel›p (NOK)];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=AmountAvailable;
+                  OnValidate=BEGIN
+                               AmountAvailableOnAfterValidate;
+                             END;
+                              }
+
+      { 5   ;2   ;Field     ;
+                  CaptionML=[ENU=Posting Date;
+                             NOR=Bokf›ringsdato];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=PostingDate;
+                  OnValidate=BEGIN
+                               ValidatePostingDate;
+                             END;
+                              }
+
+      { 1080001;2;Field     ;
+                  CaptionML=[ENU=Replace Posting Date with Due Date;
+                             NOR=Erstatt bokf›ringsdato med forfallsdato];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=ReplacePostingDateWithDueDate }
+
+      { 1080006;2;Field     ;
+                  CaptionML=[ENU=Test Document Type;
+                             NOR=Sjekk bilagstype];
+                  OptionCaptionML=[ENU=All,Invoice/Credit memo;
+                                   NOR=Alle,Faktura/Kreditnota];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=CheckLedgEntryType }
+
+      { 1080002;2;Field     ;
+                  CaptionML=[ENU=Invoice/Debit Vendor Ledger Entries only;
+                             NOR=Bare faktura-/debetposter];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=OnlyInvoice }
+
+    }
+  }
+  LABELS
+  {
+  }
+  CODE
+  {
+    VAR
+      Text000@1000 : TextConst 'ENU=Please enter the last payment date.;NOR=Angi siste betalingsdato.';
+      Text001@1001 : TextConst 'ENU=Please enter the posting date.;NOR=Angi bokf›ringsdato.';
+      Text003@1003 : TextConst 'ENU=The payment date is earlier than %1.\\Do you want to continue?;NOR=Betalingsdatoen er tidligere enn %1.\\Vil du fortsette?';
+      Text005@1005 : TextConst 'ENU=The batch job was interrupted.;NOR=Kj›rselen ble avbrutt.';
+      Text006@1006 : TextConst 'ENU=Processing vendors     #1##########;NOR=Behandler leverand›rer                   #1##########';
+      Text007@1007 : TextConst 'ENU=Processing vendors for payment discounts #1##########;NOR=Behandler leverand›rer for kontantrabatt #1##########';
+      Text008@1008 : TextConst 'ENU=Inserting payment journal lines #1##########;NOR=Setter inn betalingskladdelinjer         #1##########';
+      Text011@1011 : TextConst 'ENU=Use Vendor Priority must be activated when the value in the Amount Available field is not 0.;NOR=Bruk leverand›rprioritet m† aktiveres n†r verdien i feltet Disponibelt bel›p ikke er 0.';
+      Text016@1016 : TextConst '@@@=Parameter 1 - document type, 2 - document number, 3 - vendor number.;ENU=" is already applied to %1 %2 for vendor %3.";NOR=" er allerede utlignet mot %1 %2 for leverand›r %3."';
+      Text017@1017 : TextConst 'ENU="When Bank Payment Type = %1 and you have not selected in the Summarize per Vendor field,\then you must select the New Doc. No. per Line field.";NOR="N†r bankbetalingstype = %1 og du ikke har valgt feltet Summer per leverand›r,\m† du velge feltet Nytt bilagsnr. per linje."';
+      Text019@1019 : TextConst 'ENU=You have only created suggested vendor payment lines for the Currency Code %1. There are, however, other open vendor ledger entries in currencies other than %2.;NOR=Du har bare opprettet foresl†tte leverand›rbetalingslinjer for valutakoden %1. Det finnes imidlertid andre †pne leverand›rposter i andre valutaer enn %2.';
+      Text021@1021 : TextConst 'ENU=You have only created suggested vendor payment lines for the Currency Code %1. There are no other open vendor ledger entries in other currencies.;NOR=Du har bare opprettet foresl†tte leverand›rbetalingslinjer for valutakoden %1. Det finnes ingen andre †pne leverand›rposter i andre valutaer.';
+      Text022@1022 : TextConst 'ENU=You have created suggested vendor payment lines for all currencies.;NOR=Du har opprettet foresl†tte leverand›rbetalingslinjer for alle valutaer.';
+      Vend2@1023 : Record 23;
+      GenJnlTemplate@1024 : Record 80;
+      GenJnlBatch@1025 : Record 232;
+      GenJnlLine@1026 : Record 81;
+      VendLedgEntry@1029 : Record 25;
+      PayableVendLedgEntry@1032 : TEMPORARY Record 317;
+      TempPaymentBuffer@1033 : TEMPORARY Record 372;
+      OldTempPaymentBuffer@1034 : TEMPORARY Record 372;
+      RemAccount@1080000 : Record 15000003;
+      VendLedgEntry2@1080009 : Record 25;
+      Vend3@1080010 : Record 23;
+      DimMgt@1080017 : Codeunit 408;
+      GenJnlPostLine@1062 : Codeunit 12;
+      NoSeriesMgt@1036 : Codeunit 396;
+      RemTools@1080001 : Codeunit 15000002;
+      Window@1039 : Dialog;
+      UsePaymentDisc@1040 : Boolean;
+      PostingDate@1041 : Date;
+      LastDueDateToPayReq@1042 : Date;
+      NextDocNo@1043 : Code[20];
+      AmountAvailable@1044 : Decimal;
+      OriginalAmtAvailable@1045 : Decimal;
+      UsePriority@1046 : Boolean;
+      LastLineNo@1051 : Integer;
+      NextEntryNo@1052 : Integer;
+      StopPayments@1053 : Boolean;
+      BankPmtType@1055 : ' ,Computer Check,Manual Check';
+      BalAccType@1056 : 'G/L Account,Customer,Vendor,Bank Account';
+      BalAccNo@1057 : Code[20];
+      MessageText@1058 : Text[250];
+      GenJnlLineInserted@1059 : Boolean;
+      SeveralCurrencies@1060 : Boolean;
+      Text023@1061 : TextConst 'ENU=" ,Computer Check,Manual Check";NOR=" ,Maskinell sjekk,Manuell sjekk"';
+      OnlyInvoice@1080002 : Boolean;
+      StartText@1080003 : Text[30];
+      CheckLedgEntryType@1080005 : 'All,Invoice/Credit Memo';
+      Text15000000@1080006 : TextConst 'ENU=Refund;NOR=Motregning';
+      Text15000001@1080007 : TextConst 'ENU=Payment;NOR=Betaling';
+      Text15000002@1080008 : TextConst '@@@=Parameter 1 - Refund or Payment, 2 - document type, 3 and 4 - document numbers.;ENU=%1 of %2 %3 (%4);NOR=%1 av %2 %3 (%4)';
+      ReplacePostingDateWithDueDate@1080004 : Boolean;
+
+    PROCEDURE SetGenJnlLine@1(NewGenJnlLine@1000 : Record 81);
+    BEGIN
+      GenJnlLine := NewGenJnlLine;
+    END;
+
+    LOCAL PROCEDURE ValidatePostingDate@7();
+    BEGIN
+      GenJnlBatch.GET(GenJnlLine."Journal Template Name",GenJnlLine."Journal Batch Name");
+      IF GenJnlBatch."No. Series" = '' THEN
+        NextDocNo := ''
+      ELSE BEGIN
+        NextDocNo := NoSeriesMgt.GetNextNo(GenJnlBatch."No. Series",PostingDate,FALSE);
+        CLEAR(NoSeriesMgt);
+      END;
+    END;
+
+    PROCEDURE GetVendLedgEntries@13(Positive@1000 : Boolean;Future@1001 : Boolean);
+    BEGIN
+      VendLedgEntry.RESET;
+      VendLedgEntry.SETCURRENTKEY("Vendor No.",Open,Positive,"Due Date");
+      VendLedgEntry.SETRANGE("Vendor No.",Vendor."No.");
+      VendLedgEntry.SETRANGE(Open,TRUE);
+      VendLedgEntry.SETRANGE(Positive,Positive);
+
+      IF CheckLedgEntryType = CheckLedgEntryType::"Invoice/Credit Memo" THEN
+        VendLedgEntry.SETFILTER(
+          "Document Type",'%1|%2',VendLedgEntry."Document Type"::Invoice,VendLedgEntry."Document Type"::"Credit Memo");
+
+      IF Future THEN BEGIN
+        VendLedgEntry.SETRANGE("Due Date",LastDueDateToPayReq + 1,31129999D);
+        VendLedgEntry.SETRANGE("Pmt. Discount Date",PostingDate,LastDueDateToPayReq);
+        VendLedgEntry.SETFILTER("Remaining Pmt. Disc. Possible",'<>0');
+      END ELSE
+        VendLedgEntry.SETRANGE("Due Date",0D,LastDueDateToPayReq);
+      VendLedgEntry.SETRANGE("On Hold",'');
+      VendLedgEntry.SETFILTER("Global Dimension 1 Code",Vendor.GETFILTER("Global Dimension 1 Filter"));
+      VendLedgEntry.SETFILTER("Global Dimension 2 Code",Vendor.GETFILTER("Global Dimension 2 Filter"));
+      IF VendLedgEntry.FIND('-') THEN
+        REPEAT
+          SaveAmount;
+        UNTIL VendLedgEntry.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE SaveAmount@6();
+    VAR
+      PaymentToleranceMgt@1000 : Codeunit 426;
+    BEGIN
+      WITH GenJnlLine DO BEGIN
+        VALIDATE("Posting Date",CalcPostingdate(VendLedgEntry));
+        IF VendLedgEntry.Positive THEN // Cr.Memo
+          "Document Type" := "Document Type"::" "
+        ELSE
+          "Document Type" := "Document Type"::Payment;
+        "Account Type" := "Account Type"::Vendor;
+        VALIDATE("Account No.",VendLedgEntry."Vendor No.");
+        VALIDATE("Currency Code",VendLedgEntry."Currency Code");
+        VendLedgEntry.CALCFIELDS("Remaining Amount");
+
+        IF PaymentToleranceMgt.CheckCalcPmtDiscGenJnlVend(GenJnlLine,VendLedgEntry,0,FALSE) THEN
+          Amount := -(VendLedgEntry."Remaining Amount" - VendLedgEntry."Remaining Pmt. Disc. Possible")
+        ELSE
+          Amount := -VendLedgEntry."Remaining Amount";
+        VALIDATE(Amount);
+      END;
+
+      IF UsePriority THEN
+        PayableVendLedgEntry.Priority := Vendor.Priority
+      ELSE
+        PayableVendLedgEntry.Priority := 0;
+      PayableVendLedgEntry."Vendor No." := VendLedgEntry."Vendor No.";
+      PayableVendLedgEntry."Entry No." := NextEntryNo;
+      PayableVendLedgEntry."Vendor Ledg. Entry No." := VendLedgEntry."Entry No.";
+      PayableVendLedgEntry.Amount := GenJnlLine.Amount;
+      PayableVendLedgEntry."Amount (LCY)" := GenJnlLine."Amount (LCY)";
+      PayableVendLedgEntry.Positive := (PayableVendLedgEntry.Amount > 0);
+      PayableVendLedgEntry.Future := (VendLedgEntry."Due Date" > LastDueDateToPayReq);
+      PayableVendLedgEntry."Currency Code" := VendLedgEntry."Currency Code";
+      PayableVendLedgEntry.INSERT;
+      NextEntryNo := NextEntryNo + 1;
+    END;
+
+    PROCEDURE CheckAmounts@10(Future@1000 : Boolean);
+    VAR
+      CurrencyBalance@1001 : Decimal;
+      PrevCurrency@1002 : Code[10];
+    BEGIN
+      PayableVendLedgEntry.SETRANGE("Vendor No.",Vendor."No.");
+      PayableVendLedgEntry.SETRANGE(Future,Future);
+
+      IF PayableVendLedgEntry.FIND('-') THEN BEGIN
+        PrevCurrency := PayableVendLedgEntry."Currency Code";
+        REPEAT
+          IF PayableVendLedgEntry."Currency Code" <> PrevCurrency THEN BEGIN
+            IF CurrencyBalance < 0 THEN BEGIN
+              PayableVendLedgEntry.SETRANGE("Currency Code",PrevCurrency);
+              PayableVendLedgEntry.DELETEALL;
+              PayableVendLedgEntry.SETRANGE("Currency Code");
+            END ELSE
+              AmountAvailable := AmountAvailable - CurrencyBalance;
+            CurrencyBalance := 0;
+            PrevCurrency := PayableVendLedgEntry."Currency Code";
+          END;
+          IF (OriginalAmtAvailable = 0) OR
+             (AmountAvailable >= CurrencyBalance + PayableVendLedgEntry."Amount (LCY)")
+          THEN
+            CurrencyBalance := CurrencyBalance + PayableVendLedgEntry."Amount (LCY)"
+          ELSE
+            PayableVendLedgEntry.DELETE;
+        UNTIL PayableVendLedgEntry.NEXT = 0;
+
+        IF (CurrencyBalance < 0) AND
+           ((NOT UsePaymentDisc) OR (UsePaymentDisc AND Future))
+        THEN BEGIN
+          PayableVendLedgEntry.SETRANGE("Currency Code",PrevCurrency);
+          PayableVendLedgEntry.DELETEALL;
+          PayableVendLedgEntry.SETRANGE("Currency Code");
+        END ELSE
+          IF OriginalAmtAvailable > 0 THEN
+            AmountAvailable := AmountAvailable - CurrencyBalance;
+        IF (OriginalAmtAvailable > 0) AND (AmountAvailable <= 0) THEN
+          StopPayments := TRUE;
+      END;
+      PayableVendLedgEntry.RESET;
+    END;
+
+    LOCAL PROCEDURE MakeGenJnlLines@2();
+    VAR
+      GenJnlLine3@1000 : Record 81;
+    BEGIN
+      TempPaymentBuffer.RESET;
+      TempPaymentBuffer.DELETEALL;
+
+      IF BalAccType = BalAccType::"Bank Account" THEN BEGIN
+        CheckCurrencies(BalAccType,BalAccNo,PayableVendLedgEntry);
+        SetBankAccCurrencyFilter(BalAccType,BalAccNo,PayableVendLedgEntry);
+      END;
+
+      IF PayableVendLedgEntry.FIND('-') THEN
+        REPEAT
+          PayableVendLedgEntry.SETRANGE("Vendor No.",PayableVendLedgEntry."Vendor No.");
+          PayableVendLedgEntry.FIND('-');
+          REPEAT
+            VendLedgEntry.GET(PayableVendLedgEntry."Vendor Ledg. Entry No.");
+            TempPaymentBuffer."Vendor No." := VendLedgEntry."Vendor No.";
+            TempPaymentBuffer."Currency Code" := VendLedgEntry."Currency Code";
+            TempPaymentBuffer."Dimension Entry No." := 0;
+            TempPaymentBuffer."Global Dimension 1 Code" := '';
+            TempPaymentBuffer."Global Dimension 2 Code" := '';
+
+            GenJnlLine3.RESET;
+            GenJnlLine3.SETCURRENTKEY(
+              "Account Type","Account No.","Applies-to Doc. Type","Applies-to Doc. No.");
+            GenJnlLine3.SETRANGE("Account Type",GenJnlLine3."Account Type"::Vendor);
+            GenJnlLine3.SETRANGE("Account No.",VendLedgEntry."Vendor No.");
+            GenJnlLine3.SETRANGE("Applies-to Doc. Type",VendLedgEntry."Document Type");
+            GenJnlLine3.SETRANGE("Applies-to Doc. No.",VendLedgEntry."Document No.");
+            IF GenJnlLine3.FINDFIRST THEN
+              GenJnlLine3.FIELDERROR(
+                "Applies-to Doc. No.",
+                STRSUBSTNO(
+                  Text016,
+                  VendLedgEntry."Document Type",VendLedgEntry."Document No.",
+                  VendLedgEntry."Vendor No."));
+
+            TempPaymentBuffer."Vendor Ledg. Entry Doc. Type" := VendLedgEntry."Document Type";
+            TempPaymentBuffer."Vendor Ledg. Entry Doc. No." := VendLedgEntry."Document No.";
+            TempPaymentBuffer."Global Dimension 1 Code" := VendLedgEntry."Global Dimension 1 Code";
+            TempPaymentBuffer."Global Dimension 2 Code" := VendLedgEntry."Global Dimension 2 Code";
+            TempPaymentBuffer."Dimension Set ID" := VendLedgEntry."Dimension Set ID";
+            TempPaymentBuffer."Vendor Ledg. Entry No." := VendLedgEntry."Entry No.";
+            TempPaymentBuffer.Amount := PayableVendLedgEntry.Amount;
+            Window.UPDATE(1,VendLedgEntry."Vendor No.");
+            TempPaymentBuffer.INSERT;
+          UNTIL PayableVendLedgEntry.NEXT = 0;
+          PayableVendLedgEntry.DELETEALL;
+          PayableVendLedgEntry.SETRANGE("Vendor No.");
+        UNTIL NOT PayableVendLedgEntry.FIND('-');
+
+      CLEAR(OldTempPaymentBuffer);
+      TempPaymentBuffer.SETCURRENTKEY("Document No.");
+      IF TempPaymentBuffer.FIND('-') THEN
+        REPEAT
+          WITH GenJnlLine DO BEGIN
+            INIT;
+            Window.UPDATE(1,TempPaymentBuffer."Vendor No.");
+            LastLineNo := LastLineNo + 10000;
+            "Line No." := LastLineNo;
+
+            VendLedgEntry2.GET(TempPaymentBuffer."Vendor Ledg. Entry No.");
+            VALIDATE("Posting Date",CalcPostingdate(VendLedgEntry2));
+            IF VendLedgEntry2.Positive THEN BEGIN // Cr.Memo
+              "Document Type" := "Document Type"::" ";
+              StartText := Text15000000;
+            END ELSE BEGIN
+              "Document Type" := "Document Type"::Payment;
+              StartText := Text15000001;
+            END;
+
+            "Posting No. Series" := GenJnlBatch."Posting No. Series";
+            IF (TempPaymentBuffer."Vendor No." = OldTempPaymentBuffer."Vendor No.") AND
+               (TempPaymentBuffer."Currency Code" = OldTempPaymentBuffer."Currency Code")
+            THEN
+              "Document No." := OldTempPaymentBuffer."Document No."
+            ELSE BEGIN
+              "Document No." := NextDocNo;
+              NextDocNo := INCSTR(NextDocNo);
+              OldTempPaymentBuffer := TempPaymentBuffer;
+              OldTempPaymentBuffer."Document No." := "Document No.";
+            END;
+            "Account Type" := "Account Type"::Vendor;
+            VALIDATE("Account No.",TempPaymentBuffer."Vendor No.");
+            "Bal. Account Type" := BalAccType;
+            VALIDATE("Bal. Account No.",BalAccNo);
+            VALIDATE("Currency Code",TempPaymentBuffer."Currency Code");
+            "Bank Payment Type" := BankPmtType;
+
+            VendLedgEntry2.GET(TempPaymentBuffer."Vendor Ledg. Entry No.");
+            // Find VendLedg.Entry. Need "External Document No."
+            Description :=
+              COPYSTR(
+                STRSUBSTNO(
+                  Text15000002,
+                  StartText,VendLedgEntry2."Document Type",VendLedgEntry2."Document No.",
+                  VendLedgEntry2."External Document No."),1,MAXSTRLEN(Description));
+            Vend3.GET(VendLedgEntry2."Vendor No.");
+            VALIDATE("Remittance Account Code",Vend3."Remittance Account Code");
+            VALIDATE("Payment Due Date",VendLedgEntry2."Due Date");
+            VALIDATE("External Document No.",VendLedgEntry2."External Document No.");
+
+            "Shortcut Dimension 1 Code" := TempPaymentBuffer."Global Dimension 1 Code";
+            "Shortcut Dimension 2 Code" := TempPaymentBuffer."Global Dimension 2 Code";
+            "Source Code" := GenJnlTemplate."Source Code";
+            "Reason Code" := GenJnlBatch."Reason Code";
+            VALIDATE(Amount,TempPaymentBuffer.Amount);
+            "Applies-to Doc. Type" := TempPaymentBuffer."Vendor Ledg. Entry Doc. Type";
+            "Applies-to Doc. No." := TempPaymentBuffer."Vendor Ledg. Entry Doc. No.";
+            RemTools.CreateJournalData(GenJnlLine,VendLedgEntry2);
+            "Payment Type Code Abroad" := VendLedgEntry2."Payment Type Code Abroad";
+            "Specification (Norges Bank)" := VendLedgEntry2."Specification (Norges Bank)";
+
+            "Dimension Set ID" := TempPaymentBuffer."Dimension Set ID";
+            UpdateDimensions(GenJnlLine);
+            //01. 18.05.17 JAL -->
+            //      "Bal. Account Type" := "Bal. Account Type"::"G/L Account";
+            //      "Bal. Account No." := '';
+            //01. 18.05.17 JAL <--
+            INSERT;
+            GenJnlLineInserted := TRUE;
+          END;
+        UNTIL TempPaymentBuffer.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE SetBankAccCurrencyFilter@11(BalAccType@1000 : 'G/L Account,Customer,Vendor,Bank Account';BalAccNo@1001 : Code[20];VAR TmpPayableVendLedgEntry@1002 : Record 317);
+    VAR
+      BankAcc@1003 : Record 270;
+    BEGIN
+      IF BalAccType = BalAccType::"Bank Account" THEN
+        IF BalAccNo <> '' THEN BEGIN
+          BankAcc.GET(BalAccNo);
+          IF BankAcc."Currency Code" <> '' THEN
+            TmpPayableVendLedgEntry.SETRANGE("Currency Code",BankAcc."Currency Code");
+        END;
+    END;
+
+    LOCAL PROCEDURE ShowMessage@15(Text@1000 : Text[250]);
+    BEGIN
+      IF (Text <> '') AND GenJnlLineInserted THEN
+        MESSAGE(Text);
+    END;
+
+    LOCAL PROCEDURE CheckCurrencies@4(BalAccType@1000 : 'G/L Account,Customer,Vendor,Bank Account';BalAccNo@1001 : Code[20];VAR TmpPayableVendLedgEntry@1002 : Record 317);
+    VAR
+      BankAcc@1003 : Record 270;
+      TmpPayableVendLedgEntry2@1004 : TEMPORARY Record 317;
+    BEGIN
+      IF BalAccType = BalAccType::"Bank Account" THEN
+        IF BalAccNo <> '' THEN BEGIN
+          BankAcc.GET(BalAccNo);
+          IF BankAcc."Currency Code" <> '' THEN BEGIN
+            TmpPayableVendLedgEntry2.RESET;
+            TmpPayableVendLedgEntry2.DELETEALL;
+            IF TmpPayableVendLedgEntry.FIND('-') THEN
+              REPEAT
+                TmpPayableVendLedgEntry2 := TmpPayableVendLedgEntry;
+                TmpPayableVendLedgEntry2.INSERT;
+              UNTIL TmpPayableVendLedgEntry.NEXT = 0;
+
+            TmpPayableVendLedgEntry2.SETFILTER("Currency Code",'<>%1',BankAcc."Currency Code");
+            SeveralCurrencies := SeveralCurrencies OR TmpPayableVendLedgEntry2.FINDFIRST;
+
+            IF SeveralCurrencies THEN
+              MessageText := STRSUBSTNO(Text019,BankAcc."Currency Code")
+            ELSE
+              MessageText := STRSUBSTNO(Text021,BankAcc."Currency Code");
+          END ELSE
+            MessageText := Text022;
+        END;
+    END;
+
+    LOCAL PROCEDURE CalcPostingdate@1080003(VendLedgEntry@1000000000 : Record 25) : Date;
+    BEGIN
+      IF ReplacePostingDateWithDueDate THEN BEGIN
+        IF UsePaymentDisc AND
+           (VendLedgEntry."Pmt. Discount Date" <> 0D) AND
+           (VendLedgEntry."Pmt. Discount Date" <= LastDueDateToPayReq) AND
+           (VendLedgEntry."Remaining Pmt. Disc. Possible" <> 0)
+        THEN
+          EXIT(VendLedgEntry."Pmt. Discount Date");
+
+        EXIT(VendLedgEntry."Due Date");
+      END;
+
+      EXIT(PostingDate);
+    END;
+
+    LOCAL PROCEDURE AmountAvailableOnAfterValidate@19035272();
+    BEGIN
+      IF AmountAvailable <> 0 THEN
+        UsePriority := TRUE;
+    END;
+
+    LOCAL PROCEDURE UpdateDimensions@17(VAR GenJnlLine@1005 : Record 81);
+    VAR
+      DimSetID@1003 : Integer;
+      DimSetIDArr@1006 : ARRAY [10] OF Integer;
+    BEGIN
+      WITH GenJnlLine DO BEGIN
+        DimSetID := "Dimension Set ID";
+        CreateDim(
+          DimMgt.TypeToTableID1("Account Type"),"Account No.",
+          DimMgt.TypeToTableID1("Bal. Account Type"),"Bal. Account No.",
+          DATABASE::Job,"Job No.",
+          DATABASE::"Salesperson/Purchaser","Salespers./Purch. Code",
+          DATABASE::Campaign,"Campaign No.");
+        IF DimSetID <> "Dimension Set ID" THEN BEGIN
+          DimSetIDArr[1] := "Dimension Set ID";
+          DimSetIDArr[2] := DimSetID;
+          "Dimension Set ID" :=
+            DimMgt.GetCombinedDimensionSetID(DimSetIDArr,"Shortcut Dimension 1 Code","Shortcut Dimension 2 Code");
+        END;
+      END;
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 18.05.17 JAL SEPA payments gets balance account info from journal template used.
+    }
+    END.
+  }
+  RDLDATA
+  {
+  }
+}
+
+OBJECT Codeunit 1221 SEPA CT-Fill Export Buffer
+{
+  OBJECT-PROPERTIES
+  {
+    Date=12.05.17;
+    Time=17.56.36;
+    Modified=Yes;
+    Version List=NAVW110.00.00.15140,NAVNO10.00.00.15140,INCBF1.4;
+  }
+  PROPERTIES
+  {
+    TableNo=1226;
+    Permissions=TableData 1226=rimd;
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      HasErrorsErr@1007 : TextConst 'ENU=The file export has one or more errors.\\For each line to be exported, resolve the errors displayed to the right and then try to export again.;NOR=Fileksporten har ‚n eller flere feil.\\L›s alle feil som vises til h›yre, for hver linje som skal eksporteres, og pr›v deretter † eksportere p† nytt.';
+      FieldIsBlankErr@1006 : TextConst '@@@="%1=field name, e.g. Post Code.";ENU=Field %1 must be specified.;NOR=Feltet %1 m† angis.';
+      SameBankErr@1000 : TextConst 'ENU=All lines must have the same bank account as the balancing account.;NOR=Alle linjer m† ha samme bankkonto som motkontoen.';
+      RemittancePaymentOrder@1080000 : Record 15000001;
+
+    PROCEDURE FillExportBuffer@3(VAR GenJnlLine@1000 : Record 81;VAR PaymentExportData@1001 : Record 1226);
+    VAR
+      TempGenJnlLine@1011 : TEMPORARY Record 81;
+      GeneralLedgerSetup@1012 : Record 98;
+      BankAccount@1010 : Record 270;
+      Customer@1009 : Record 18;
+      Vendor@1008 : Record 23;
+      VendorBankAccount@1007 : Record 288;
+      CustomerBankAccount@1006 : Record 287;
+      CreditTransferRegister@1005 : Record 1205;
+      CreditTransferEntry@1004 : Record 1206;
+      BankExportImportSetup@1003 : Record 1200;
+      RemittanceTools@1080000 : Codeunit 15000002;
+      MessageID@1002 : Code[20];
+    BEGIN
+      TempGenJnlLine.COPYFILTERS(GenJnlLine);
+      CODEUNIT.RUN(CODEUNIT::"SEPA CT-Prepare Source",TempGenJnlLine);
+
+      TempGenJnlLine.RESET;
+      TempGenJnlLine.FINDSET;
+      BankAccount.GET(TempGenJnlLine."Bal. Account No.");
+      BankAccount.TESTFIELD(IBAN);
+      BankAccount.GetBankExportImportSetup(BankExportImportSetup);
+      BankExportImportSetup.TESTFIELD("Check Export Codeunit");
+      TempGenJnlLine.DeletePaymentFileBatchErrors;
+      REPEAT
+        CODEUNIT.RUN(BankExportImportSetup."Check Export Codeunit",TempGenJnlLine);
+        IF TempGenJnlLine."Bal. Account No." <> BankAccount."No." THEN
+          TempGenJnlLine.InsertPaymentFileError(SameBankErr);
+      UNTIL TempGenJnlLine.NEXT = 0;
+
+      IF TempGenJnlLine.HasPaymentFileErrorsInBatch THEN BEGIN
+        COMMIT;
+        ERROR(HasErrorsErr);
+      END;
+
+      CreatePaymOrderHead;
+
+      GeneralLedgerSetup.GET;
+      GeneralLedgerSetup.TESTFIELD("LCY Code");
+
+      MessageID := BankAccount.GetCreditTransferMessageNo;
+      CreditTransferRegister.CreateNew(MessageID,BankAccount."No.");
+
+      WITH PaymentExportData DO BEGIN
+        RESET;
+        IF FINDLAST THEN;
+
+        TempGenJnlLine.FINDSET;
+        REPEAT
+          INIT;
+          "Entry No." += 1;
+          SetPreserveNonLatinCharacters(BankExportImportSetup."Preserve Non-Latin Characters");
+          SetBankAsSenderBank(BankAccount);
+          "Transfer Date" := TempGenJnlLine."Posting Date";
+          "Document No." := TempGenJnlLine."Document No.";
+          "Applies-to Ext. Doc. No." := TempGenJnlLine."Applies-to Ext. Doc. No.";
+          Amount := TempGenJnlLine.Amount;
+          IF TempGenJnlLine."Currency Code" = '' THEN
+            "Currency Code" := GeneralLedgerSetup."LCY Code"
+          ELSE
+            "Currency Code" := TempGenJnlLine."Currency Code";
+
+          CASE TempGenJnlLine."Account Type" OF
+            TempGenJnlLine."Account Type"::Customer:
+              BEGIN
+                Customer.GET(TempGenJnlLine."Account No.");
+                CustomerBankAccount.GET(Customer."No.",TempGenJnlLine."Recipient Bank Account");
+                SetCustomerAsRecipient(Customer,CustomerBankAccount);
+              END;
+            TempGenJnlLine."Account Type"::Vendor:
+              BEGIN
+                Vendor.GET(TempGenJnlLine."Account No.");
+                VendorBankAccount.GET(Vendor."No.",TempGenJnlLine."Recipient Bank Account");
+                SetVendorAsRecipient(Vendor,VendorBankAccount);
+              END;
+          END;
+
+          VALIDATE("SEPA Instruction Priority","SEPA Instruction Priority"::NORMAL);
+          VALIDATE("SEPA Payment Method","SEPA Payment Method"::TRF);
+          VALIDATE("SEPA Charge Bearer","SEPA Charge Bearer"::SLEV);
+          "SEPA Batch Booking" := FALSE;
+          SetCreditTransferIDs(MessageID);
+
+          IF TempGenJnlLine."Recipient Ref. 1" <> '' THEN
+            AddRemittanceText(TempGenJnlLine."Recipient Ref. 1");
+          IF TempGenJnlLine."Recipient Ref. 2" <> '' THEN
+            AddRemittanceText(TempGenJnlLine."Recipient Ref. 2");
+
+          VALIDATE(Urgent,TempGenJnlLine.Urgent);
+
+          //01. 12.05.17 JAL -->
+          OnBeforeValidatePaymentExportData(PaymentExportData,TempGenJnlLine);
+          //01. 12.05.17 JAL <--
+
+          ValidatePaymentExportData(PaymentExportData,TempGenJnlLine);
+          INSERT(TRUE);
+          CreditTransferEntry.CreateNew(
+            CreditTransferRegister."No.","Entry No.",
+            TempGenJnlLine."Account Type",TempGenJnlLine."Account No.",
+            TempGenJnlLine.GetAppliesToDocEntryNo,
+            "Transfer Date","Currency Code",Amount,COPYSTR("End-to-End ID",1,MAXSTRLEN("End-to-End ID")),
+            TempGenJnlLine."Recipient Bank Account",TempGenJnlLine."Message to Recipient");
+
+          MoveToWaitingJournal(
+            TempGenJnlLine,COPYSTR("Message ID",1,20),COPYSTR("Payment Information ID",1,20),COPYSTR("Document No.",1,20),
+            COPYSTR("End-to-End ID",1,20));
+          RemittanceTools.MarkEntry(TempGenJnlLine,'REM',RemittancePaymentOrder.ID);
+        UNTIL TempGenJnlLine.NEXT = 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE ValidatePaymentExportData@2(VAR PaymentExportData@1000 : Record 1226;VAR GenJnlLine@1001 : Record 81);
+    BEGIN
+      ValidatePaymentExportDataField(PaymentExportData,GenJnlLine,PaymentExportData.FIELDNAME("Sender Bank Account No."));
+      ValidatePaymentExportDataField(PaymentExportData,GenJnlLine,PaymentExportData.FIELDNAME("Recipient Name"));
+      ValidatePaymentExportDataField(PaymentExportData,GenJnlLine,PaymentExportData.FIELDNAME("Recipient Bank Acc. No."));
+      ValidatePaymentExportDataField(PaymentExportData,GenJnlLine,PaymentExportData.FIELDNAME("Transfer Date"));
+      ValidatePaymentExportDataField(PaymentExportData,GenJnlLine,PaymentExportData.FIELDNAME("Payment Information ID"));
+      ValidatePaymentExportDataField(PaymentExportData,GenJnlLine,PaymentExportData.FIELDNAME("End-to-End ID"));
+    END;
+
+    LOCAL PROCEDURE ValidatePaymentExportDataField@5(VAR PaymentExportData@1000 : Record 1226;VAR GenJnlLine@1001 : Record 81;FieldName@1003 : Text);
+    VAR
+      Field@1004 : Record 2000000041;
+      RecRef@1005 : RecordRef;
+      FieldRef@1002 : FieldRef;
+    BEGIN
+      RecRef.GETTABLE(PaymentExportData);
+      Field.SETRANGE(TableNo,RecRef.NUMBER);
+      Field.SETRANGE(FieldName,FieldName);
+      Field.FINDFIRST;
+      FieldRef := RecRef.FIELD(Field."No.");
+      IF (Field.Type = Field.Type::Text) AND (FORMAT(FieldRef.VALUE) <> '') THEN
+        EXIT;
+      IF (Field.Type = Field.Type::Code) AND (FORMAT(FieldRef.VALUE) <> '') THEN
+        EXIT;
+      IF (Field.Type = Field.Type::Decimal) AND (FORMAT(FieldRef.VALUE) <> '0') THEN
+        EXIT;
+      IF (Field.Type = Field.Type::Integer) AND (FORMAT(FieldRef.VALUE) <> '0') THEN
+        EXIT;
+      IF (Field.Type = Field.Type::Date) AND (FORMAT(FieldRef.VALUE) <> '0D') THEN
+        EXIT;
+
+      PaymentExportData.AddGenJnlLineErrorText(GenJnlLine,STRSUBSTNO(FieldIsBlankErr,Field."Field Caption"));
+    END;
+
+    PROCEDURE MoveToWaitingJournal@13(GenJournalLine@1080000 : Record 81;MsgId@1080005 : Code[20];PaymentInfId@1080004 : Code[20];InstrId@1080002 : Code[20];EndToEndId@1080003 : Code[20]);
+    VAR
+      WaitingJournal@1080001 : Record 15000004;
+    BEGIN
+      WaitingJournal.INIT;
+      WaitingJournal.TRANSFERFIELDS(GenJournalLine);
+      WaitingJournal."Payment Order ID - Sent" := RemittancePaymentOrder.ID;
+      WaitingJournal."Remittance Status" := WaitingJournal."Remittance Status"::Sent;
+      WaitingJournal.Reference := NextWaitingJournalRef;
+      WaitingJournal.VALIDATE("Remittance Account Code",GenJournalLine."Remittance Account Code");
+      WaitingJournal."SEPA Msg. ID" := MsgId;
+      WaitingJournal."SEPA Payment Inf ID" := PaymentInfId;
+      WaitingJournal."SEPA Instr. ID" := InstrId;
+      WaitingJournal."SEPA End To End ID" := EndToEndId;
+      WaitingJournal.INSERT(TRUE);
+      WaitingJournal.CopyLineDimensions(GenJournalLine);
+    END;
+
+    LOCAL PROCEDURE NextWaitingJournalRef@6() : Integer;
+    VAR
+      WaitingJournal@1080000 : Record 15000004;
+    BEGIN
+      WaitingJournal.LOCKTABLE;  // Serial no. depends on the existing Waiting journal.
+      WaitingJournal.INIT;
+      IF WaitingJournal.FINDLAST THEN
+        EXIT(WaitingJournal.Reference + 1);
+
+      EXIT(1);
+    END;
+
+    PROCEDURE CreatePaymOrderHead@4();
+    VAR
+      NextID@1080000 : Integer;
+    BEGIN
+      // Create a PaymOrder for import.
+      // Select ID. Find next:
+      RemittancePaymentOrder.LOCKTABLE;
+      IF RemittancePaymentOrder.FINDLAST THEN
+        NextID := RemittancePaymentOrder.ID + 1
+      ELSE
+        NextID := 1;
+
+      // Insert new PaymOrder. Remaining data are processed later:
+      RemittancePaymentOrder.INIT;
+      RemittancePaymentOrder.ID := NextID;
+      RemittancePaymentOrder.Date := TODAY;
+      RemittancePaymentOrder.Time := TIME;
+      RemittancePaymentOrder.Type := RemittancePaymentOrder.Type::Export;
+      RemittancePaymentOrder.INSERT;
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeValidatePaymentExportData@1101103000(VAR PaymentExportData@1101103001 : Record 1226;VAR GenJnlLine@1101103000 : Record 81);
+    BEGIN
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.05.17 JAL Nordea has another XML format and NAV is missing fields for bank references.
+                       Added OnBeforeValidatePaymentExportData event publisher
+    }
+    END.
+  }
+}
+
+OBJECT Codeunit 50000 COD Events
+{
+  OBJECT-PROPERTIES
+  {
+    Date=12.05.17;
+    Time=17.57.10;
+    Modified=Yes;
+    Version List=INCBF1.4;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+
+    [EventSubscriber(Codeunit,1221,OnBeforeValidatePaymentExportData)]
+    LOCAL PROCEDURE COD1221OnBeforeValidatePaymentExportData@1101103000(VAR PaymentExportData@1101103000 : Record 1226;VAR GenJnlLine@1101103001 : Record 81);
+    BEGIN
+      PaymentExportData."General Journal Template"   := GenJnlLine."Journal Template Name";
+      PaymentExportData."General Journal Batch Name" := GenJnlLine."Journal Batch Name";
+      PaymentExportData."General Journal Line No."   := GenJnlLine."Line No.";
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.05.17 JAL SEPA Nordea has another XML format and NAV is missing fields for bank references.
+    }
+    END.
+  }
+}
+
+OBJECT XMLport 1000 SEPA CT pain.001.001.03
+{
+  OBJECT-PROPERTIES
+  {
+    Date=18.05.17;
+    Time=15.15.20;
+    Modified=Yes;
+    Version List=NAVW110.00.00.15140,NAVNO10.00.00.15140,INCBF1.4;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=SEPA CT pain.001.001.03;
+               NOR=SEPA KO - pain.001.001.03];
+    Direction=Export;
+    Encoding=UTF-8;
+    Format/Evaluate=XML Format/Evaluate;
+    DefaultNamespace=urn:iso:std:iso:20022:tech:xsd:pain.001.001.03;
+    UseDefaultNamespace=Yes;
+    OnPreXMLport=BEGIN
+                   InitData;
+                 END;
+
+  }
+  ELEMENTS
+  {
+    { [{0EA1BA75-FB56-4C05-946C-A299E4809E84}];  ;Document            ;Element ;Table   ;
+                                                  SourceTable=Table81;
+                                                  Temporary=Yes }
+
+    { [{568BE3AC-1100-49BD-8637-45657742D7EA}];1 ;CstmrCdtTrfInitn    ;Element ;Table   ;
+                                                  VariableName=CompanyInformation;
+                                                  SourceTable=Table79;
+                                                  Export::OnAfterGetRecord=BEGIN
+                                                                             IF NOT PaymentExportData.GetPreserveNonLatinCharacters THEN
+                                                                               PaymentExportData.CompanyInformationConvertToLatin(CompanyInformation);
+                                                                           END;
+                                                                            }
+
+    { [{F453CB4A-C71A-42A4-94E0-58B28F74B700}];2 ;GrpHdr              ;Element ;Text     }
+
+    { [{3997F638-5334-4BF1-95DD-AE962CB67E54}];3 ;MsgId               ;Element ;Text    ;
+                                                  VariableName=MessageID }
+
+    { [{A981B758-9AF8-40B2-82CE-751EF9589CF9}];3 ;CreDtTm             ;Element ;Text    ;
+                                                  VariableName=CreatedDateTime }
+
+    { [{33D2038B-8BA5-488F-AE46-4A53BF076616}];3 ;NbOfTxs             ;Element ;Text    ;
+                                                  VariableName=NoOfTransfers }
+
+    { [{C73EA524-0705-433C-AD79-5D2EDA12143A}];3 ;CtrlSum             ;Element ;Text    ;
+                                                  VariableName=ControlSum }
+
+    { [{16BCBAC8-79B6-4EA5-A791-9B1D4B7A5E50}];3 ;InitgPty            ;Element ;Text     }
+
+    { [{F1BBD354-2D4E-49CB-B04A-66E35FD0E2BB}];4 ;Nm                  ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=CompanyInformation::Name }
+
+    { [{DAD373F6-C60F-4090-A65F-3CB8E2B33013}];4 ;PstlAdr             ;Element ;Text    ;
+                                                  VariableName=InitgPtyPstlAdr }
+
+    { [{F2AB2301-03F7-40CB-BF71-127E8427EAA0}];5 ;StrtNm              ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=CompanyInformation::Address;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF CompanyInformation.Address = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{01399FE4-0A0B-4C51-9328-7BAB543C7E56}];5 ;PstCd               ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=CompanyInformation::Post Code;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF CompanyInformation."Post Code" = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{C9B05645-C2E5-49BB-A4F2-61E50D31AA8C}];5 ;TwnNm               ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=CompanyInformation::City;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF CompanyInformation.City = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{7D4DC1EA-410D-4FF5-876B-87BE61596D39}];5 ;Ctry                ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=CompanyInformation::Country/Region Code;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF CompanyInformation."Country/Region Code" = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{10D686DF-4DE8-4112-B210-7BE40D2E72C6}];4 ;Id                  ;Element ;Text    ;
+                                                  VariableName=InitgPtyId }
+
+    { [{29A44F38-72AF-4132-9436-CEE6D6339C7F}];5 ;OrgId               ;Element ;Text    ;
+                                                  VariableName=InitgPtyOrgId }
+
+    { [{5E57766E-E782-4A66-AF3D-73B2155D790F}];6 ;Othr                ;Element ;Text    ;
+                                                  VariableName=InitgPtyOthrInitgPty }
+
+    { [{3D98418C-123C-48EC-B064-E59ACDDB3FD6}];7 ;Id                  ;Element ;Text    ;
+                                                  VariableName=InitgPtyAggrNo;
+                                                  DataType=Text;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 //01. 12.05.17 JAL -->
+                                                                                 InitgPtyAggrNo := GetAggreementNo;
+                                                                                 //01. 12.05.17 JAL <--
+                                                                               END;
+                                                                                }
+
+    { [{9A44DB55-C07F-48C6-9E6A-91699CFD73BB}];7 ;SchmeNm             ;Element ;Text    ;
+                                                  VariableName=SchemaName;
+                                                  DataType=Text;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 //01. 12.05.17 JAL -->
+                                                                                 // SchemaName := '';
+                                                                                 // TempPaymentExportRemittanceText.SETRANGE("Pmt. Export Data Entry No.",PaymentExportData."Entry No.");
+                                                                                 // IF NOT TempPaymentExportRemittanceText.FINDSET THEN
+                                                                                 //  currXMLport.SKIP;
+                                                                                 // SchemaName := TempPaymentExportRemittanceText.Text;
+                                                                                 //01. 12.05.17 JAL <--
+                                                                               END;
+                                                                                }
+
+    { [{0B6D544A-836B-4834-881E-0F1480CC11E3}];8 ;Cd                  ;Element ;Text    ;
+                                                  VariableName=Cd;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 //01. 12.05.17 JAL --> New tag + code
+                                                                                 Cd := 'CUST';
+                                                                                 //01. 12.05.17 JAL <--
+                                                                               END;
+                                                                                }
+
+    { [{1C380B59-66E4-4E7D-B8F2-FC6EEDC49F16}];2 ;PmtInf              ;Element ;Table   ;
+                                                  VariableName=PaymentExportDataGroup;
+                                                  SourceTable=Table1226;
+                                                  Temporary=Yes }
+
+    { [{EFBF6B1E-3E5E-43C6-8105-71DC727017D5}];3 ;PmtInfId            ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=PaymentExportDataGroup::Payment Information ID }
+
+    { [{7AAD5A08-7896-48C4-B57F-73F7D9E368C7}];3 ;PmtMtd              ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=PaymentExportDataGroup::SEPA Payment Method Text }
+
+    { [{CEBC5B3F-846D-4A7C-B4C2-32BC431B9F07}];3 ;BtchBookg           ;Element ;Field   ;
+                                                  DataType=Boolean;
+                                                  SourceField=PaymentExportDataGroup::SEPA Batch Booking }
+
+    { [{CFA86CA6-54E0-4AC1-AF8D-2E712867580D}];3 ;NbOfTxs             ;Element ;Field   ;
+                                                  DataType=Integer;
+                                                  SourceField=PaymentExportDataGroup::Line No. }
+
+    { [{51A00315-71E4-4ED4-96D6-71439749DE43}];3 ;CtrlSum             ;Element ;Field   ;
+                                                  DataType=Decimal;
+                                                  SourceField=PaymentExportDataGroup::Amount }
+
+    { [{E9C6BBA6-C89B-4D1D-AC41-21D04B46642E}];3 ;PmtTpInf            ;Element ;Text     }
+
+    { [{6B2033D7-893F-4297-8A45-5269EB5B50D0}];4 ;InstrPrty           ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=PaymentExportDataGroup::SEPA Instruction Priority Text }
+
+    { [{CCA0210B-5DE0-458D-924B-EFCE88C971AA}];3 ;ReqdExctnDt         ;Element ;Field   ;
+                                                  DataType=Date;
+                                                  SourceField=PaymentExportDataGroup::Transfer Date }
+
+    { [{34AB1EBE-C255-4A84-BF3B-BED540B08D31}];3 ;Dbtr                ;Element ;Text     }
+
+    { [{D7054455-7C8E-4A43-92E2-68339D35C7B8}];4 ;Nm                  ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=CompanyInformation::Name }
+
+    { [{641EBA3B-B750-4251-A42C-0939A5D4BCC1}];4 ;PstlAdr             ;Element ;Text    ;
+                                                  VariableName=DbtrPstlAdr }
+
+    { [{BD29577A-379E-47BA-A2E1-B8D87AA96325}];5 ;StrtNm              ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=CompanyInformation::Address;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF CompanyInformation.Address = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{74721C3A-4ECB-4D06-8894-A9164CA45C18}];5 ;PstCd               ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=CompanyInformation::Post Code;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF CompanyInformation."Post Code" = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{96AA9F0E-FF23-4640-B8BB-BA41BE19AC28}];5 ;TwnNm               ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=CompanyInformation::City;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF CompanyInformation.City = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{543D6173-AE1E-4280-B9ED-3836D92D89D3}];5 ;Ctry                ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=CompanyInformation::Country/Region Code;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF CompanyInformation."Country/Region Code" = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{AF960EC2-7D7A-41FF-A776-9FAADB60E3C1}];4 ;Id                  ;Element ;Text    ;
+                                                  VariableName=DbtrId;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 IF PaymentExportDataGroup."Sender Bank BIC" = '' THEN
+                                                                                   currXMLport.SKIP;
+                                                                               END;
+                                                                                }
+
+    { [{79822EC2-E881-4098-9A65-38489D57A092}];5 ;OrgId               ;Element ;Text    ;
+                                                  VariableName=DbtrOrgId }
+
+    { [{3BD152FB-1829-44F3-B053-A57488DFB23B}];6 ;Othr                ;Element ;Text    ;
+                                                  VariableName=DBtrInitgPtyOthrInitgPty }
+
+    { [{1E1D0C71-CD62-4682-A9AD-9D93E6A1DD01}];7 ;Id                  ;Element ;Text    ;
+                                                  VariableName=DBtrSignerId;
+                                                  DataType=Text;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 //01. 12.05.17 JAL -->
+                                                                                 DBtrSignerId := GetSignerId(PaymentExportDataGroup);
+                                                                                 //01. 12.05.17 JAL <--
+                                                                               END;
+                                                                                }
+
+    { [{A27E7F2C-032E-42FD-8B58-499D08208A52}];7 ;SchmeNm             ;Element ;Text    ;
+                                                  VariableName=DBtrSchemaName;
+                                                  DataType=Text }
+
+    { [{F9FDABC1-1167-4A96-AE1E-3E0B3C014493}];8 ;Cd                  ;Element ;Text    ;
+                                                  VariableName=DBtrCd;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 //01. 12.05.17 JAL --> New tag + code
+                                                                                 DBtrCd := 'BANK';
+                                                                                 //01. 12.05.17 JAL <--
+                                                                               END;
+                                                                                }
+
+    { [{C03658C2-2A8F-4BA1-9BCC-EBE8792CBE66}];3 ;DbtrAcct            ;Element ;Text     }
+
+    { [{81A8C407-25E5-44B4-B149-7D3AE4DD3395}];4 ;Id                  ;Element ;Text    ;
+                                                  VariableName=DbtrAcctId }
+
+    { [{8FD2446D-757A-42D5-B2E2-DF7248FBC1CE}];5 ;IBAN                ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=PaymentExportDataGroup::Sender Bank Account No.;
+                                                  MinOccurs=Once;
+                                                  MaxOccurs=Once }
+
+    { [{D0B5A16B-B829-46EB-9D00-29EC3BF3FD73}];4 ;Ccy                 ;Element ;Text    ;
+                                                  VariableName=Ccy;
+                                                  DataType=Code;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 //01. 12.05.17 JAL -->
+                                                                                 Ccy := GetSenderCurrency(PaymentExportDataGroup);
+                                                                                 //01. 12.05.17 JAL <--
+                                                                               END;
+                                                                                }
+
+    { [{2DA35E48-3B45-413C-A8C3-432E5A8977E5}];3 ;DbtrAgt             ;Element ;Text    ;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 IF PaymentExportDataGroup."Sender Bank BIC" = '' THEN
+                                                                                   currXMLport.SKIP;
+                                                                               END;
+                                                                                }
+
+    { [{74823A04-AC49-4C6F-98BF-635C4B3EED71}];4 ;FinInstnId          ;Element ;Text    ;
+                                                  VariableName=DbtrAgtFinInstnId }
+
+    { [{8263441F-0EDC-450A-8A37-7B67E733204A}];5 ;BIC                 ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=PaymentExportDataGroup::Sender Bank BIC;
+                                                  MinOccurs=Once;
+                                                  MaxOccurs=Once }
+
+    { [{1EC22517-CB00-45A6-B706-519F06B5D211}];3 ;ChrgBr              ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=PaymentExportDataGroup::SEPA Charge Bearer Text }
+
+    { [{85410CA8-932D-4B4F-B719-0B82E0645073}];3 ;CdtTrfTxInf         ;Element ;Table   ;
+                                                  VariableName=PaymentExportData;
+                                                  SourceTable=Table1226;
+                                                  LinkFields=Field34=FIELD(Field34),
+                                                             Field15000000=FIELD(Field15000000),
+                                                             Field82=FIELD(Field82),
+                                                             Field107=FIELD(Field107),
+                                                             Field109=FIELD(Field109);
+                                                  LinkTable=PaymentExportDataGroup;
+                                                  Temporary=Yes }
+
+    { [{374F3E7A-E0F4-4E89-A403-462FF468AC42}];4 ;PmtId               ;Element ;Text     }
+
+    { [{62C7D579-13A2-4881-A51C-B342CE175C62}];5 ;InstrId             ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=PaymentExportData::Document No. }
+
+    { [{FD2AD3C7-0F3D-421D-AFD6-988FC7C0F0B5}];5 ;EndToEndId          ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=PaymentExportData::End-to-End ID }
+
+    { [{C992CAEB-8F71-4906-BFD8-BF01F2CD4DDF}];4 ;Amt                 ;Element ;Text     }
+
+    { [{3D783E02-E494-4865-A533-E60B9CA1A70C}];5 ;InstdAmt            ;Element ;Field   ;
+                                                  DataType=Decimal;
+                                                  SourceField=PaymentExportData::Amount }
+
+    { [{9E6A7F70-50CD-470B-8C52-87221D0DE961}];6 ;Ccy                 ;Attribute;Field  ;
+                                                  DataType=Code;
+                                                  SourceField=PaymentExportData::Currency Code }
+
+    { [{120A28D5-B9AC-493E-8548-3DF7FB05DDB5}];4 ;CdtrAgt             ;Element ;Text    ;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 IF PaymentExportData."Recipient Bank BIC" = '' THEN
+                                                                                   currXMLport.SKIP;
+                                                                               END;
+                                                                                }
+
+    { [{ECC5853C-C8F2-4596-8A82-26B2E2DD3374}];5 ;FinInstnId          ;Element ;Text    ;
+                                                  VariableName=CdtrAgtFinInstnId }
+
+    { [{4808BFFB-1265-44E3-B0E1-994951E155A0}];6 ;BIC                 ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  FieldValidate=Yes;
+                                                  SourceField=PaymentExportData::Recipient Bank BIC }
+
+    { [{3B46A04E-6B42-47FC-BBE9-3FE0D1846CCB}];4 ;Cdtr                ;Element ;Text     }
+
+    { [{83FC105E-ACE8-4D4B-8289-7B53AFABB0C5}];5 ;Nm                  ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=PaymentExportData::Recipient Name }
+
+    { [{563B375A-AC99-4BDC-A3D3-F980A30A3058}];5 ;PstlAdr             ;Element ;Text    ;
+                                                  VariableName=CdtrPstlAdr;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 IF (PaymentExportData."Recipient Address" = '') AND
+                                                                                    (PaymentExportData."Recipient Post Code" = '') AND
+                                                                                    (PaymentExportData."Recipient City" = '') AND
+                                                                                    (PaymentExportData."Recipient Country/Region Code" = '')
+                                                                                 THEN
+                                                                                   currXMLport.SKIP;
+                                                                               END;
+                                                                                }
+
+    { [{6A1206F1-6BA0-439E-A947-E21DF435703E}];6 ;StrtNm              ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=PaymentExportData::Recipient Address;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF PaymentExportData."Recipient Address" = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{45E4522C-981A-432C-97AB-D66D7CC66AB5}];6 ;PstCd               ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=PaymentExportData::Recipient Post Code;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF PaymentExportData."Recipient Post Code" = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{3D20D92C-6163-45CC-B7D4-6FB4A3CEFA40}];6 ;TwnNm               ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=PaymentExportData::Recipient City;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF PaymentExportData."Recipient City" = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{EA348CA7-563C-40D0-AA7B-DC1343578362}];6 ;Ctry                ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=PaymentExportData::Recipient Country/Region Code;
+                                                  Export::OnBeforePassField=BEGIN
+                                                                              IF PaymentExportData."Recipient Country/Region Code" = '' THEN
+                                                                                currXMLport.SKIP;
+                                                                            END;
+                                                                             }
+
+    { [{F857F2DE-A0E0-4481-B0DB-72BC46B24EB3}];4 ;CdtrAcct            ;Element ;Text     }
+
+    { [{5422E388-2B8F-4839-AF88-37C1BE6722BD}];5 ;Id                  ;Element ;Text    ;
+                                                  VariableName=CdtrAcctId }
+
+    { [{5133FFC8-861A-4CCA-A73F-27FEDBE798B0}];6 ;IBAN                ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  FieldValidate=Yes;
+                                                  SourceField=PaymentExportData::Recipient Bank Acc. No.;
+                                                  MinOccurs=Once;
+                                                  MaxOccurs=Once }
+
+    { [{32F0A997-C8D2-4A50-B085-94F7765EE2B5}];4 ;RgltryRptg          ;Element ;Text    ;
+                                                  VariableName=RgltryRptg;
+                                                  MinOccurs=Zero }
+
+    { [{302A9E17-82EC-456E-BCAB-2F9D4864CA9E}];5 ;Dtls                ;Element ;Text    ;
+                                                  VariableName=RgltryRptgDtls;
+                                                  MinOccurs=Zero }
+
+    { [{7D90A4ED-4150-44F8-BD81-5AEEC7010AC3}];6 ;Cd                  ;Element ;Text    ;
+                                                  VariableName=RgltryRptgCd;
+                                                  MinOccurs=Zero;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 GetRegulatoryReporting(PaymentExportData);
+                                                                               END;
+                                                                                }
+
+    { [{145DFAAF-A259-43B9-8540-8139FB07D910}];6 ;Inf                 ;Element ;Text    ;
+                                                  VariableName=RgltryRptgDtlsInf;
+                                                  MinOccurs=Zero }
+
+    { [{A2F63261-B74E-469C-AB97-C6ABBFA719FA}];4 ;RmtInf              ;Element ;Text    ;
+                                                  MinOccurs=Zero;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 RemittanceText1 := '';
+                                                                                 RemittanceText2 := '';
+                                                                                 TempPaymentExportRemittanceText.SETRANGE("Pmt. Export Data Entry No.",PaymentExportData."Entry No.");
+                                                                                 IF NOT TempPaymentExportRemittanceText.FINDSET THEN
+                                                                                   currXMLport.SKIP;
+                                                                                 RemittanceText1 := TempPaymentExportRemittanceText.Text;
+                                                                                 IF TempPaymentExportRemittanceText.NEXT = 0 THEN
+                                                                                   EXIT;
+                                                                                 RemittanceText2 := TempPaymentExportRemittanceText.Text;
+                                                                               END;
+                                                                                }
+
+    { [{12BAE668-51DE-4E4E-8E1A-7F416DB3D93D}];5 ;Ustrd               ;Element ;Text    ;
+                                                  VariableName=RemittanceText1;
+                                                  MinOccurs=Zero }
+
+    { [{D04F8739-098D-421F-B17B-ED3A77B8AA6A}];5 ;Ustrd               ;Element ;Text    ;
+                                                  VariableName=RemittanceText2;
+                                                  MinOccurs=Zero;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 IF RemittanceText2 = '' THEN
+                                                                                   currXMLport.SKIP;
+                                                                               END;
+                                                                                }
+
+  }
+  EVENTS
+  {
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+    }
+    CONTROLS
+    {
+    }
+  }
+  CODE
+  {
+    VAR
+      TempPaymentExportRemittanceText@1000 : TEMPORARY Record 1229;
+      NoDataToExportErr@1001 : TextConst '@@@="%1=Field;%2=Value;%3=Value";ENU=There is no data to export.;NOR=Det finnes ingen data † eksportere.';
+
+    LOCAL PROCEDURE InitData@1();
+    VAR
+      WaitingJournal@1080000 : Record 15000004;
+      SEPACTFillExportBuffer@1001 : Codeunit 1221;
+      PaymentGroupNo@1000 : Integer;
+    BEGIN
+      SEPACTFillExportBuffer.FillExportBuffer("Gen. Journal Line",PaymentExportData);
+      PaymentExportData.GetRemittanceTexts(TempPaymentExportRemittanceText);
+
+      NoOfTransfers := FORMAT(PaymentExportData.COUNT);
+      MessageID := PaymentExportData."Message ID";
+      CreatedDateTime := FORMAT(CURRENTDATETIME,19,9);
+      PaymentExportData.CALCSUMS(Amount);
+      ControlSum := FORMAT(PaymentExportData.Amount,0,9);
+
+      PaymentExportData.SETCURRENTKEY(
+        "Sender Bank BIC","Transfer Date","SEPA Batch Booking",
+        "SEPA Charge Bearer Text",Urgent);
+
+      IF NOT PaymentExportData.FINDSET THEN
+        ERROR(NoDataToExportErr);
+
+      InitPmtGroup;
+      REPEAT
+        IF IsNewGroup THEN BEGIN
+          InsertPmtGroup(PaymentGroupNo);
+          InitPmtGroup;
+        END;
+
+        WaitingJournal.RESET;
+        WaitingJournal.SETFILTER("SEPA Msg. ID",PaymentExportData."Message ID");
+        WaitingJournal.SETFILTER("SEPA Payment Inf ID",PaymentExportData."Payment Information ID");
+        WaitingJournal.SETFILTER("SEPA End To End ID",PaymentExportData."End-to-End ID");
+        WaitingJournal.SETFILTER("SEPA Instr. ID",PaymentExportData."Document No.");
+        IF WaitingJournal.FINDFIRST THEN
+          WaitingJournal.MODIFYALL("SEPA Payment Inf ID",PaymentExportDataGroup."Payment Information ID",TRUE);
+
+        PaymentExportDataGroup."Line No." += 1;
+        PaymentExportDataGroup.Amount += PaymentExportData.Amount;
+      UNTIL PaymentExportData.NEXT = 0;
+      InsertPmtGroup(PaymentGroupNo);
+    END;
+
+    LOCAL PROCEDURE IsNewGroup@4() : Boolean;
+    BEGIN
+      EXIT(
+        (PaymentExportData."Sender Bank BIC" <> PaymentExportDataGroup."Sender Bank BIC") OR
+        (PaymentExportData.Urgent <> PaymentExportDataGroup.Urgent) OR
+        (PaymentExportData."Transfer Date" <> PaymentExportDataGroup."Transfer Date") OR
+        (PaymentExportData."SEPA Batch Booking" <> PaymentExportDataGroup."SEPA Batch Booking") OR
+        (PaymentExportData."SEPA Charge Bearer Text" <> PaymentExportDataGroup."SEPA Charge Bearer Text"));
+    END;
+
+    LOCAL PROCEDURE InitPmtGroup@2();
+    BEGIN
+      PaymentExportDataGroup := PaymentExportData;
+      PaymentExportDataGroup."Line No." := 0; // used for counting transactions within group
+      PaymentExportDataGroup.Amount := 0; // used for summarizing transactions within group
+    END;
+
+    LOCAL PROCEDURE InsertPmtGroup@3(VAR PaymentGroupNo@1000 : Integer);
+    BEGIN
+      PaymentGroupNo += 1;
+      PaymentExportDataGroup."Entry No." := PaymentGroupNo;
+      PaymentExportDataGroup."Payment Information ID" :=
+        COPYSTR(
+          STRSUBSTNO('%1/%2',PaymentExportData."Message ID",PaymentGroupNo),
+          1,MAXSTRLEN(PaymentExportDataGroup."Payment Information ID"));
+      PaymentExportDataGroup.INSERT;
+    END;
+
+    LOCAL PROCEDURE GetAggreementNo@1101103000() : Code[20];
+    VAR
+      RemittanceAccountL@1101103002 : Record 15000003;
+    BEGIN
+      //01. 12.05.17 JAL -->
+      PaymentExportDataGroup.FINDFIRST;
+      GetRemittanceAccount(PaymentExportDataGroup, RemittanceAccountL);
+      EXIT(RemittanceAccountL."Aggreement No.");
+      //01. 12.05.17 JAL <--
+    END;
+
+    LOCAL PROCEDURE GetSignerId@1101103002(VAR PaymentExportDataP@1101103003 : TEMPORARY Record 1226) : Code[20];
+    VAR
+      RemittanceAccountL@1101103002 : Record 15000003;
+      VendorL@1101103001 : Record 23;
+      GenJournalLineL@1101103000 : Record 81;
+    BEGIN
+      //01. 12.05.17 JAL -->
+      GetRemittanceAccount(PaymentExportDataP, RemittanceAccountL);
+      EXIT(RemittanceAccountL."Signer Id");
+      //01. 12.05.17 JAL <--
+    END;
+
+    LOCAL PROCEDURE GetSenderCurrency@1101103004(VAR PaymentExportDataP@1101103003 : TEMPORARY Record 1226) : Code[20];
+    VAR
+      RemittanceAccountL@1101103002 : Record 15000003;
+      BankAccountL@1101103001 : Record 270;
+      GenJournalLineL@1101103000 : Record 81;
+    BEGIN
+      //01. 12.05.17 JAL -->
+      GenJournalLineL.GET(PaymentExportDataP."General Journal Template",PaymentExportDataP."General Journal Batch Name",PaymentExportDataP."General Journal Line No.");
+      BankAccountL.GET(GenJournalLineL."Bal. Account No.");
+      EXIT(BankAccountL."Currency Code");
+      //01. 12.05.17 JAL <--
+    END;
+
+    LOCAL PROCEDURE GetRemittanceAccount@1101103001(VAR PaymentExportDataP@1101103003 : TEMPORARY Record 1226;VAR RemittanceAccountP@1101103004 : Record 15000003);
+    VAR
+      VendorL@1101103001 : Record 23;
+      GenJournalLineL@1101103000 : Record 81;
+    BEGIN
+      //01. 12.05.17 JAL -->
+      GenJournalLineL.GET(PaymentExportDataP."General Journal Template",PaymentExportDataP."General Journal Batch Name",PaymentExportDataP."General Journal Line No.");
+      //VendorL.GET(GenJournalLineL."Account No.");
+      //RemittanceAccountP.GET(VendorL."Remittance Account Code");
+      RemittanceAccountP.GET(GenJournalLineL."Remittance Account Code");
+      //01. 12.05.17 JAL <--
+    END;
+
+    LOCAL PROCEDURE GetRegulatoryReporting@1101103003(VAR PaymentExportDataP@1101103003 : TEMPORARY Record 1226);
+    VAR
+      GenJournalLineL@1101103000 : Record 81;
+    BEGIN
+      //01. 12.05.17 JAL -->
+      GenJournalLineL.GET(PaymentExportDataP."General Journal Template",PaymentExportDataP."General Journal Batch Name",PaymentExportDataP."General Journal Line No.");
+      RgltryRptgCd      := GenJournalLineL."Payment Type Code Abroad";
+      RgltryRptgDtlsInf := GenJournalLineL."Specification (Norges Bank)";
+      //01. 12.05.17 JAL <--
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.05.17 JAL Nordea has another XML format and NAV is missing fields for bank references.
+    }
+    END.
+  }
+}
+
+OBJECT Page 15000004 Remittance Account Card
+{
+  OBJECT-PROPERTIES
+  {
+    Date=12.05.17;
+    Time=17.58.30;
+    Modified=Yes;
+    Version List=NAVNO10.00,INCBF1.4;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Remittance Account Card;
+               NOR=Remitteringskontokort];
+    SourceTable=Table15000003;
+    PageType=Card;
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=[ENU=General;
+                           NOR=Generelt] }
+
+    { 47  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the remittance account.;
+                           NOR=Angir koden for remitteringskontoen.];
+                ApplicationArea=#All;
+                SourceExpr=Code }
+
+    { 9   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the remittance agreement.;
+                           NOR=Angir remitteringsavtalen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Remittance Agreement Code" }
+
+    { 2   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the payment type.;
+                           NOR=Angir betalingstypen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Type }
+
+    { 49  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a description of the remittance account.;
+                           NOR=Angir en beskrivelse av remitteringskontoen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Description }
+
+    { 59  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the bank account.;
+                           NOR=Angir bankkontoen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Bank Account No." }
+
+    { 21  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the agreement with BBS.;
+                           NOR=Angir avtalen med BBS.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="BBS Agreement ID" }
+
+    { 1101103000;2;Field  ;
+                SourceExpr="Signer Id" }
+
+    { 1101103001;2;Field  ;
+                SourceExpr="Aggreement No." }
+
+    { 1905401101;1;Group  ;
+                CaptionML=[ENU=Finance;
+                           NOR=Finans] }
+
+    { 39  ;2   ;Field     ;
+                ToolTipML=[ENU=Indicates that if Account Type is set to Finance, then the Account No. field specifies the general ledger account for the transaction.;
+                           NOR=Angir at dersom kontotypen er satt til Finans, angir feltet Kontonr. finanskontoen for transaksjonen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Account Type" }
+
+    { 23  ;2   ;Field     ;
+                ToolTipML=[ENU=Indicates that if Account Type is set to Finance, then the Account No. field specifies the general ledger account for the transaction.;
+                           NOR=Angir at dersom kontotypen er satt til Finans, angir feltet Kontonr. finanskontoen for transaksjonen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Account No." }
+
+    { 63  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the charge account.;
+                           NOR=Angir gebyrkontoen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Charge Account No." }
+
+    { 65  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the account for rounding differences between currencies.;
+                           NOR=Angir kontoen for avrundingsdifferanser mellom valutaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Round off/Divergence Acc. No." }
+
+    { 11  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the maximum rounding difference for this remittance account.;
+                           NOR=Angir den maksimale avrundingsdifferansen for denne remitteringskontoen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Max. Round off/Diverg. (LCY)" }
+
+    { 25  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series for the payment documents.;
+                           NOR=Angir nummerserien for betalingsdokumentene.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Document No. Series" }
+
+    { 15  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies how documents are numbered when payments are posted.;
+                           NOR=Angir hvordan dokumenter nummereres n†r betalinger bokf›res.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="New Document Per." }
+
+    { 17  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the general journal template that settled payments are transferred to.;
+                           NOR=Angir finanskladdemalen som avregnede betalinger overf›res til.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Return Journal Template Name" }
+
+    { 19  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the general journal batch that settled payments are transferred to.;
+                           NOR=Angir finanskladden som avregnede betalinger overf›res til.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Return Journal Name" }
+
+    { 1900325501;1;Group  ;
+                CaptionML=[ENU=Domestic;
+                           NOR=Innenlands] }
+
+    { 27  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 1 - Invoice" }
+
+    { 29  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 2 - Invoice" }
+
+    { 31  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 3 - Invoice" }
+
+    { 33  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 1 - Cr. Memo" }
+
+    { 35  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 2 - Cr. Memo" }
+
+    { 37  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 3 - Cr. Memo" }
+
+    { 1906114301;1;Group  ;
+                CaptionML=[ENU=Foreign;
+                           NOR=Utenlands] }
+
+    { 55  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the currency code of the payment.;
+                           NOR=Angir valutakoden for betalingen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Currency Code" }
+
+    { 51  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient Ref. Abroad" }
+
+    { 4   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of the futures contract if this transaction is linked to a futures contract.;
+                           NOR=Angir nummeret for terminskontrakten hvis denne transaksjonen er knyttet til en terminskontrakt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Futures Contract No." }
+
+    { 7   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the exchange rate of the futures contract if this transaction is linked to a futures contract.;
+                           NOR=Angir valutakursen for terminskontrakten hvis denne transaksjonen er knyttet til en terminskontrakt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Futures Contract Exch. Rate" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.05.17 JAL Nordea has another XML format and NAV is missing fields for bank references.
+                       Show field : "Signer ID" and "Aggreement No."
+    }
+    END.
+  }
+}
+

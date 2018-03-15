@@ -1,0 +1,605 @@
+OBJECT Page 459 Sales & Receivables Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=29.08.17;
+    Time=15:11:19;
+    Modified=Yes;
+    Version List=NAVW110.00,NAVNO10.00,EPDF1.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Sales & Receivables Setup;
+               NOR=Salgsoppsett];
+    InsertAllowed=No;
+    DeleteAllowed=No;
+    SourceTable=Table311;
+    PageType=Card;
+    PromotedActionCategoriesML=[ENU=New,Process,Report,Customer Groups,Payments;
+                                NOR=Ny,Prosess,Rapport,Kundegrupper,Betalinger];
+    OnOpenPage=BEGIN
+                 RESET;
+                 IF NOT GET THEN BEGIN
+                   INIT;
+                   INSERT;
+                 END;
+               END;
+
+    ActionList=ACTIONS
+    {
+      { 47      ;    ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 45      ;1   ;Action    ;
+                      CaptionML=[ENU=Customer Posting Groups;
+                                 NOR=Bokf›ringsgrupper - kunde];
+                      ToolTipML=[ENU=Set up the posting groups to select from when you set up customer cards to link business transactions made for the customer with the appropriate account in the general ledger.;
+                                 NOR=Definer bokf›ringsgruppene du velger fra n†r du oppretter kundekort for † koble forretningstransaksjoner for kunden til riktig konto i Finans.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 110;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=CustomerGroup;
+                      PromotedCategory=Category4 }
+      { 43      ;1   ;Action    ;
+                      CaptionML=[ENU=Customer Price Groups;
+                                 NOR=Kundeprisgrupper];
+                      ToolTipML=[ENU=Set up the posting groups to select from when you set up customer cards to link business transactions made for the customer with the appropriate account in the general ledger.;
+                                 NOR=Definer bokf›ringsgruppene du velger fra n†r du oppretter kundekort for † koble forretningstransaksjoner for kunden til riktig konto i Finans.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 7;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Price;
+                      PromotedCategory=Category4 }
+      { 54      ;1   ;Action    ;
+                      CaptionML=[ENU=Customer Disc. Groups;
+                                 NOR=Kunderabattgrupper];
+                      ToolTipML=[ENU=Set up discount group codes that you can use as criteria when you define special discounts on a customer, vendor, or item card.;
+                                 NOR=Angi rabattgruppekoder du kan bruke som kriterier n†r du definerer spesielle rabatter p† et kunde-, leverand›r- eller varekort.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 512;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Discount;
+                      PromotedCategory=Category4 }
+      { 53      ;1   ;ActionGroup;
+                      CaptionML=[ENU=Payment;
+                                 NOR=Betaling] }
+      { 35      ;2   ;Action    ;
+                      CaptionML=[ENU=Payment Registration Setup;
+                                 NOR=Betalingsregistreringsoppsett];
+                      ToolTipML=[ENU=Set up the payment journal template and the balancing account that is used to post received customer payments. Define how you prefer to process customer payments in the Payment Registration window.;
+                                 NOR=Definer utbetalingskladdemalen og motkontoen som brukes for † bokf›re mottatte kundebetalinger. Definer hvordan du foretrekker † behandle kundebetalinger, i vinduet Betalingsregistrering.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 982;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=PaymentJournal;
+                      PromotedCategory=Category5 }
+      { 51      ;2   ;Action    ;
+                      CaptionML=[ENU=Payment Methods;
+                                 NOR=Betalingsm†ter];
+                      ToolTipML=[ENU=Set up the payment methods that you select from the customer card to define how the customer must pay, for example by bank transfer.;
+                                 NOR=Angi betalingsmetodene du kan velge fra p† kundekortet for † definere hvordan kunden m† betale, for eksempel via bankoverf›ring.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 427;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Payment;
+                      PromotedCategory=Category5 }
+      { 33      ;2   ;Action    ;
+                      CaptionML=[ENU=Payment Terms;
+                                 NOR=Betalingsbetingelser];
+                      ToolTipML=[ENU=Set up the payment terms that you select from on customer cards to define when the customer must pay, such as within 14 days.;
+                                 NOR=Definer betalingsbetingelsene du velger fra p† kundekort for † definere n†r kunden m† betale, for eksempel innen 14 dager.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 4;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Payment;
+                      PromotedCategory=Category5 }
+      { 31      ;2   ;Action    ;
+                      CaptionML=[ENU=Finance Charge Terms;
+                                 NOR=Rentenotabetingelser];
+                      ToolTipML=[ENU=Set up the finance charge terms that you select from on customer cards to define how to calculate interest in case the customer's payment is late.;
+                                 NOR=Definer rentebetingelsene du velger fra p† kundekortene for † definere hvordan renter beregnes ved forsinket betaling fra kunden.];
+                      RunObject=Page 6;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=FinChargeMemo;
+                      PromotedCategory=Category5 }
+      { 29      ;2   ;Action    ;
+                      CaptionML=[ENU=Reminder Terms;
+                                 NOR=Purrebetingelser];
+                      ToolTipML=[ENU=Set up reminder terms that you select from on customer cards to define when and how to remind the customer of late payments.;
+                                 NOR=Definer purrebetingelsene du velger fra p† kundekort for † definere n†r og hvordan det sendes purringer til kunden om forsinkede betalinger.];
+                      RunObject=Page 431;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=ReminderTerms;
+                      PromotedCategory=Category5 }
+      { 27      ;2   ;Action    ;
+                      CaptionML=[ENU=Rounding Methods;
+                                 NOR=Avrundingsmetoder];
+                      ToolTipML=[ENU=Define how amounts are rounded when you use functions to adjust or suggest item prices or standard costs.;
+                                 NOR=Definer hvordan bel›p avrundes n†r du bruker funksjoner for † justere eller foresl† varepriser eller standardkost.];
+                      RunObject=Page 65;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Calculate;
+                      PromotedCategory=Category5 }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=[ENU=General;
+                           NOR=Generelt] }
+
+    { 18  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the type of sales discounts to post separately.;
+                           NOR=Angir typen salgsrabatter som skal bokf›res separat.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Discount Posting" }
+
+    { 3   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether to warn about the customer's status when you create a sales order or invoice.;
+                           NOR=Angir om du skal varsle om kundens status n†r du oppretter en ordre eller faktura.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Credit Warnings" }
+
+    { 20  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if a warning is displayed when you enter a quantity on a sales document that brings the item's inventory level below zero.;
+                           NOR=Angir om det vises en advarsel n†r du angir et antall i et salgsdokument som bringer varens lagerniv† under null.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Stockout Warning" }
+
+    { 16  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that a posted shipment and a posted invoice are automatically created when you post an invoice.;
+                           NOR=Angir at en bokf›rt f›lgeseddel og en bokf›rt faktura blir opprettet automatisk n†r du bokf›rer en faktura.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Shipment on Invoice";
+                Importance=Additional }
+
+    { 57  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that a posted return receipt and a posted sales credit memo are automatically created when you post a credit memo.;
+                           NOR=Angir at en bokf›rt returseddel og en bokf›rt salgskreditnora blir opprettet automatisk n†r du bokf›rer en kreditnota.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Return Receipt on Credit Memo";
+                Importance=Additional }
+
+    { 8   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that amounts are rounded for sales invoices.;
+                           NOR=Angir at bel›pene er avrundet for salgsfakturaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Invoice Rounding" }
+
+    { 666 ;2   ;Field     ;
+                Name=DefaultItemQuantity;
+                CaptionML=[ENU=Default Item Quantity;
+                           NOR=Standard vareantall];
+                ToolTipML=[ENU=Specifies that the Quantity field is set to 1 when you fill the Item No. field.;
+                           NOR=Angir at feltet Antall settes til 1 n†r du fyller ut feltet Varenr.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Default Item Quantity" }
+
+    { 41  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether the system will suggest to create a new item when no item matches the description.;
+                           NOR=Angir om systemet foresl†r † opprette en ny vare n†r ingen varer samsvarer med beskrivelsen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Create Item from Description" }
+
+    { 9   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether it is mandatory to enter an external document number in the External Document No. field on a sales header or the External Document No. field on a general journal line.;
+                           NOR=Angir om det er obligatorisk † angi et eksternt dokumentnummer i feltet Eksterndokumentnr. i et salgshode eller i feltet Eksterndokumentnr. p† en kladdelinje.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Ext. Doc. No. Mandatory";
+                Importance=Additional }
+
+    { 44  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether it is allowed to apply customer payments in different currencies.;
+                           NOR=Angir om det er tillatt † bruke kundebetalinger i ulike valutaer.];
+                ApplicationArea=#Suite;
+                SourceExpr="Appln. between Currencies" }
+
+    { 65  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the position of your company logo on business letters and documents.;
+                           NOR=Angir plasseringen av selskapslogoen p† forretningsbrev og dokumenter.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Logo Position on Documents" }
+
+    { 39  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the general ledger account that must be used for freight charges.;
+                           NOR=Angir nummeret p† finanskontoen som m† brukes til frakt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Freight G/L Acc. No." }
+
+    { 77  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies how to use the Posting Date field on sales documents.;
+                           NOR=Angir hvordan feltet Bokf›ringsdato skal brukes p† salgsdokumenter.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Default Posting Date" }
+
+    { 79  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the default value that is inserted in the Qty. to Ship field on sales order lines and in the Return Qty. to Receive field on sales return order lines.;
+                           NOR=Angir standardverdien som settes inn i feltet Levere (antall) p† ordrelinjer, og i feltet Returant. som skal mottas p† ordrereturlinjer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Default Quantity to Ship";
+                Importance=Additional }
+
+    { 36  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether to copy comments from blanket orders to sales orders.;
+                           NOR=Angir om du vil kopiere merknader fra rammeordrer til ordrer.];
+                SourceExpr="Copy Comments Blanket to Order";
+                Importance=Additional }
+
+    { 40  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether to copy comments from sales orders to sales invoices.;
+                           NOR=Angir om du vil kopiere merknader fra ordrer til salgsfakturaer.];
+                SourceExpr="Copy Comments Order to Invoice";
+                Importance=Additional }
+
+    { 42  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether to copy comments from sales orders to shipments.;
+                           NOR=Angir om du vil kopiere merknader fra ordrer til f›lgesedler.];
+                SourceExpr="Copy Comments Order to Shpt.";
+                Importance=Additional }
+
+    { 61  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether to copy comments from sales return orders to sales credit memos.;
+                           NOR=Angir om du vil kopiere merknader fra returordrer til salgskreditnotaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Copy Cmts Ret.Ord. to Cr. Memo";
+                Importance=Additional }
+
+    { 48  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that comments are copied from the sales credit memo to the posted return receipt.;
+                           NOR=Angir at merknader kopieres salgskreditnotaen til den bokf›rte returseddelen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Copy Cmts Ret.Ord. to Ret.Rcpt";
+                Importance=Additional }
+
+    { 46  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether to allow the manual adjustment of VAT amounts in sales documents.;
+                           NOR=Angir om du vil tillate manuell justering av mva-bel›p i salgsdokumenter.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Allow VAT Difference" }
+
+    { 22  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether the invoice discount amount is automatically calculated with sales documents.;
+                           NOR=Angir om fakturarabattbel›pet blir beregnet automatisk med salgsdokumenter.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Calc. Inv. Discount" }
+
+    { 52  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that the invoice discount is calculated according to VAT Identifier.;
+                           NOR=Angir at fakturarabatten blir beregnet i henhold til mva-typen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Calc. Inv. Disc. per VAT ID" }
+
+    { 21  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a VAT business posting group for customers for whom you want the item price including VAT, to apply.;
+                           NOR=Angir en mva-firmabokf›ringsgruppe for kunder som du vil at vareprisen, inkludert mva, skal gjelde for.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="VAT Bus. Posting Gr. (Price)" }
+
+    { 59  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that a return transaction cannot be posted unless the Appl.-from Item Entry field on the sales order line Specifies an entry.;
+                           NOR=Angir at en returtransaksjon ikke kan bokf›res med mindre feltet Utlignet fra-varepost i ordren angir en post.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Exact Cost Reversing Mandatory";
+                Importance=Additional }
+
+    { 71  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that you cannot ship or invoice an order that has an unpaid prepayment amount.;
+                           NOR=Angir at du ikke kan levere eller fakturere en ordre som har ubetalte forskuddsbel›p.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Check Prepmt. when Posting";
+                Importance=Additional }
+
+    { 81  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether to automatically archive sales quotes and sales orders when a sales quote/order is deleted.;
+                           NOR=Angir om tilbud og ordrer skal arkiveres automatisk n†r et tilbud eller en ordre slettes.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Archive Quotes and Orders";
+                Importance=Additional }
+
+    { 37  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if and when posted sales documents can be deleted. If you enter a date, posted sales documents with a posting date on or after this date cannot be deleted.;
+                           NOR=Angir om og n†r bokf›rte salgsdokumenter kan slettes. Hvis du angir en dato, kan ikke bokf›rte salgsdokumenter med en bokf›ringsdato p† eller etter denne datoen, slettes.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Allow Document Deletion Before";
+                Importance=Additional }
+
+    { 1900309501;1;Group  ;
+                CaptionML=[ENU=Dimensions;
+                           NOR=Dimensjoner] }
+
+    { 63  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the dimension code for customer groups in your analysis report.;
+                           NOR=Angir dimensjonskoden for kundegruppene i analyserapporten.];
+                SourceExpr="Customer Group Dimension Code" }
+
+    { 14  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the dimension code for salespeople in your analysis report;
+                           NOR=Angir dimensjonskoden for selgere i analyserapporten];
+                SourceExpr="Salesperson Dimension Code" }
+
+    { 1904569201;1;Group  ;
+                CaptionML=[ENU=Number Series;
+                           NOR=Nummerserie];
+                GroupType=Group }
+
+    { 85  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to customers.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til kunder.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Customer Nos." }
+
+    { 24  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to sales quotes.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til tilbud.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Quote Nos." }
+
+    { 38  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to blanket sales orders.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til rammeordrer.];
+                SourceExpr="Blanket Order Nos." }
+
+    { 26  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to sales orders.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til ordrer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Order Nos." }
+
+    { 55  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series that is used to assign numbers to new sales return orders.;
+                           NOR=Angir nummerserien som skal brukes til † tilordne numre til nye ordrereturer.];
+                SourceExpr="Return Order Nos." }
+
+    { 75  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to sales invoices.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til salgsfakturaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Invoice Nos." }
+
+    { 30  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to sales invoices when they are posted.;
+                           NOR=Angir koden for nummerserien som brukes til † tilordne numre til salgsfakturaer n†r de er bokf›rt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Posted Invoice Nos." }
+
+    { 74  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to sales credit memos.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til salgskreditnotaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Credit Memo Nos." }
+
+    { 32  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to sales credit memos when they are posted.;
+                           NOR=Angir koden for nummerserien som brukes til † tilordne numre til salgskreditnotaer n†r de er bokf›rt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Posted Credit Memo Nos." }
+
+    { 28  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to shipments.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til f›lgesedler.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Posted Shipment Nos." }
+
+    { 50  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to posted return receipts.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til bokf›rte retursedler.];
+                SourceExpr="Posted Return Receipt Nos." }
+
+    { 6   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to reminders.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til purringer.];
+                SourceExpr="Reminder Nos." }
+
+    { 10  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to reminders when they are issued.;
+                           NOR=Angir koden for nummerserien som brukes til † tilordne numre til purringer n†r de er utstedt.];
+                SourceExpr="Issued Reminder Nos." }
+
+    { 34  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to finance charge memos.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til rentenotaer.];
+                SourceExpr="Fin. Chrg. Memo Nos." }
+
+    { 12  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to finance charge memos when they are issued.;
+                           NOR=Angir koden for nummerserien som brukes til † tilordne numre til rentenotaer n†r de er utstedt.];
+                SourceExpr="Issued Fin. Chrg. M. Nos." }
+
+    { 69  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that will be used to assign numbers to sales prepayment invoices.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til forskuddsfaktura for salg.];
+                SourceExpr="Posted Prepmt. Inv. Nos." }
+
+    { 67  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the number series that is used to assign numbers to sales prepayment credit memos when they are posted.;
+                           NOR=Angir koden for nummerserien som brukes til † tilordne numre til kreditnotaer for forskudd for salg n†r de er bokf›rt.];
+                SourceExpr="Posted Prepmt. Cr. Memo Nos." }
+
+    { 25  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series for direct-debit mandates.;
+                           NOR=Angir nummerserien for Direct Debit-belastningsfullmakter.];
+                SourceExpr="Direct Debit Mandate Nos." }
+
+    { 2   ;1   ;Group     ;
+                CaptionML=[ENU=Background Posting;
+                           NOR=Bakgrunnsbokf›ring];
+                GroupType=Group }
+
+    { 23  ;2   ;Group     ;
+                CaptionML=[ENU=Post;
+                           NOR=Bokf›r];
+                GroupType=Group }
+
+    { 19  ;3   ;Field     ;
+                ToolTipML=[ENU=Specifies if your business process uses job queues in the background to post sales and purchase documents, including orders, invoices, return orders, and credit memos.;
+                           NOR=Angir om forretningsprosessen bruker prosjektk›er i bakgrunnen til † bokf›re salgs- og kj›psdokumenter, inkluderer ordrer, fakturaer, ordrereturer og kreditnotaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Post with Job Queue" }
+
+    { 17  ;3   ;Field     ;
+                ToolTipML=[ENU=Specifies the priority of the job queue when you run it in the context of background posting. You can set different priorities for the post and post and print settings. The default setting is 1000.;
+                           NOR=Angir prioriteten for prosjektk›en n†r du kj›rer den i forbindelse med bokf›ring i bakgrunnen. Du kan angi ulike prioriteter for bokf›ringen og bokf›re og skrive ut innstillinger. Standardinnstillingen er 1000.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Job Queue Priority for Post" }
+
+    { 13  ;2   ;Group     ;
+                CaptionML=[ENU=Post & Print;
+                           NOR=Bokf›r og skriv ut];
+                GroupType=Group }
+
+    { 15  ;3   ;Field     ;
+                ToolTipML=[ENU=Specifies if your business process uses job queues to post and print sales documents.;
+                           NOR=Angir om forretningsprosessen bruker prosjektk›er til † bokf›re og skrive ut salgsdokumenter.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Post & Print with Job Queue" }
+
+    { 11  ;3   ;Field     ;
+                ToolTipML=[ENU=Specifies the priority of the job queue when you run it in the context of background posting. You can set different priorities for the post and post and print settings. The default setting is 1000.;
+                           NOR=Angir prioriteten for prosjektk›en n†r du kj›rer den i forbindelse med bokf›ring i bakgrunnen. Du kan angi ulike prioriteter for bokf›ringen og bokf›re og skrive ut innstillinger. Standardinnstillingen er 1000.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Job Q. Prio. for Post & Print" }
+
+    { 7   ;2   ;Group     ;
+                CaptionML=[ENU=General;
+                           NOR=Generelt];
+                GroupType=Group }
+
+    { 5   ;3   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the category of the job queue that you want to associate with background posting.;
+                           NOR=Angir koden for prosjektk›kategorien du vil forbinde med bokf›ring i bakgrunnen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Job Queue Category Code" }
+
+    { 4   ;3   ;Field     ;
+                ToolTipML=[ENU=Specifies if a notification is sent when posting and printing is successfully completed.;
+                           NOR=Angir om det sendes et varsel n†r bokf›ring og utskrift er fullf›rt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Notify On Success" }
+
+    { 1901093401;1;Group  ;
+                CaptionML=[ENU=Documents;
+                           NOR=Dokumenter] }
+
+    { 1080002;2;Field     ;
+                ToolTipML=[ENU=Specifies the format of the Kunde ID (KID) number on the giro part of a sales document.;
+                           NOR=Angir formatet for kunde-ID-nummeret (KID-nummeret) p† girodelen av et salgsdokument.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="KID Setup" }
+
+    { 1080004;2;Field     ;
+                ToolTipML=[ENU=Specifies the number of digits used for specifying the document number in the KID number.;
+                           NOR=Angir hvor mange sifre som skal brukes for † angi dokumentnummeret i KID-nummeret.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Document No. length" }
+
+    { 1080006;2;Field     ;
+                ToolTipML=[ENU=Specifies the number of digits used for specifying the customer no. in the KID number.;
+                           NOR=Angir hvor mange sifre som skal brukes for † angi kundenummeret i KID-nummeret.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Customer No. length" }
+
+    { 1080008;2;Field     ;
+                ToolTipML=[ENU=Specifies if you want to print Kunde ID (KID) numbers on the Finance Charge Memo.;
+                           NOR=Angir om du vil skrive ut kunde-ID-numre (KID-numre) i rentenotaen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Use KID on Fin. Charge Memo" }
+
+    { 1080010;2;Field     ;
+                ToolTipML=[ENU=Specifies if you want to print Kunde ID (KID) numbers on the Reminder.;
+                           NOR=Angir om du vil skrive ut kunde-ID-numre (KID-numre) i purringen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Use KID on Reminder" }
+
+    { 1080000;2;Field     ;
+                ToolTipML=[ENU=Specifies whether you want to print the receipt section on the sales documents.;
+                           NOR=Angir om du vil skrive ut kvitteringsdelen i salgsdokumentene.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Print Receipt on Giro" }
+
+    { 1906854401;1;Group  ;
+                CaptionML=[ENU=E-Invoice;
+                           NOR=E-faktura] }
+
+    { 1080034;2;Group     ;
+                CaptionML=[ENU=Output Paths;
+                           NOR=Utdatabaner] }
+
+    { 1080030;3;Field     ;
+                CaptionML=[ENU=Invoice Path;
+                           NOR=Fakturabane];
+                ToolTipML=[ENU=Specifies the path and name of the folder where you want to store the files for electronic invoices.;
+                           NOR=Angir banen til og navnet p† mappen der du vil lagre filene for elektroniske fakturaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="E-Invoice Sales Invoice Path";
+                ShowMandatory=TRUE }
+
+    { 1080032;3;Field     ;
+                CaptionML=[ENU=Cr. Memo Path;
+                           NOR=Kreditnotabane];
+                ToolTipML=[ENU=Specifies the path and name of the folder where you want to store the files for electronic credit memos.;
+                           NOR=Angir banen til og navnet p† mappen der du vil lagre filene for elektroniske kreditnotaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="E-Invoice Sales Cr. Memo Path";
+                ShowMandatory=TRUE }
+
+    { 1080016;3;Field     ;
+                CaptionML=[ENU=Reminder Path;
+                           NOR=Purrebane];
+                ToolTipML=[ENU=Specifies the path and name of the folder where you want to store the files for electronic reminders.;
+                           NOR=Angir banen til og navnet p† mappen der du vil lagre filene for elektroniske purringer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="E-Invoice Reminder Path";
+                ShowMandatory=TRUE }
+
+    { 1080018;3;Field     ;
+                CaptionML=[ENU=Fin. Charge Path;
+                           NOR=Rentenotabane];
+                ToolTipML=[ENU=Specifies the path and name of the folder where you want to store the files for electronic finance charge memos.;
+                           NOR=Angir banen til og navnet p† mappen der du vil lagre filene for elektroniske rentenotaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="E-Invoice Fin. Charge Path";
+                ShowMandatory=TRUE }
+
+    { 1101103000;3;Field  ;
+                SourceExpr="Include PDF in EHF File" }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 29.08.17 JAL Added the field "Include PDF in EHF File"
+    }
+    END.
+  }
+}
+

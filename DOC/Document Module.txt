@@ -1,0 +1,1310 @@
+OBJECT Table 53200 Document Module Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=25.10.16;
+    Time=15:24:09;
+    Modified=Yes;
+    Version List=DOC1.0;
+  }
+  PROPERTIES
+  {
+  }
+  FIELDS
+  {
+    { 1   ;   ;Primary Key         ;Code10        ;CaptionML=[ENU=Primary Key;
+                                                              NOR=Prim‘rn›kkel] }
+    { 2   ;   ;Filename No. Series ;Code20        ;TableRelation="No. Series";
+                                                   CaptionML=[ENU=Filename No. Series;
+                                                              NOR=Filnavn nr.serie] }
+    { 3   ;   ;Storage Location    ;Text250       ;CaptionML=[ENU=Storage Location;
+                                                              NOR=Filsti] }
+    { 10  ;   ;Storage Type        ;Option        ;CaptionML=[ENU=Storage Type;
+                                                              NOR=Lagringstype];
+                                                   OptionCaptionML=[ENU=Disk File,Embedded;
+                                                                    NOR=Fil p† disk,I database];
+                                                   OptionString=Disk File,Embedded }
+    { 20  ;   ;Add To Record Link  ;Boolean       ;CaptionML=[ENU=Add To Record Link;
+                                                              NOR=Legge fil til Koblinger] }
+    { 30  ;   ;Use Attachment Table;Boolean       ;CaptionML=[ENU=Use Attachment Table;
+                                                              NOR=Bruke Vedlegg tabellen] }
+    { 40  ;   ;Add To Interaction Log;Boolean     ;CaptionML=[ENU=Add Interaction Log Entry;
+                                                              NOR=Legg til Samhandlingspost] }
+    { 50  ;   ;Add Line To Support Task;Boolean   ;CaptionML=[ENU=Add Line To Support Task;
+                                                              NOR=Legg til Supportlinje] }
+    { 60  ;   ;Interaction Template Code;Code10   ;TableRelation="Interaction Template";
+                                                   CaptionML=[ENU=Interaction Template Code;
+                                                              NOR=Samhandlingsmal - kode] }
+  }
+  KEYS
+  {
+    {    ;Primary Key                             ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+
+OBJECT Table 53201 Document Module Documents
+{
+  OBJECT-PROPERTIES
+  {
+    Date=25.10.16;
+    Time=15:29:09;
+    Modified=Yes;
+    Version List=DOC1.0;
+  }
+  PROPERTIES
+  {
+    OnDelete=VAR
+               RecRef@1101103000 : RecordRef;
+             BEGIN
+               RecRef.OPEN("Table No.");
+               IF RecRef.GET(RecordID) THEN
+                 RecRef.DELETELINK("Link ID");
+             END;
+
+    CaptionML=[ENU=Document Module Documents;
+               NOR=Dokumentmodul dokumenter];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Table No.           ;Integer       ;TableRelation=Object.ID WHERE (Type=CONST(Table)) }
+    { 2   ;   ;Line No.            ;Integer       ;CaptionML=[ENU=Line No.;
+                                                              NOR=Linjenr.] }
+    { 3   ;   ;RecordID            ;RecordID      ;CaptionML=[ENU=Record ID;
+                                                              NOR=Record ID] }
+    { 7   ;   ;Description         ;Text250       ;CaptionML=[ENU=Description;
+                                                              NOR=Beskrivelse] }
+    { 10  ;   ;Storage Type        ;Option        ;CaptionML=[ENU=Storage Type;
+                                                              NOR=Lagringstype];
+                                                   OptionCaptionML=[ENU=Disk File,Embedded;
+                                                                    NOR=Fil p† disk,I database];
+                                                   OptionString=Disk File,Embedded }
+    { 11  ;   ;Attachment          ;BLOB          ;CaptionML=[ENU=Attachment;
+                                                              NOR=Vedlegg] }
+    { 12  ;   ;Filename No.        ;Code100       ;CaptionML=[ENU=Filename No.;
+                                                              NOR=Filnavn nr.] }
+    { 13  ;   ;File Extension      ;Text30        ;CaptionML=[ENU=File Extension;
+                                                              NOR=Filtype] }
+    { 14  ;   ;Date                ;Date          ;CaptionML=[ENU=Date;
+                                                              NOR=Dato];
+                                                   Editable=No }
+    { 15  ;   ;Time                ;Time          ;CaptionML=[ENU=Time;
+                                                              NOR=Tid];
+                                                   Editable=No }
+    { 16  ;   ;Size                ;Integer       ;CaptionML=[ENU=Size;
+                                                              NOR=St›rrelse] }
+    { 17  ;   ;Storage Pointer     ;Text250       ;OnValidate=BEGIN
+                                                                IF COPYSTR("Storage Pointer", STRLEN("Storage Pointer"), 1) <> '\' THEN
+                                                                BEGIN
+                                                                  "Storage Pointer" += '\';
+                                                                END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Storage Pointer;
+                                                              NOR=Lagringssti] }
+    { 18  ;   ;Read Only           ;Boolean       ;CaptionML=[ENU=Read Only;
+                                                              NOR=Skrivebeskyttet] }
+    { 30  ;   ;Link ID             ;Integer        }
+    { 200 ;   ;Attachment No.      ;Integer       ;CaptionML=[ENU=Attachment No.;
+                                                              NOR=Vedleggnr.] }
+  }
+  KEYS
+  {
+    {    ;Table No.,RecordID,Line No.             ;Clustered=Yes }
+    {    ;Link ID                                  }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      DocumentModuleSetupG@1101103003 : Record 53200;
+      FileMgt@1101103001 : Codeunit 419;
+      DocModuleMgt@1101103000 : Codeunit 53201;
+      Text002@1101103016 : TextConst 'ENU=The attachment is empty.;NOR=Vedlegget er tomt.';
+      Text003@1101103015 : TextConst 'ENU=Attachment is already in use on this machine.;NOR=Vedlegget er allerede i bruk p† denne maskinen.';
+      Text004@1101103014 : TextConst 'ENU=When you have saved your document, click Yes to import the document.;NOR=N†r du har lagret dokumentet, klikker du p† Ja for † lese det inn.';
+      Text005@1101103013 : TextConst 'ENU=Export Attachment;NOR=Les ut vedlegg';
+      Text006@1101103012 : TextConst 'ENU=Import Attachment;NOR=Importer vedlegg';
+      Text007@1101103011 : TextConst 'ENU=All Files (*.*)|*.*;NOR=Alle filer (*.*)|*.*';
+      Text008@1101103010 : TextConst 'ENU=Error during copying file: %1.;NOR=Feil ved kopiering av fil: %1';
+      Text009@1101103009 : TextConst 'ENU=Do you want to remove %1?;NOR=Vil du fjerne %1?';
+      Text010@1101103008 : TextConst 'ENU=External file could not be removed.;NOR=Ekstern fil kunne ikke fjernes.';
+      NoSeriesMgt@1101103004 : Codeunit 396;
+
+    PROCEDURE ImportAttachmentFromClientFile@5(RecordRefP@1101103003 : RecordRef;ClientFileNameP@1000 : Text;IsTemporaryP@1001 : Boolean;VAR AttachmentNoP@1101103004 : Integer;VAR InteractionLogEntryNoP@1101103002 : Integer) : Boolean;
+    VAR
+      FileNameL@1005 : Text;
+      ServerFileNameL@1010 : Text;
+      NewServerFileNameL@1101103001 : Text;
+      DocModuleSetupL@1101103000 : Record 53200;
+    BEGIN
+      IF IsTemporaryP THEN
+        EXIT(ImportTemporaryAttachmentFromClientFile(ClientFileNameP));
+
+      DocModuleSetupL.GET;
+      IF DocModuleSetupL."Storage Type" = DocModuleSetupL."Storage Type"::"Disk File" THEN
+        DocModuleSetupL.TESTFIELD("Storage Location");
+      ServerFileNameL := FileMgt.UploadFileSilent(ClientFileNameP);
+      FileNameL := FileMgt.GetFileName(ClientFileNameP);
+      NewServerFileNameL := FileMgt.CombinePath(TEMPORARYPATH, FileNameL);
+      FileMgt.CopyServerFile(ServerFileNameL, NewServerFileNameL, TRUE);
+      FileMgt.DeleteServerFile(ServerFileNameL);
+      EXIT(ImportAttachmentFromServerFile(RecordRefP, NewServerFileNameL, FALSE, TRUE, FileNameL, AttachmentNoP, InteractionLogEntryNoP));
+    END;
+
+    PROCEDURE ConnectAttachmentFromClientFile@1101103000(RecRef@1101103003 : RecordRef;ImportFromFile@1000 : Text;IsTemporary@1001 : Boolean) : Boolean;
+    VAR
+      FileName@1005 : Text;
+      ServerFileName@1010 : Text;
+      FilePath@1101103000 : Text;
+    BEGIN
+      IF IsTemporary THEN
+        EXIT(ImportTemporaryAttachmentFromClientFile(ImportFromFile));
+      // passing to UPLOAD function when only server path is specified, not ALSO the file name,
+      // then function updates the server file path with the actual client name
+      ServerFileName := TEMPORARYPATH;
+      FileName := ImportFromFile;
+      FileName := FileMgt.OpenFileDialog(Text006, '', Text007);
+      FilePath := FileMgt.GetDirectoryName(FileName);
+
+      EXIT(ConnectAttachmentFromServerFile(RecRef, FileName , FilePath, FALSE,TRUE));
+    END;
+
+    PROCEDURE ImportAttachmentFromServerFile@19(RecRef@1101103001 : RecordRef;ImportFromFile@1000 : Text;IsTemporary@1002 : Boolean;Overwrite@1001 : Boolean;SubjectP@1101103009 : Text[250];VAR AttachmentNoP@1101103007 : Integer;VAR InteractionLogEntryNoP@1101103008 : Integer) : Boolean;
+    VAR
+      NewDocumentLineNo@1101103000 : Integer;
+      DocModuleSetup@1101103002 : Record 53200;
+      TempBlob@1101103003 : Record 99008535;
+      FileExtensionL@1101103004 : Text[30];
+      FileNameL@1101103005 : Text;
+      ImportedL@1101103006 : Boolean;
+    BEGIN
+      ImportedL := FALSE;
+      IF ImportFromFile = '' THEN
+        EXIT(FALSE);
+
+      IF IsTemporary THEN BEGIN
+        ImportTemporaryAttachmentFromServerFile(ImportFromFile);
+        EXIT(TRUE);
+      END;
+
+      DocModuleSetup.GET;
+      IF DocModuleSetup."Storage Type" = DocModuleSetup."Storage Type"::"Disk File" THEN
+        DocModuleSetup.TESTFIELD("Storage Location");
+      DocModuleSetup.TESTFIELD("Filename No. Series");
+
+      NewDocumentLineNo := InsertNewDocumentRecord(RecRef);
+      GET(RecRef.RECORDID.TABLENO, RecRef.RECORDID, NewDocumentLineNo);
+      FileExtensionL := COPYSTR(FileMgt.GetExtension(ImportFromFile),1,250);
+      FileNameL := FileMgt.GetFileName(ImportFromFile);
+      CASE DocModuleSetup."Storage Type" OF
+        DocModuleSetup."Storage Type"::Embedded:
+          BEGIN
+            Date := TODAY;
+            Time := Time;
+            "Storage Pointer" := '';
+            "Storage Type" := "Storage Type"::Embedded;
+            "File Extension" := FileExtensionL;
+            Description := FileNameL;
+            "Filename No." := NoSeriesMgt.GetNextNo(DocModuleSetup."Filename No. Series",TODAY,TRUE);
+            IF DocModuleSetup."Use Attachment Table" THEN
+              "Attachment No." := DocModuleMgt.InsertAttachment(ImportFromFile, FileExtensionL)
+            ELSE BEGIN
+              CLEAR(TempBlob);
+              FileMgt.BLOBImportFromServerFile(TempBlob,ImportFromFile);
+              Attachment := TempBlob.Blob;
+            END;
+            IF MODIFY(TRUE) AND DocModuleSetup."Add To Record Link" THEN
+            BEGIN
+              "Link ID" := RecRef.ADDLINK(ConstDiskFileName, Description);
+              MODIFY(TRUE) ;
+            END;
+            FileMgt.DeleteServerFile(ImportFromFile);
+            ImportedL := TRUE;
+          END;
+        "Storage Type"::"Disk File":
+          BEGIN
+            Date := TODAY;
+            Time := Time;
+            "Storage Type" := "Storage Type"::"Disk File";
+            "Storage Pointer" := DocModuleSetup."Storage Location";
+            "File Extension" := FileExtensionL;
+            Description := FileNameL;
+            "Filename No." := NoSeriesMgt.GetNextNo(DocModuleSetup."Filename No. Series",TODAY,TRUE);
+            FileMgt.CopyServerFile(ImportFromFile, ConstDiskFileName, Overwrite); // Copy from UNC location to another UNC location
+            IF MODIFY(TRUE) AND DocModuleSetup."Add To Record Link" THEN
+            BEGIN
+              "Link ID" := RecRef.ADDLINK(ConstDiskFileName, Description);
+              MODIFY(TRUE);
+            END;
+            ImportedL := TRUE;
+          END;
+      END;
+      AttachmentNoP := Rec."Attachment No.";
+      IF ImportedL AND DocModuleSetup."Add To Interaction Log" THEN BEGIN
+        InteractionLogEntryNoP := InsertInteractionLogEntry(RecRef, FileExtensionL, Rec."Attachment No.", SubjectP);
+      END;
+
+      EXIT(ImportedL);
+    END;
+
+    PROCEDURE ConnectAttachmentFromServerFile@1101103001(RecRef@1101103002 : RecordRef;ImportFromFile@1000 : Text;FilePath@1101103000 : Text;IsTemporary@1002 : Boolean;Overwrite@1001 : Boolean) : Boolean;
+    VAR
+      NewDocumentLineNo@1101103001 : Integer;
+      DocModuleSetup@1101103003 : Record 53200;
+      TempBlob@1101103004 : Record 99008535;
+      FileNameL@1101103005 : Text;
+      FileExtensionL@1101103006 : Text[30];
+    BEGIN
+
+      IF ImportFromFile = '' THEN
+        EXIT(FALSE);
+
+      IF IsTemporary THEN BEGIN
+        ImportTemporaryAttachmentFromServerFile(ImportFromFile);
+        EXIT(TRUE);
+      END;
+
+      DocModuleSetup.GET;
+      IF DocModuleSetup."Storage Type" = DocModuleSetup."Storage Type"::"Disk File" THEN
+        DocModuleSetup.TESTFIELD("Storage Location");
+      DocModuleSetup.TESTFIELD("Filename No. Series");
+
+      NewDocumentLineNo := InsertNewDocumentRecord(RecRef);
+      GET(RecRef.RECORDID.TABLENO, RecRef.RECORDID, NewDocumentLineNo);
+      FileExtensionL := COPYSTR(FileMgt.GetExtension(ImportFromFile),1,250);
+      FileNameL := FileMgt.GetFileName(ImportFromFile);
+      CASE DocModuleSetup."Storage Type" OF
+        DocModuleSetup."Storage Type"::Embedded:
+          BEGIN
+            Date := TODAY;
+            Time := Time;
+            "Storage Pointer" := '';
+            "Storage Type" := "Storage Type"::Embedded;
+            "File Extension" := FileExtensionL;
+            Description := FileNameL;
+            "Filename No." := FileMgt.GetFileName(ImportFromFile);
+            IF DocModuleSetup."Use Attachment Table" THEN
+              "Attachment No." := DocModuleMgt.InsertAttachment(ImportFromFile, FileExtensionL)
+            ELSE BEGIN
+              CLEAR(TempBlob);
+              FileMgt.BLOBImportFromServerFile(TempBlob,ImportFromFile);
+              Attachment := TempBlob.Blob;
+            END;
+
+            IF MODIFY(TRUE) AND DocModuleSetup."Add To Record Link" THEN
+            BEGIN
+              "Link ID" := RecRef.ADDLINK(ConstDiskFileName, Description);
+              MODIFY(TRUE);
+            END;
+            EXIT(TRUE);
+          END;
+        "Storage Type"::"Disk File":
+          BEGIN
+            Date := TODAY;
+            Time := Time;
+            "Storage Type" := "Storage Type"::"Disk File";
+            "Storage Pointer" := FilePath;
+            "File Extension" := FileExtensionL;
+            Description := FileNameL;
+            "Filename No." := FileMgt.GetFileNameWithoutExtension(ImportFromFile);
+           // FileMgt.CopyServerFile(ImportFromFile,ConstDiskFileName,Overwrite); // Copy from UNC location to another UNC location
+            IF MODIFY(TRUE) AND DocModuleSetup."Add To Record Link" THEN
+            BEGIN
+              "Link ID" := RecRef.ADDLINK(ConstDiskFileName, Description);
+              MODIFY(TRUE);
+            END;
+            EXIT(TRUE);
+          END;
+      END;
+
+      EXIT(FALSE);
+    END;
+
+    LOCAL PROCEDURE ImportTemporaryAttachmentFromClientFile@21(ImportFromFile@1000 : Text) : Boolean;
+    VAR
+      FileName@1001 : Text;
+      TempBlob@1101103000 : Record 99008535;
+    BEGIN
+      FileName := FileMgt.BLOBImport(TempBlob,ImportFromFile);
+
+      IF FileName <> '' THEN BEGIN
+        Attachment := TempBlob.Blob;
+        "Storage Type" := "Storage Type"::Embedded;
+        "Storage Pointer" := '';
+        "File Extension" := COPYSTR(UPPERCASE(FileMgt.GetExtension(FileName)),1,250);
+        EXIT(TRUE);
+      END;
+
+      EXIT(FALSE);
+    END;
+
+    LOCAL PROCEDURE ImportTemporaryAttachmentFromServerFile@22(ImportFromFile@1000 : Text);
+    VAR
+      TempBlob@1101103000 : Record 99008535;
+    BEGIN
+      FileMgt.BLOBImportFromServerFile(TempBlob,ImportFromFile);
+      Attachment := TempBlob.Blob;
+      "Storage Type" := "Storage Type"::Embedded;
+      "Storage Pointer" := '';
+      "File Extension" := COPYSTR(UPPERCASE(FileMgt.GetExtension(ImportFromFile)),1,250);
+    END;
+
+    PROCEDURE DeleteFile@10(FilePath@1001 : Text[250]) : Boolean;
+    VAR
+      I@1002 : Integer;
+    BEGIN
+      IF FilePath = '' THEN
+        EXIT(FALSE);
+
+      IF NOT FileMgt.ClientFileExists(FilePath) THEN
+        EXIT(TRUE);
+
+      REPEAT
+        SLEEP(250);
+        I := I + 1;
+      UNTIL FileMgt.DeleteClientFile(FilePath) OR (I = 25);
+      EXIT(NOT FileMgt.ClientFileExists(FilePath));
+    END;
+
+    PROCEDURE ConstFilename@9() FileName@1000 : Text;
+    BEGIN
+      FileName := FileMgt.ClientTempFileName("File Extension");
+    END;
+
+    PROCEDURE ConstDiskFileName@3() DiskFileName@1000 : Text;
+    BEGIN
+      IF COPYSTR("Storage Pointer", STRLEN("Storage Pointer"), 1) <> '\' THEN
+        DiskFileName := "Storage Pointer" + '\' + FORMAT("Filename No.") + '.' + "File Extension"
+      ELSE
+        DiskFileName := "Storage Pointer" + FORMAT("Filename No.") + '.' + "File Extension";
+    END;
+
+    PROCEDURE InsertNewDocumentRecord@1101103002(RecRef@1101103002 : RecordRef) : Integer;
+    VAR
+      Document@1101103001 : Record 53201;
+    BEGIN
+      Document.INIT;
+      Document."Table No." := RecRef.RECORDID.TABLENO;
+      Document."Line No." := GetNextLineNo(RecRef);
+      Document.RecordID := RecRef.RECORDID;
+      Document.INSERT;
+
+      EXIT(Document."Line No.");
+    END;
+
+    PROCEDURE GetNextLineNo@1101103003(RecRef@1101103000 : RecordRef) : Integer;
+    VAR
+      Document@1101103001 : Record 53201;
+    BEGIN
+      Document.SETRANGE("Table No.", RecRef.RECORDID.TABLENO);
+      Document.SETRANGE(RecordID, RecRef.RECORDID);
+      IF Document.FINDLAST THEN
+        EXIT(Document."Line No." + 1)
+      ELSE
+        EXIT(0);
+    END;
+
+    PROCEDURE InsertInteractionLogEntry@1101103004(VAR RecordRefP@1101103000 : RecordRef;FileExtP@1101103002 : Text[30];VAR AttachmentNoP@1101103001 : Integer;DescriptionP@1101103004 : Text[250]) : Integer;
+    VAR
+      SupportHeaderL@1101103003 : Record 52006;
+      InteractionLogEntryNoL@1101103005 : Integer;
+    BEGIN
+      InteractionLogEntryNoL := 0;
+      DocumentModuleSetupG.GET;
+      CASE RecordRefP.RECORDID.TABLENO OF
+        DATABASE::"Support Header":
+        BEGIN
+          RecordRefP.SETTABLE(SupportHeaderL);
+          InteractionLogEntryNoL := DocModuleMgt.InsertInteractionLogEntry(SupportHeaderL."Contact No.", DescriptionP, FileExtP, AttachmentNoP, DocumentModuleSetupG."Interaction Template Code")
+        END;
+      END;
+      EXIT(InteractionLogEntryNoL);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.11.14 JAL Created the object
+    }
+    END.
+  }
+}
+
+OBJECT Codeunit 53200 Document Module Files
+{
+  OBJECT-PROPERTIES
+  {
+    Date=25.10.16;
+    Time=14:00:37;
+    Modified=Yes;
+    Version List=DOC1.0;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      DocumentModuleSetupG@1101103004 : Record 53200;
+      FileManagementG@1101103000 : Codeunit 419;
+      Text001@1101103002 : TextConst 'ENU=Import document from file;NOR=Importer dokument fra fil';
+      DocumentModuleManagementG@1101103003 : Codeunit 53201;
+      SupportManagementG@1101103005 : Codeunit 53001;
+      DocPageG@1101103001 : Page 53201;
+
+    PROCEDURE ShowDocuments@1101103001(RecordRefP@1101103002 : RecordRef);
+    VAR
+      Documents@1101103001 : Record 53201;
+      RecId@1101103003 : RecordID;
+    BEGIN
+      RecId := RecordRefP.RECORDID;
+
+      Documents.SETCURRENTKEY("Table No.", RecordID, "Line No.");
+      Documents.SETRANGE("Table No.", RecId.TABLENO);
+      Documents.SETRANGE(RecordID, RecId);
+
+      DocPageG.SetRecordRef(RecordRefP);
+      DocPageG.SETTABLEVIEW(Documents);
+      DocPageG.RUN;
+    END;
+
+    PROCEDURE ShowDocument@1101103006(VAR DocumentModuleDocumentsP@1101103004 : Record 53201);
+    VAR
+      AttachmentL@1101103001 : Record 5062;
+      FileNameL@1101103000 : Text[250];
+    BEGIN
+      IF DocumentModuleDocumentsP."Attachment No." = 0 THEN
+        EXIT;
+      IF AttachmentL.GET(DocumentModuleDocumentsP."Attachment No.") THEN
+        AttachmentL.OpenAttachment('Attachment', TRUE, '');
+
+      //FileNameL := DocumentModuleManagementG.DownloadFileToClient(DocumentModuleDocumentsP, '');
+      //HYPERLINK(FileNameL);
+    END;
+
+    PROCEDURE ImportDocument@1101103000(RecRef@1101103003 : RecordRef);
+    VAR
+      DocumentModuleDocumentsL@1101103002 : Record 53201;
+      FileNameL@1101103001 : Text[250];
+      AttachmentNoL@1101103000 : Integer;
+      InteractionLogEntryNoL@1101103004 : Integer;
+    BEGIN
+      DocumentModuleSetupG.GET;
+      DocumentModuleDocumentsL.ImportAttachmentFromClientFile(RecRef, FileNameL, FALSE, AttachmentNoL, InteractionLogEntryNoL);
+      IF DocumentModuleSetupG."Add Line To Support Task" THEN
+        SupportManagementG.OnAfterImportDocumentFromFile(RecRef, FileNameL, AttachmentNoL, InteractionLogEntryNoL);
+    END;
+
+    PROCEDURE ImportDocumentFromFile@1101103004(RecordRefP@1101103003 : RecordRef;FileNameP@1101103000 : Text[250]);
+    VAR
+      DocumentModuleDocumentsL@1101103002 : Record 53201;
+      AttachmentNoL@1101103004 : Integer;
+      InteractionLogEntryNoL@1101103001 : Integer;
+      SupportHeaderL@1101103005 : Record 52006;
+      SupportLineL@1101103006 : Record 52007;
+      SupportConsultantCodeL@1101103007 : Code[50];
+    BEGIN
+      DocumentModuleSetupG.GET;
+      DocumentModuleDocumentsL.ImportAttachmentFromClientFile(RecordRefP, FileNameP, FALSE, AttachmentNoL, InteractionLogEntryNoL);
+      IF DocumentModuleSetupG."Add Line To Support Task" THEN
+        SupportManagementG.OnAfterImportDocumentFromFile(RecordRefP, FileNameP, AttachmentNoL, InteractionLogEntryNoL);
+    END;
+
+    PROCEDURE ImportDocFromMail@1101103008(VariantP@1101103000 : Variant;VAR MailItemP@1101103004 : BigText;SubjectP@1101103008 : Text[250];FileExtP@1101103003 : Text[250];VAR AttachmentNoP@1101103007 : Integer;VAR InteractionLogEntryNoP@1101103006 : Integer);
+    VAR
+      RecordRefL@1101103001 : RecordRef;
+      DocModDocumentsL@1101103002 : Record 53201;
+      FileNameL@1101103005 : Text[250];
+    BEGIN
+      RecordRefL.GETTABLE(VariantP);
+      IF NOT RecordRefL.GET(RecordRefL.RECORDID) THEN
+        EXIT;
+      DocumentModuleManagementG.SaveMailItem(MailItemP, SubjectP, FileExtP, FileNameL);
+      DocModDocumentsL.ImportAttachmentFromServerFile(RecordRefL, FileNameL, FALSE, TRUE, SubjectP, AttachmentNoP, InteractionLogEntryNoP);
+      IF DocModDocumentsL."Attachment No." > 0 THEN BEGIN
+        DocModDocumentsL.Description := SubjectP;
+        DocModDocumentsL.MODIFY(TRUE);
+      END;
+    END;
+
+    PROCEDURE SaveFileToClient@1101103007(VAR DocumentModuleDocumentsP@1101103000 : Record 53201);
+    VAR
+      DocModDocumentsL@1101103002 : Record 53201;
+    BEGIN
+      DocumentModuleManagementG.SaveFileToClient(DocumentModuleDocumentsP);
+    END;
+
+    PROCEDURE ConnectDocument@1101103002(RecRef@1101103003 : RecordRef);
+    VAR
+      Documents@1101103002 : Record 53201;
+      FileName@1101103001 : Text[250];
+    BEGIN
+      Documents.ConnectAttachmentFromClientFile(RecRef, FileName, FALSE);
+    END;
+
+    PROCEDURE DeleteDocument@1101103003(FileName@1101103000 : Text[250]);
+    VAR
+      Documents@1101103001 : Record 53201;
+    BEGIN
+      Documents.DeleteFile(FileName);
+    END;
+
+    PROCEDURE DeleteDocumentByAttachmentNo@1101103009(AttachmentNoP@1101103000 : Integer);
+    VAR
+      Documents@1101103001 : Record 53201;
+    BEGIN
+      IF AttachmentNoP <= 0 THEN
+        EXIT;
+      Documents.SETRANGE("Attachment No.", AttachmentNoP);
+      IF Documents.FINDSET THEN
+        Documents.DELETEALL(TRUE);
+    END;
+
+    PROCEDURE RenameDocuments@1101103005(NewRecRef@1101103002 : RecordRef;OldRecRef@1101103000 : RecordRef);
+    VAR
+      Documents@1101103001 : Record 53201;
+      RecId@1101103003 : RecordID;
+      DocumentRec@1101103004 : Record 53201;
+    BEGIN
+      RecId := OldRecRef.RECORDID;
+      Documents.SETRANGE("Table No.", RecId.TABLENO);
+      Documents.SETRANGE(RecordID, RecId);
+      IF Documents.FINDSET THEN
+      REPEAT
+        DocumentRec.GET(Documents."Table No.", OldRecRef.RECORDID, Documents."Line No.");
+        DocumentRec.RENAME(Documents."Table No.", NewRecRef.RECORDID, Documents."Line No.");
+      UNTIL Documents.NEXT <= 0;
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.11.14 JAL Created the object
+    }
+    END.
+  }
+}
+
+OBJECT Codeunit 53201 Document Module Management
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07.10.16;
+    Time=12:23:16;
+    Modified=Yes;
+    Version List=DOC1.0;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      Text000@1000 : TextConst 'ENU=Send attachments...\\;NOR=Send vedlegg...\\';
+      Text001@1001 : TextConst 'ENU=Preparing;NOR=Forbereder';
+      Text002@1002 : TextConst 'ENU=Deliver misc.;NOR=Lever div.';
+      Text008@1003 : TextConst 'ENU=You must select an interaction template with an attachment.;NOR=Du m† velge en samhandlingsmal med et vedlegg.';
+      Text003@1101103000 : TextConst 'ENU=Save File;NOR=Lagre fil';
+
+    PROCEDURE InsertAttachmentNo@14(AttachmentNo@1000 : Integer) : Integer;
+    VAR
+      Attachment@1001 : Record 5062;
+      Attachment3@1003 : Record 5062;
+    BEGIN
+      IF AttachmentNo <> 0 THEN BEGIN
+        Attachment.GET(AttachmentNo);
+        IF Attachment."Storage Type" = Attachment."Storage Type"::Embedded THEN
+          Attachment.CALCFIELDS(Attachment);
+        Attachment3 := Attachment; // Remember "from" attachment
+      END;
+
+      Attachment.INSERT(TRUE);
+
+      IF AttachmentNo <> 0 THEN
+        // New attachment is based on old attachment
+        TransferAttachment(Attachment3,Attachment); // Transfer attachments of different types.
+
+      EXIT(Attachment."No.");
+    END;
+
+    PROCEDURE Send@1(VAR DeliverySorter@1000 : Record 5074);
+    VAR
+      Attachment@1001 : Record 5062;
+      TempDeliverySorterWord@1002 : TEMPORARY Record 5074;
+      TempDeliverySorterOther@1003 : TEMPORARY Record 5074;
+      InteractLogEntry@1004 : Record 5065;
+      Contact@1005 : Record 5050;
+      FileMgt@1012 : Codeunit 419;
+      WordManagement@1006 : Codeunit 5054;
+      Mail@1007 : Codeunit 397;
+      FileName@1008 : Text;
+      Window@1009 : Dialog;
+      NoOfAttachments@1010 : Integer;
+      I@1011 : Integer;
+    BEGIN
+      Window.OPEN(
+        Text000 +
+        '#1############ @2@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\' +
+        '#3############ @4@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@');
+
+      Window.UPDATE(1,Text001);
+      Window.UPDATE(3,Text002);
+
+      IF DeliverySorter.FIND('-') THEN BEGIN
+        NoOfAttachments := DeliverySorter.COUNT;
+        REPEAT
+          DeliverySorter.TESTFIELD("Correspondence Type");
+          IF NOT Attachment.GET(DeliverySorter."Attachment No.") THEN
+            ERROR(Text008);
+
+          IF WordManagement.IsWordDocumentExtension(Attachment."File Extension")
+          THEN BEGIN
+            TempDeliverySorterWord := DeliverySorter;
+            TempDeliverySorterWord.INSERT;
+          END ELSE BEGIN
+            TempDeliverySorterOther := DeliverySorter;
+            TempDeliverySorterOther.INSERT;
+          END;
+          I := I + 1;
+          Window.UPDATE(2,ROUND(I / NoOfAttachments * 10000,1));
+        UNTIL DeliverySorter.NEXT = 0;
+      END;
+
+      // MS Word merge
+      IF TempDeliverySorterWord.FINDFIRST THEN
+        WordManagement.Merge(TempDeliverySorterWord);
+
+      // Deliver other types
+      IF TempDeliverySorterOther.FIND('-') THEN BEGIN
+        I := 0;
+        NoOfAttachments := TempDeliverySorterOther.COUNT;
+        REPEAT
+          InteractLogEntry.LOCKTABLE;
+          InteractLogEntry.GET(TempDeliverySorterOther."No.");
+          IF TempDeliverySorterOther."Correspondence Type" = TempDeliverySorterOther."Correspondence Type"::"E-Mail" THEN BEGIN
+            Attachment.GET(TempDeliverySorterOther."Attachment No.");
+            Attachment.TESTFIELD("File Extension");
+            FileName := FileMgt.ServerTempFileName(Attachment."File Extension");
+            Attachment.ExportAttachmentToServerFile(FileName);
+            Contact.GET(InteractLogEntry."Contact No.");
+            Mail.NewMessage(InteractionEMail(InteractLogEntry),'',TempDeliverySorterOther.Subject,'',FileName,FALSE);
+            InteractLogEntry."Delivery Status" := InteractLogEntry."Delivery Status"::" ";
+            InteractLogEntry.MODIFY;
+          END ELSE BEGIN
+            InteractLogEntry."Delivery Status" := InteractLogEntry."Delivery Status"::Error;
+            InteractLogEntry.MODIFY;
+          END;
+          COMMIT;
+          I := I + 1;
+          Window.UPDATE(4,ROUND(I / NoOfAttachments * 10000,1));
+        UNTIL TempDeliverySorterOther.NEXT = 0;
+      END;
+      Window.CLOSE;
+    END;
+
+    LOCAL PROCEDURE TransferAttachment@5(FromAttachment@1000 : Record 5062;VAR ToAttachment@1001 : Record 5062);
+    VAR
+      RMSetup@1002 : Record 5079;
+      FileName@1003 : Text;
+    BEGIN
+      // Transfer attachments of different types
+
+      IF (FromAttachment."Storage Type" = FromAttachment."Storage Type"::Embedded) AND
+         (ToAttachment."Storage Type" = ToAttachment."Storage Type"::"Disk File")
+      THEN BEGIN
+        FileName := ToAttachment.ConstDiskFileName;
+        FromAttachment.ExportAttachmentToServerFile(FileName); // Export blob to UNC location
+        WITH ToAttachment DO BEGIN
+          CLEAR(Attachment);
+          RMSetup.GET;
+          RMSetup.TESTFIELD("Attachment Storage Location");
+          "Storage Pointer" := RMSetup."Attachment Storage Location";
+          MODIFY;
+        END;
+      END;
+
+      IF (FromAttachment."Storage Type" = FromAttachment."Storage Type"::"Disk File") AND
+         (ToAttachment."Storage Type" = ToAttachment."Storage Type"::"Disk File")
+      THEN BEGIN
+        // Copy external attachment (to new storage)
+        RMSetup.GET;
+        RMSetup.TESTFIELD("Attachment Storage Location");
+        ToAttachment."Storage Pointer" := RMSetup."Attachment Storage Location";
+        ToAttachment.MODIFY;
+        FILE.COPY(FromAttachment.ConstDiskFileName,ToAttachment.ConstDiskFileName);
+      END;
+
+      IF (FromAttachment."Storage Type" = FromAttachment."Storage Type"::"Disk File") AND
+         (ToAttachment."Storage Type" = ToAttachment."Storage Type"::Embedded)
+      THEN
+        // Transfer External to Embedded attachment
+        WITH ToAttachment DO BEGIN
+          ImportAttachmentFromServerFile(FromAttachment.ConstDiskFileName,TRUE,FALSE); // Import file from UNC location
+          "File Extension" := FromAttachment."File Extension";
+          "Storage Pointer" := '';
+          MODIFY;
+        END;
+    END;
+
+    PROCEDURE InteractionEMail@6(VAR InteractLogEntry@1000 : Record 5065) : Text[80];
+    VAR
+      Cont@1001 : Record 5050;
+      ContAltAddr@1002 : Record 5051;
+    BEGIN
+      IF InteractLogEntry."Contact Alt. Address Code" = '' THEN BEGIN
+        Cont.GET(InteractLogEntry."Contact No.");
+        EXIT(Cont."E-Mail");
+      END;
+      ContAltAddr.GET(InteractLogEntry."Contact No.",InteractLogEntry."Contact Alt. Address Code");
+      IF ContAltAddr."E-Mail" <> '' THEN
+        EXIT(ContAltAddr."E-Mail");
+
+      Cont.GET(InteractLogEntry."Contact No.");
+      EXIT(Cont."E-Mail");
+    END;
+
+    PROCEDURE InteractionFax@7(VAR InteractLogEntry@1000 : Record 5065) : Text[30];
+    VAR
+      Cont@1001 : Record 5050;
+      ContAltAddr@1002 : Record 5051;
+    BEGIN
+      IF InteractLogEntry."Contact Alt. Address Code" = '' THEN BEGIN
+        Cont.GET(InteractLogEntry."Contact No.");
+        EXIT(Cont."Fax No.");
+      END;
+      ContAltAddr.GET(InteractLogEntry."Contact No.",InteractLogEntry."Contact Alt. Address Code");
+      IF ContAltAddr."Fax No." <> '' THEN
+        EXIT(ContAltAddr."Fax No.");
+
+      Cont.GET(InteractLogEntry."Contact No.");
+      EXIT(Cont."Fax No.");
+    END;
+
+    PROCEDURE DownloadFileToClient@1000000015(VAR DocumentModuleDocumentsP@1000000002 : Record 53201;ClientFileNameP@1000000001 : Text) : Text[250];
+    VAR
+      FileNameL@1000000000 : Text;
+      FileManagementL@1101103000 : Codeunit 419;
+    BEGIN
+      IF ClientFileNameP = '' THEN
+        ClientFileNameP := FileManagementL.ClientTempFileName(DocumentModuleDocumentsP."File Extension");
+      FileNameL := FileManagementL.ServerTempFileName(DocumentModuleDocumentsP."File Extension");
+      DocumentModuleDocumentsP.CALCFIELDS(Attachment);
+      DocumentModuleDocumentsP.Attachment.EXPORT(FileNameL);
+      FileManagementL.DownloadToFile(FileNameL, ClientFileNameP);
+      FileManagementL.DeleteServerFile(FileNameL);
+      EXIT(ClientFileNameP);
+    END;
+
+    PROCEDURE SaveFileToClient@1101103000(VAR DocumentModuleDocumentsP@1101103000 : Record 53201);
+    VAR
+      FileManagementL@1101103001 : Codeunit 419;
+      FileNameL@1101103002 : Text;
+    BEGIN
+      FileNameL := FileManagementL.SaveFileDialog(Text003, DocumentModuleDocumentsP.Description,'');
+      DownloadFileToClient(DocumentModuleDocumentsP, FileNameL);
+    END;
+
+    PROCEDURE InsertAttachment@1101390361(FileNameP@1101390367 : Text;FileExtensionP@1101103000 : Text[30]) : Integer;
+    VAR
+      Attachment@1101390361 : Record 5062;
+      Attachment2@1101390360 : Record 5062;
+      NextNo@1101390362 : Integer;
+      TempFile@1101390366 : File;
+    BEGIN
+      Attachment2.RESET;
+      IF Attachment2.FINDLAST THEN
+        NextNo :=  Attachment2."No." + 1
+      ELSE
+         NextNo := 0;
+      Attachment.INIT;
+      Attachment."No." := NextNo;
+      Attachment.Attachment.IMPORT(FileNameP);
+      Attachment."Storage Type" := Attachment."Storage Type"::Embedded;
+      Attachment."File Extension" := FileExtensionP;
+      Attachment."Read Only" := TRUE;
+      Attachment."Last Date Modified" := TODAY;
+      Attachment."Last Time Modified" := TIME;
+      Attachment.INSERT(TRUE);
+
+      EXIT(NextNo);
+    END;
+
+    PROCEDURE InsertInteractionLogEntry@1101103002(ContactNoP@1101390361 : Code[20];SubjectP@1101390362 : Text[250];FileExtP@1101390363 : Text[30];AttachmentNoP@1101103003 : Integer;TemplateCodeP@1101103001 : Code[10]) : Integer;
+    VAR
+      Contact@1101390367 : Record 5050;
+      InteractionLogEntryL@1101390365 : Record 5065;
+      SupportSetupL@1101103000 : Record 52001;
+      NextEntryNo@1101390366 : Integer;
+    BEGIN
+      Contact.GET(ContactNoP);
+      InteractionLogEntryL.RESET;
+      IF InteractionLogEntryL.FINDLAST THEN
+        NextEntryNo :=  InteractionLogEntryL."Entry No." + 1
+      ELSE
+         NextEntryNo := 0;
+      InteractionLogEntryL.INIT;
+      InteractionLogEntryL."Entry No." := NextEntryNo;
+      InteractionLogEntryL.VALIDATE("Contact Company No.", Contact."Company No.");
+      InteractionLogEntryL.VALIDATE("Contact No.", ContactNoP);
+      InteractionLogEntryL.VALIDATE("Interaction Template Code", TemplateCodeP);
+      InteractionLogEntryL.Date := TODAY;
+      InteractionLogEntryL.Description := COPYSTR(SubjectP, 1, MAXSTRLEN(InteractionLogEntryL.Description));
+      InteractionLogEntryL.Subject := COPYSTR(SubjectP, 1, MAXSTRLEN(InteractionLogEntryL.Subject));
+      InteractionLogEntryL."Attachment No." := AttachmentNoP;
+      InteractionLogEntryL.INSERT(TRUE);
+      EXIT(InteractionLogEntryL."Entry No.");
+    END;
+
+    PROCEDURE SaveMailItem@1101103001(MailItemP@1101390363 : BigText;SubjectP@1101103000 : Text[250];FileExtP@1101390367 : Text[30];VAR FileNameP@1101103001 : Text[250]);
+    VAR
+      FileManagementL@1101390366 : Codeunit 419;
+      Base64@1101390364 : DotNet "'base64, Version=1.0.0.0, Culture=neutral, PublicKeyToken=2ed5bff0965cbb98'.base64.base64";
+    BEGIN
+      FileNameP := FileManagementL.ServerTempFileName(FileExtP);
+      //IF STRPOS(FileExtP, '.')  = 0 THEN
+      // FileExtP := '.' + FileExtP;
+      //FileNameP := FileManagementL.Magicpath()  + '\' + SubjectP + FileExtP;
+      // Decode base64
+
+      Base64 := Base64.base64();
+      Base64.decodeToFile(MailItemP, FileNameP);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.11.14 JAL Created the object
+    }
+    END.
+  }
+}
+
+OBJECT Page 53200 Document Module Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=25.10.16;
+    Time=15:26:09;
+    Modified=Yes;
+    Version List=DOC1.0;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Document Module Setup;
+               NOR=Dokumentmodul oppsett];
+    InsertAllowed=Yes;
+    DeleteAllowed=No;
+    SourceTable=Table53200;
+    PageType=Card;
+  }
+  CONTROLS
+  {
+    { 1101103000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1101103001;1;Group  ;
+                Name=General;
+                CaptionML=[ENU=General;
+                           NOR=Generelt];
+                GroupType=Group }
+
+    { 1101103002;2;Field  ;
+                SourceExpr="Filename No. Series" }
+
+    { 1101103003;2;Field  ;
+                SourceExpr="Storage Location";
+                OnValidate=BEGIN
+                             IF COPYSTR("Storage Location", STRLEN("Storage Location"), 1) <> '\' THEN
+                             BEGIN
+                               "Storage Location" += '\';
+                             END;
+                           END;
+                            }
+
+    { 1101103004;2;Field  ;
+                SourceExpr="Storage Type" }
+
+    { 1101103005;2;Field  ;
+                SourceExpr="Add To Record Link" }
+
+    { 1101103006;2;Field  ;
+                SourceExpr="Use Attachment Table" }
+
+    { 1101103007;2;Field  ;
+                SourceExpr="Add To Interaction Log" }
+
+    { 1101103008;2;Field  ;
+                SourceExpr="Add Line To Support Task" }
+
+    { 1101103009;2;Field  ;
+                SourceExpr="Interaction Template Code" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.11.14 JAL Created the object
+    }
+    END.
+  }
+}
+
+OBJECT Page 53201 Document Module Documents
+{
+  OBJECT-PROPERTIES
+  {
+    Date=28.09.16;
+    Time=20:24:34;
+    Modified=Yes;
+    Version List=DOC1.0;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Document Module Documents;
+               NOR=Dokumentmodul Dokumenter];
+    InsertAllowed=No;
+    SourceTable=Table53201;
+    PageType=List;
+    OnInit=VAR
+             RecIdFilter@1101103000 : Text[250];
+           BEGIN
+           END;
+
+    OnDeleteRecord=VAR
+                     DocumentModuleFiles@1101103000 : Codeunit 53200;
+                   BEGIN
+                     IF GUIALLOWED AND  CONFIRM (TextDeleteFile, FALSE, FIELDCAPTION("Filename No."), "Filename No.") THEN
+                     BEGIN
+                       DocumentModuleFiles.DeleteDocument(ConstDiskFileName);
+                     END;
+                   END;
+
+    ActionList=ACTIONS
+    {
+      { 1101103010;  ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1101103012;1 ;ActionGroup;
+                      CaptionML=[ENU=Documents;
+                                 NOR=Dokumenter];
+                      Description=Documents;
+                      Image=Setup }
+      { 1101103011;2 ;Action    ;
+                      Name=Import document;
+                      CaptionML=[ENU=Import document;
+                                 NOR=Importere dokument];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Add;
+                      PromotedCategory=New;
+                      OnAction=VAR
+                                 DocumentModuleFiles@1101103000 : Codeunit 53200;
+                               BEGIN
+                                 DocumentModuleFiles.ImportDocument(RelatedRecRef);
+                               END;
+                                }
+      { 1101103016;2 ;Action    ;
+                      Name=Connect document;
+                      CaptionML=[ENU=Connect document;
+                                 NOR=Koble dokument];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Attach;
+                      OnAction=VAR
+                                 DocumentModuleFiles@1101103000 : Codeunit 53200;
+                               BEGIN
+                                 DocumentModuleFiles.ConnectDocument(RelatedRecRef);
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1101103000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1101103001;1;Group  ;
+                Name=Group;
+                GroupType=Repeater }
+
+    { 1101103002;2;Field  ;
+                SourceExpr=Description }
+
+    { 1101103003;2;Field  ;
+                AssistEdit=Yes;
+                SourceExpr="Filename No.";
+                Editable=False;
+                OnAssistEdit=BEGIN
+                               HYPERLINK(ConstDiskFileName);
+                             END;
+                              }
+
+    { 1101103004;2;Field  ;
+                SourceExpr=Date }
+
+    { 1101103005;2;Field  ;
+                SourceExpr=Time }
+
+    { 1101103013;2;Field  ;
+                Name=RecordID;
+                SourceExpr=FORMAT(RecordID);
+                Editable=False }
+
+    { 1101103006;2;Field  ;
+                SourceExpr=Size;
+                Visible=False;
+                Editable=False }
+
+    { 1101103015;2;Field  ;
+                SourceExpr="File Extension";
+                Editable=False }
+
+    { 1101103014;2;Field  ;
+                SourceExpr="Storage Pointer";
+                Editable=False }
+
+    { 1101103007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1101103008;1;Part   ;
+                Visible=False;
+                PartType=System;
+                SystemPartID=Notes }
+
+    { 1101103009;1;Part   ;
+                Visible=False;
+                PartType=System;
+                SystemPartID=MyNotes }
+
+  }
+  CODE
+  {
+    VAR
+      RelatedRecRef@1101103000 : RecordRef;
+      TextDeleteFile@1101103001 : TextConst 'ENU=Do you want to delete the file?;NOR=Vil du ogs† slette den underliggende filen?';
+
+    PROCEDURE SetRecordRef@1101103000(RecRef@1101103000 : RecordRef);
+    BEGIN
+        RelatedRecRef.OPEN(RecRef.RECORDID.TABLENO);
+        RelatedRecRef.GET(RecRef.RECORDID);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.11.14 JAL Created the object
+    }
+    END.
+  }
+}
+
+OBJECT Page 53202 Document File FactBox
+{
+  OBJECT-PROPERTIES
+  {
+    Date=18.10.16;
+    Time=17:00:06;
+    Modified=Yes;
+    Version List=DOC1.0;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=[ENU=Attached Files;
+               NOR=Vedlagte filer];
+    InsertAllowed=No;
+    DeleteAllowed=No;
+    ModifyAllowed=No;
+    LinksAllowed=No;
+    SourceTable=Table53201;
+    SourceTableView=SORTING(Table No.,RecordID,Line No.)
+                    ORDER(Ascending);
+    PageType=ListPart;
+    OnInit=BEGIN
+             IsFilterSetG := FALSE;
+           END;
+
+    OnFindRecord=BEGIN
+                   IF IsFilterSetG THEN
+                     EXIT(FIND(Which));
+                   EXIT(FALSE);
+                 END;
+
+    ActionList=ACTIONS
+    {
+      { 1000000004;  ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1000000007;1 ;ActionGroup;
+                      Name=Action;
+                      CaptionML=[ENU=Actions;
+                                 NOR=Handlinger];
+                      Image=Action }
+      { 1000000005;2 ;Action    ;
+                      Name=Add Attached File;
+                      Ellipsis=Yes;
+                      CaptionML=[ENU=Add;
+                                 NOR=Legg til];
+                      Image=Add;
+                      OnAction=BEGIN
+                                 DocumentModuleFilesG.ImportDocument(RecordRefG);
+                               END;
+                                }
+      { 1000000006;2 ;Action    ;
+                      Name=Save Attached File;
+                      Ellipsis=Yes;
+                      CaptionML=[ENU=Save;
+                                 NOR=Lagre];
+                      Image=Save;
+                      OnAction=VAR
+                                 DocumentModuleDocumentsL@1000000000 : Record 53201;
+                               BEGIN
+                                 CurrPage.SETSELECTIONFILTER(DocumentModuleDocumentsL);
+                                 IF DocumentModuleDocumentsL.FINDSET THEN
+                                   REPEAT
+                                     DocumentModuleFilesG.SaveFileToClient(DocumentModuleDocumentsL)
+                                   UNTIL DocumentModuleDocumentsL.NEXT = 0;
+                               END;
+                                }
+      { 1000000009;2 ;Separator  }
+      { 1000000010;2 ;Action    ;
+                      Name=Delete Attached File;
+                      CaptionML=[ENU=Delete;
+                                 NOR=Slett];
+                      Image=Delete;
+                      OnAction=VAR
+                                 DocumentModuleDocumentsL@1000000000 : Record 53201;
+                               BEGIN
+                                 CurrPage.SETSELECTIONFILTER(DocumentModuleDocumentsL);
+                                 IF DocumentModuleDocumentsL.FINDSET THEN
+                                   REPEAT
+                                     DocumentModuleDocumentsL.DELETE(TRUE);
+                                   UNTIL DocumentModuleDocumentsL.NEXT = 0;
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1000000000;;Container;
+                ContainerType=ContentArea }
+
+    { 1000000002;1;Group  ;
+                GroupType=Repeater }
+
+    { 1101103001;2;Field  ;
+                SourceExpr=Description;
+                OnAssistEdit=BEGIN
+                               DocumentModuleFilesG.ShowDocument(Rec);
+                               CurrPage.UPDATE(FALSE);
+                             END;
+                              }
+
+    { 1101103002;2;Field  ;
+                SourceExpr="File Extension" }
+
+    { 1101103003;2;Field  ;
+                SourceExpr=Date }
+
+    { 1101103000;1;Field  ;
+                Name=DragAndDrop;
+                ControlAddIn=[Incadea.DropAreaControlAddIn;PublicKeyToken=c7fbc976bcfb9a00];
+                ShowCaption=No }
+
+  }
+  CODE
+  {
+    VAR
+      Text001@1000000002 : TextConst 'ENU=Drag and drop files or e-mails here!;NOR=Dra og slipp filer eller e-poster her!';
+      DocumentModuleFilesG@1101103002 : Codeunit 53200;
+      ControlAddInReadyG@1000000003 : Boolean;
+      Text002@1000000004 : TextConst 'ENU=Refresh the page after the record is inserted.;NOR=Forny siden etter at posten er satt inn.';
+      Text003@1000000005 : TextConst 'ENU=Then try again.;NOR=Deretter pr›v igjen.';
+      Text004@1000000008 : TextConst 'ENU=Control add-in is missing.;NOR=Kontrolltillegg mangler.';
+      Text005@1101103001 : TextConst 'ENU=Insert a line.;NOR=Sett inn en linje.';
+      RecordIDG@1101103000 : RecordID;
+      RecordRefG@1101103003 : RecordRef;
+      IsFilterSetG@1101103004 : Boolean;
+
+    PROCEDURE SetRecordRef@1101103000(VariantP@1101103000 : Variant);
+    BEGIN
+      RecordRefG.GETTABLE(VariantP);
+      IF NOT RecordRefG.GET(RecordRefG.RECORDID) THEN
+        EXIT;
+      RecordIDG := RecordRefG.RECORDID;
+      Rec.SETCURRENTKEY("Table No.", RecordID, "Line No.");
+      Rec.SETRANGE("Table No.", RecordIDG.TABLENO);
+      Rec.SETRANGE(RecordID, RecordIDG);
+      IsFilterSetG := TRUE;
+      CurrPage.UPDATE(FALSE)
+    END;
+
+    EVENT DragAndDrop@-1101103000::ControlAddInReady@2();
+    BEGIN
+      ControlAddInReadyG := TRUE;
+    END;
+
+    EVENT DragAndDrop@-1101103000::FileDropBegin@3(filename@1101103000 : Text);
+    BEGIN
+    END;
+
+    EVENT DragAndDrop@-1101103000::FileDrop@4(data@1101103000 : Text);
+    BEGIN
+    END;
+
+    EVENT DragAndDrop@-1101103000::FileAdded@5(FilePathAndName@1101103000 : Text);
+    BEGIN
+      IF ControlAddInReadyG THEN BEGIN
+        DocumentModuleFilesG.ImportDocumentFromFile(RecordRefG, FilePathAndName);
+      END;
+    END;
+
+    EVENT DragAndDrop@-1101103000::FileDropEnd@6();
+    BEGIN
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 20.09.16 JAL Document Module Factbox
+    }
+    END.
+  }
+}
+

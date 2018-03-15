@@ -1,0 +1,293 @@
+OBJECT Page 461 Inventory Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=25.10.16;
+    Time=12:00:00;
+    Version List=NAVW110.00;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Inventory Setup;
+               NOR=Lageroppsett];
+    InsertAllowed=No;
+    DeleteAllowed=No;
+    SourceTable=Table313;
+    PageType=Card;
+    PromotedActionCategoriesML=[ENU=New,Process,Report,General,Posting,Journal Templates;
+                                NOR=Ny,Prosess,Rapport,Generelt,Bokf›ring,Kladdemaler];
+    OnOpenPage=BEGIN
+                 RESET;
+                 IF NOT GET THEN BEGIN
+                   INIT;
+                   INSERT;
+                 END;
+               END;
+
+    ActionList=ACTIONS
+    {
+      { 21      ;    ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 19      ;1   ;Action    ;
+                      CaptionML=[ENU=Inventory Periods;
+                                 NOR=Lagerperioder];
+                      ToolTipML=[ENU=Set up periods in combinations with your accounting periods that define when you can post transactions that affect the value of your item inventory. When you close an inventory period, you cannot post any changes to the inventory value, either expected or actual value, before the ending date of the inventory period.;
+                                 NOR=Definer perioder i kombinasjoner med regnskapsperiodene som definerer n†r du kan bokf›re transaksjoner som p†virker verdien av varelageret. N†r du lukker en lagerperiode, kan du ikke bokf›re endringer til lagerverdien, verken forventet eller faktisk verdi, f›r lagerperiodens sluttdato.];
+                      RunObject=Page 5828;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Period;
+                      PromotedCategory=Category4 }
+      { 17      ;1   ;Action    ;
+                      CaptionML=[ENU=Units of Measure;
+                                 NOR=Enheter];
+                      ToolTipML=[ENU=Set up the units of measure, such as PSC or HOUR, that you can select from in the Item Units of Measure window that you access from the item card.;
+                                 NOR=Definer enhetene, for eksempel STK eller TIME, som du kan velge fra i vinduet Vareenheter som du kan †pne fra varekortet.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 209;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=UnitOfMeasure;
+                      PromotedCategory=Category4 }
+      { 13      ;1   ;Action    ;
+                      CaptionML=[ENU=Item Discount Groups;
+                                 NOR=Varerabattgrupper];
+                      ToolTipML=[ENU=Set up discount group codes that you can use as criteria when you define special discounts on a customer, vendor, or item card.;
+                                 NOR=Angi rabattgruppekoder du kan bruke som kriterier n†r du definerer spesielle rabatter p† et kunde-, leverand›r- eller varekort.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 513;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Discount;
+                      PromotedCategory=Category4 }
+      { 15      ;1   ;ActionGroup;
+                      CaptionML=[ENU=Posting;
+                                 NOR=Bokf›ring] }
+      { 11      ;2   ;Action    ;
+                      CaptionML=[ENU=Inventory Posting Setup;
+                                 NOR=Lagerbokf›ringsoppsett];
+                      ToolTipML=[ENU=Set up links between inventory posting groups, inventory locations, and general ledger accounts to define where transactions for inventory items are recorded in the general ledger.;
+                                 NOR=Lag forbindelser mellom lagerbokf›ringsgrupper, lagerlokasjoner og finanskonti for † definere hvor lagervaretransaksjoner registreres i Finans.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 5826;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=PostedInventoryPick;
+                      PromotedCategory=Category5 }
+      { 9       ;2   ;Action    ;
+                      CaptionML=[ENU=Inventory Posting Groups;
+                                 NOR=Bokf›ringsgrupper - lager];
+                      ToolTipML=[ENU=Set up the posting groups that you assign to item cards to link business transactions made for the item with an inventory account in the general ledger to group amounts for that item type.;
+                                 NOR=Definer bokf›ringsgruppene du knytter til varekort for † koble forretningstransaksjoner for varen til en lagerkonto i Finans, for † gruppere bel›p for den varetypen.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 112;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=ItemGroup;
+                      PromotedCategory=Category5 }
+      { 7       ;1   ;ActionGroup;
+                      CaptionML=[ENU=Journal Templates;
+                                 NOR=Kladdemaler] }
+      { 5       ;2   ;Action    ;
+                      CaptionML=[ENU=Item Journal Templates;
+                                 NOR=Varekladdemaler];
+                      ToolTipML=[ENU=Set up number series and reason codes in the journals that you use for inventory adjustment. By using different templates you can design windows with different layouts and you can assign trace codes, number series, and reports to each template.;
+                                 NOR=Definer nummerserier og †rsakskoder i kladdene du bruker for lagerjustering. Ved hjelp av ulike maler kan du utforme vinduer med ulike oppsett, og du kan knytte sporingskoder, nummerserier og rapporter til hver mal.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 102;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=JournalSetup;
+                      PromotedCategory=Category6 }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=[ENU=General;
+                           NOR=Generelt] }
+
+    { 2   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that the Automatic Cost Posting function is used.;
+                           NOR=Angir at funksjonen Automatisk kostbokf›ring brukes.];
+                SourceExpr="Automatic Cost Posting" }
+
+    { 24  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the ability to post expected costs to interim accounts in the general ledger.;
+                           NOR=Angir muligheten til † bokf›re forventede kostnader til midlertidige konti i finans.];
+                SourceExpr="Expected Cost Posting to G/L";
+                Importance=Additional }
+
+    { 36  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether to adjust for any cost changes when you post inventory transactions.;
+                           NOR=Angir om det skal justeres for eventuelle kostendringer ved bokf›ring av lagertransaksjoner.];
+                SourceExpr="Automatic Cost Adjustment" }
+
+    { 22  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies information about the method that the program uses to calculate average cost.;
+                           NOR=Angir opplysninger om hvilken metode programmet bruker ved beregning av gjennomsnittlig kost.];
+                OptionCaptionML=[ENU=,Item,Item & Location & Variant;
+                                 NOR=,Vare,Vare og lokasjon og variant];
+                SourceExpr="Average Cost Calc. Type";
+                Importance=Additional }
+
+    { 38  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the period of time used to calculate the weighted average cost of items that apply the average costing method.;
+                           NOR=Angir tidsperioden som brukes til † beregne den vektet gjennomsnittlig kost for varer som utligner den gjennomsnittlige lagermetoden.];
+                OptionCaptionML=[ENU=,Day,Week,Month,,,Accounting Period;
+                                 NOR=,Dag,Uke,M†ned,,,Regnskapsperiode];
+                SourceExpr="Average Cost Period";
+                Importance=Additional }
+
+    { 12  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that you want the program to copy the comments entered on the transfer order to the transfer shipment.;
+                           NOR=Angir at du vil at programmet skal kopiere merknadene i overf›ringsordren til overf›ringsseddelen.];
+                SourceExpr="Copy Comments Order to Shpt.";
+                Importance=Additional }
+
+    { 14  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that you want the program to copy the comments entered on the transfer order to the transfer receipt.;
+                           NOR=Angir at du vil at programmet skal kopiere merknadene i overf›ringsordren til overf›ringsmottaket.];
+                SourceExpr="Copy Comments Order to Rcpt.";
+                Importance=Additional }
+
+    { 26  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a date formula for the outbound warehouse handling time for your company in general.;
+                           NOR=Angir en datoformel for utg†ende lagerh†ndteringstid for selskapet generelt sett.];
+                SourceExpr="Outbound Whse. Handling Time";
+                Importance=Additional }
+
+    { 28  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a date formula for the inbound warehouse handling time for your company in general.;
+                           NOR=Angir en datoformel for inng†ende lagerh†ndteringstid for selskapet generelt sett.];
+                SourceExpr="Inbound Whse. Handling Time";
+                Importance=Additional }
+
+    { 3   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if you can post transactions that will bring inventory levels below zero.;
+                           NOR=Angir om du kan bokf›re transaksjoner som bringer lagerniv†ene under null.];
+                SourceExpr="Prevent Negative Inventory" }
+
+    { 1904339001;1;Group  ;
+                CaptionML=[ENU=Location;
+                           NOR=Lokasjon] }
+
+    { 4   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether items must have a location code in order to be posted.;
+                           NOR=Angir om varer m† ha en lokasjonskode for † bli bokf›rt.];
+                SourceExpr="Location Mandatory" }
+
+    { 1900309501;1;Group  ;
+                CaptionML=[ENU=Dimensions;
+                           NOR=Dimensjoner] }
+
+    { 34  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the dimension code that you want to use for product groups in analysis reports.;
+                           NOR=Angir dimensjonskoden du vil bruke for produktgrupper i analyserapporter.];
+                ApplicationArea=#Suite;
+                SourceExpr="Item Group Dimension Code" }
+
+    { 1904569201;1;Group  ;
+                CaptionML=[ENU=Numbering;
+                           NOR=Nummerering] }
+
+    { 81  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code that will be used to assign numbers to items.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til varer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Item Nos." }
+
+    { 16  ;2   ;Field     ;
+                CaptionML=[ENU=Non-stock Item Nos.;
+                           NOR=Katalogvarenr.];
+                ToolTipML=[ENU=Specifies the number series that is used for nonstock items.;
+                           NOR=Angir nummerserien som brukes for katalogvarer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Nonstock Item Nos.";
+                Importance=Additional }
+
+    { 6   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code that the program uses to assign numbers to transfer orders.;
+                           NOR=Angir koden for nummerserien som programmet bruker til † tilordne numre til overf›ringsordrer.];
+                SourceExpr="Transfer Order Nos.";
+                Importance=Additional }
+
+    { 8   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code that the program uses to assign numbers to posted transfer shipments.;
+                           NOR=Angir koden for nummerserien som programmet bruker til † tilordne numre til bokf›rte overf›ringssedler.];
+                SourceExpr="Posted Transfer Shpt. Nos.";
+                Importance=Additional }
+
+    { 10  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code that will be used to assign numbers to posted transfer receipt documents.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til bokf›rte dokumenter for overf›ringsmottak.];
+                SourceExpr="Posted Transfer Rcpt. Nos.";
+                Importance=Additional }
+
+    { 18  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code to assign numbers to inventory put-always.;
+                           NOR=Angir koden for nummerserien for † tilordne numre til lagerplasseringer.];
+                SourceExpr="Inventory Put-away Nos.";
+                Importance=Additional }
+
+    { 30  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code to assign numbers to posted inventory put-always.;
+                           NOR=Angir koden for nummerserien for † tilordne numre til bokf›rte lagerplasseringer.];
+                SourceExpr="Posted Invt. Put-away Nos.";
+                Importance=Additional }
+
+    { 20  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code to assign numbers to inventory picks.;
+                           NOR=Angir koden for nummerserien for † tilordne numre til lagerplukkinger.];
+                SourceExpr="Inventory Pick Nos.";
+                Importance=Additional }
+
+    { 32  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code to assign numbers to posted inventory picks.;
+                           NOR=Angir koden for nummerserien for † tilordne numre til bokf›rte lagerplukkinger.];
+                SourceExpr="Posted Invt. Pick Nos.";
+                Importance=Additional }
+
+    { 40  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code used to assign numbers to inventory movements.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til lagerflyttinger.];
+                SourceExpr="Inventory Movement Nos.";
+                Importance=Additional }
+
+    { 42  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code to assign numbers to registered inventory movements.;
+                           NOR=Angir koden for nummerserien for † tilordne numre til registrerte lagerflyttinger.];
+                SourceExpr="Registered Invt. Movement Nos.";
+                Importance=Additional }
+
+    { 44  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series code used to assign numbers to internal movements.;
+                           NOR=Angir koden for nummerserien som skal brukes til † tilordne numre til interne flyttinger.];
+                SourceExpr="Internal Movement Nos.";
+                Importance=Additional }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+

@@ -1,0 +1,678 @@
+OBJECT MenuSuite 1061 Fastfit Translation
+{
+  OBJECT-PROPERTIES
+  {
+    Date=24.08.17;
+    Time=09:10:13;
+    Modified=Yes;
+    Version List=TRL1.01;
+  }
+  PROPERTIES
+  {
+  }
+  MENUNODES
+  {
+    {                ;[{461E0681-DB6D-4404-BA6E-58606A783576}] ;NextNodeID=[{6F3F8679-A237-412E-9A2E-F80E88789317}] }
+    { Menu           ;[{6F3F8679-A237-412E-9A2E-F80E88789317}] ;Name=Object Manager;
+                                                                CaptionML=[ENU=Object Manager;
+                                                                           ESP=Object Manager;
+                                                                           FRA=Object Manager;
+                                                                           NLD=Object Manager;
+                                                                           DEA=Object Manager];
+                                                                MemberOfMenu=[{6F3F8679-A237-412E-9A2E-F80E88789317}];
+                                                                Image=9;
+                                                                IsShortcut=No;
+                                                                Visible=Yes;
+                                                                Enabled=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}] }
+    { MenuGroup      ;[{779BBE12-FFF7-481C-A91A-15ABD9C2F15D}] ;Name=Objects;
+                                                                CaptionML=[ENU=Objects;
+                                                                           ESP=Objects;
+                                                                           FRA=Objects;
+                                                                           NLD=Objecten;
+                                                                           DEA=Objects];
+                                                                Visible=Yes }
+    { MenuItem       ;[{8B36E9CE-526A-48BB-89F0-2D3AA9CCB14C}] ;Name=Object Explorer;
+                                                                CaptionML=[ENU=Object Explorer;
+                                                                           ESP=Object Explorer;
+                                                                           FRA=Object Explorer;
+                                                                           NLD=Objectverkenner;
+                                                                           DEA=Object Explorer];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102081;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{DA9A0900-1A73-4CEC-9C91-D8DA0D586E31}] ;Name=Import Objects;
+                                                                CaptionML=[ENU=Import Objects;
+                                                                           ESP=Import Objects;
+                                                                           FRA=Import Objects;
+                                                                           NLD=Objecten importeren;
+                                                                           DEA=Import Objects];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102080;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{C9F6C569-9AED-49FE-84FC-6F3B892CD3CF}] ;Name=Object Locks;
+                                                                CaptionML=[ENU=Object Locks;
+                                                                           ESP=Object Locks;
+                                                                           FRA=Object Locks;
+                                                                           NLD=Vergrendelde objecten;
+                                                                           DEA=Object Locks];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102074;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{C4481D35-9C4A-4463-9B64-0C702F8FEDBA}] ;Name=Modifications;
+                                                                CaptionML=[ENU=Modifications;
+                                                                           ESP=Modifications;
+                                                                           FRA=Modifications;
+                                                                           NLD=Wijzigingen;
+                                                                           DEA=Modifications];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102049;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{61AAA1B0-B61C-4F73-B778-CCBBBC6E0780}] ;Name=Assign Modifications;
+                                                                CaptionML=[ENU=Assign Modifications;
+                                                                           ESP=Assign Modifications;
+                                                                           FRA=Assign Modifications;
+                                                                           NLD=Wijzigingen toewijzen;
+                                                                           DEA=Assign Modifications];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102050;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuGroup      ;[{C48F3FA8-3441-4E74-A623-1475AF7A6F4A}] ;Name=Transports;
+                                                                CaptionML=[ENU=Transports;
+                                                                           ESP=Transports;
+                                                                           FRA=Transports;
+                                                                           NLD=Transporten;
+                                                                           DEA=Transports];
+                                                                Visible=Yes;
+                                                                IsDepartmentPage=Yes }
+    { MenuItem       ;[{B5A9204F-465A-4108-BD0F-85E48E33AFC3}] ;Name=Projects;
+                                                                CaptionML=[ENU=Projects;
+                                                                           ESP=Projects;
+                                                                           FRA=Projects;
+                                                                           NLD=Projecten;
+                                                                           DEA=Projects];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102040;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{EDBBF7A5-DCF5-4670-ACD8-949AA03B11AC}] ;Name=Planning Board;
+                                                                CaptionML=[ENU=Planning Board;
+                                                                           ESP=Planning Board;
+                                                                           FRA=Planning Board;
+                                                                           NLD=Planbord;
+                                                                           DEA=Planning Board];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102041;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{F3FC131A-13D3-4A2F-A153-81C5F5E449F0}] ;Name=Project Objects;
+                                                                CaptionML=[ENU=Project Objects;
+                                                                           ESP=Project Objects;
+                                                                           FRA=Project Objects;
+                                                                           NLD=Project objecten;
+                                                                           DEA=Project Objects];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102042;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{DE047B5A-85CB-4A80-A5FA-FFF5D09F3F84}] ;Name=Status History;
+                                                                CaptionML=[ENU=Status History;
+                                                                           ESP=Status History;
+                                                                           FRA=Status History;
+                                                                           NLD=Statushistorie;
+                                                                           DEA=Status History];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102044;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{83C0579E-52BE-43BF-80BD-C79DCFE966F7}] ;Name=Transports;
+                                                                CaptionML=[ENU=Transports;
+                                                                           ESP=Transports;
+                                                                           FRA=Transports;
+                                                                           NLD=Transporten;
+                                                                           DEA=Transports];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102055;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{86728E68-660A-4C82-BEC9-F0A68F3548BE}] ;Name=Import Transport;
+                                                                CaptionML=[ENU=Import Transport;
+                                                                           ESP=Import Transport;
+                                                                           FRA=Import Transport;
+                                                                           NLD=Transport importeren;
+                                                                           DEA=Import Transport];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102078;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuGroup      ;[{F649788B-2CD5-4446-99CE-EBA36609411E}] ;Name=Source Control;
+                                                                CaptionML=[ENU=Source Control;
+                                                                           ESP=Source Control;
+                                                                           FRA=Source Control;
+                                                                           NLD=Source control;
+                                                                           DEA=Source Control];
+                                                                Visible=Yes }
+    { MenuItem       ;[{5F328730-60F1-4536-A441-F2AC9EBDEE9B}] ;Name=C/AL History;
+                                                                CaptionML=[ENU=C/AL History;
+                                                                           ESP=C/AL History;
+                                                                           FRA=C/AL History;
+                                                                           NLD=C/AL Historie;
+                                                                           DEA=C/AL History];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102072;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{1246467A-7C81-4647-9842-F50CAB78297F}] ;Name=Branche;
+                                                                CaptionML=[ENU=Branches;
+                                                                           ESP=Branches;
+                                                                           FRA=Branches;
+                                                                           NLD=Branches;
+                                                                           DEA=Branches];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102131;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{64F2C45E-318D-4E36-9966-91C18EA5DE7A}] ;Name=Rollback Objects;
+                                                                CaptionML=[ENU=Rollback Objects;
+                                                                           ESP=Rollback Objects;
+                                                                           FRA=Rollback Objects;
+                                                                           NLD=Objecten terugrollen;
+                                                                           DEA=Rollback Objects];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102098;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{E27E7005-855F-4BFB-9C2A-FD4982260CFE}] ;Name=Repository;
+                                                                CaptionML=[ENU=Repository;
+                                                                           ESP=Repository;
+                                                                           FRA=Repository;
+                                                                           NLD=Repository;
+                                                                           DEA=Repository];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102122;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{71F5BE1F-4882-4FD5-9654-045F2E2CA9B7}] ;Name=Compare C/AL Code;
+                                                                CaptionML=[ENU=Compare C/AL Code;
+                                                                           ESP=Compare C/AL Code;
+                                                                           FRA=Compare C/AL Code;
+                                                                           NLD=C/AL Code vergelijken;
+                                                                           DEA=Compare C/AL Code];
+                                                                RunObjectType=Report;
+                                                                RunObjectID=11102037;
+                                                                Visible=Yes;
+                                                                NextNodeID=[{5F328730-60F1-4536-A441-F2AC9EBDEE9B}];
+                                                                DepartmentCategory=Tasks }
+    { MenuGroup      ;[{C5AFCC6D-45FD-4A57-84B2-034E68F19BDB}] ;Name=Analyzing Tools;
+                                                                CaptionML=[ENU=Analyzing Tools;
+                                                                           ESP=Analyzing Tools;
+                                                                           FRA=Analyzing Tools;
+                                                                           NLD=Analysetools;
+                                                                           DEA=Analyzing Tools];
+                                                                Visible=Yes }
+    { MenuItem       ;[{18C3787A-C0E8-4F70-B085-ADF67789C962}] ;Name=Where Used Objects;
+                                                                CaptionML=[ENU=Where Used Objects;
+                                                                           ESP=Where Used Objects;
+                                                                           FRA=Where Used Objects;
+                                                                           NLD=Where-used objecten;
+                                                                           DEA=Where Used Objects];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102087;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuItem       ;[{DE06B7E6-5073-418B-B20A-A6D652EEBEB1}] ;Name=Search String in C/AL Code;
+                                                                CaptionML=[ENU=Search String in C/AL Code;
+                                                                           ESP=Search String in C/AL Code;
+                                                                           FRA=Search String in C/AL Code;
+                                                                           NLD=Zoek string in C/AL code;
+                                                                           DEA=Search String in C/AL Code];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102089;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuItem       ;[{367B5077-1C99-405A-9C22-9F3318599D71}] ;Name=Check Guidelines;
+                                                                CaptionML=[ENU=Check Guidelines;
+                                                                           ESP=Check Guidelines;
+                                                                           FRA=Check Guidelines;
+                                                                           NLD=Controleer richtlijnen;
+                                                                           DEA=Check Guidelines];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102116;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuItem       ;[{99AC1D68-003F-4E0D-BAE6-A205D2600E06}] ;Name=Compare Databases;
+                                                                CaptionML=[ENU=Compare Databases;
+                                                                           ESP=Compare Databases;
+                                                                           FRA=Compare Databases;
+                                                                           NLD=Databases vergelijken;
+                                                                           DEA=Compare Databases];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102115;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuItem       ;[{08411177-2384-4513-846E-F77C41E87BF0}] ;Name=Compare Fields;
+                                                                CaptionML=[ENU=Compare Fields;
+                                                                           ESP=Compare Fields;
+                                                                           FRA=Compare Fields;
+                                                                           NLD=Velden vergelijken;
+                                                                           DEA=Compare Fields];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102106;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuItem       ;[{48739A89-E624-41CF-AB03-A8A24CD2E3F9}] ;Name=Object Compare Sheet;
+                                                                CaptionML=[ENU=Object Compare Sheet;
+                                                                           ESP=Object Compare Sheet;
+                                                                           FRA=Object Compare Sheet;
+                                                                           NLD=Objectenvergelijksheet;
+                                                                           DEA=Object Compare Sheet];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102097;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{F63D0104-C88A-4949-AE03-B0B48A2DA018}] ;Name=Test Worksheet;
+                                                                CaptionML=[ENU=Test Worksheet;
+                                                                           ESP=Test Worksheet;
+                                                                           FRA=Test Worksheet;
+                                                                           NLD=Test werkblad;
+                                                                           DEA=Test Worksheet];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102125;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{09FBA37C-AFF2-45C9-AC69-5EB364FE3792}] ;Name=Check Transferfields;
+                                                                CaptionML=[ENU=Check Transferfields;
+                                                                           ESP=Check Transferfields;
+                                                                           FRA=Check Transferfields;
+                                                                           NLD=Controleer transferfields;
+                                                                           DEA=Check Transferfields];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102119;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{9E0438FC-3E85-461F-A40E-B78CB474CFE1}] ;Name=MenuSuite viewer;
+                                                                CaptionML=[ENU=MenuSuite Viewer;
+                                                                           ESP=MenuSuite Viewer;
+                                                                           FRA=MenuSuite Viewer;
+                                                                           NLD=MenuSuite viewer;
+                                                                           DEA=MenuSuite Viewer];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102128;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuItem       ;[{BEE71255-A39D-4AF7-8405-16FF211C4A42}] ;Name=Check License;
+                                                                CaptionML=[ENU=Check License;
+                                                                           ESP=Check License;
+                                                                           FRA=Check License;
+                                                                           NLD=Licentie controleren;
+                                                                           DEA=Check License];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102082;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuItem       ;[{6D51E9C0-3D4D-44D1-8AB5-49DA1F2A1F79}] ;Name=Bitmaps A to L;
+                                                                CaptionML=[ENU=Bitmaps A to L;
+                                                                           ESP=Bitmaps A to L;
+                                                                           FRA=Bitmaps A to L;
+                                                                           NLD=Bitmaps A tot L;
+                                                                           DEA=Bitmaps A to L];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102102;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuItem       ;[{940E07BC-69C0-4AAD-9E3A-B086EB5588C4}] ;Name=Bitmaps M to Z;
+                                                                CaptionML=[ENU=Bitmaps M to Z;
+                                                                           ESP=Bitmaps M to Z;
+                                                                           FRA=Bitmaps M to Z;
+                                                                           NLD=Bitmaps M tot Z;
+                                                                           DEA=Bitmaps M to Z];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102103;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuGroup      ;[{88AE4561-A3FE-4568-BADB-8C0E60E4F6BF}] ;Name=Object Tools;
+                                                                CaptionML=[ENU=Object Tools;
+                                                                           ESP=Object Tools;
+                                                                           FRA=Object Tools;
+                                                                           NLD=Objecttools;
+                                                                           DEA=Object Tools];
+                                                                Visible=Yes }
+    { MenuItem       ;[{A1F0C40F-ED04-4D27-94D9-42D8E417AD6F}] ;Name=Renumbering Objects;
+                                                                CaptionML=[ENU=Renumber Objects;
+                                                                           ESP=Renumber Objects;
+                                                                           FRA=Renumber Objects;
+                                                                           NLD=Objecten omnummeren;
+                                                                           DEA=Renumber Objects];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102092;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{EECD3877-1E64-4534-96C7-416EC9AEF45F}] ;Name=Renumber Fields;
+                                                                CaptionML=[ENU=Renumber Fields;
+                                                                           ESP=Renumber Fields;
+                                                                           FRA=Renumber Fields;
+                                                                           NLD=Velden omnummeren;
+                                                                           DEA=Renumber Fields];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102108;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{CB47FE94-F764-40CE-8F3F-F5F2A26D9226}] ;Name=Renumber Elements;
+                                                                CaptionML=[ENU=Renumber Elements;
+                                                                           ESP=Renumber Elements;
+                                                                           FRA=Renumber Elements;
+                                                                           NLD=Elementen omnummeren;
+                                                                           DEA=Renumber Elements];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102110;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{D506E192-BE9A-4405-8B84-8857A665BB4D}] ;Name=Update Variables;
+                                                                CaptionML=[ENU=Update Variables;
+                                                                           ESP=Update Variables;
+                                                                           FRA=Update Variables;
+                                                                           NLD=Variabelen bijwerken;
+                                                                           DEA=Update Variables];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102093;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{D6523D69-6025-41E1-9481-14C671546E9B}] ;Name=Translation Tool;
+                                                                CaptionML=[ENU=Translation Tool;
+                                                                           ESP=Translation Tool;
+                                                                           FRA=Translation Tool;
+                                                                           NLD=Vertaaltool;
+                                                                           DEA=Translation Tool];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102099;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuGroup      ;[{AA245EB1-2C82-44B1-953B-564B63F0753F}] ;Name=Data Tools;
+                                                                CaptionML=[ENU=Data Tools;
+                                                                           ESP=Data Tools;
+                                                                           FRA=Data Tools;
+                                                                           NLD=Datatools;
+                                                                           DEA=Data Tools];
+                                                                Visible=Yes }
+    { MenuItem       ;[{ABD8FB78-DAEB-4856-A9F4-3DA01F19AEFC}] ;Name=Action Worksheet;
+                                                                CaptionML=[ENU=Action Worksheet;
+                                                                           ESP=Action Worksheet;
+                                                                           FRA=Action Worksheet;
+                                                                           NLD=Actie werkblad;
+                                                                           DEA=Action Worksheet];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102060;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{EC82DF0C-4E12-4ECD-B6BB-9C9052297D29}] ;Name=Record Permissions Wizard;
+                                                                CaptionML=[ENU=Record Permissions Wizard;
+                                                                           ESP=Record Permissions Wizard;
+                                                                           FRA=Record Permissions Wizard;
+                                                                           NLD=Rechtenmacro wizard;
+                                                                           DEA=Record Permissions Wizard];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102070;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuGroup      ;[{FFCBC0C4-40C6-43D0-99A4-A76963A4FF72}] ;Name=File Functions;
+                                                                CaptionML=[ENU=File Functions;
+                                                                           ESP=File Functions;
+                                                                           FRA=File Functions;
+                                                                           NLD=Bestandsfuncties;
+                                                                           DEA=File Functions];
+                                                                Visible=Yes;
+                                                                IsDepartmentPage=Yes }
+    { MenuItem       ;[{1DBD1D6D-6E50-485E-AF36-95D8DB9613BA}] ;Name=Import File;
+                                                                CaptionML=[ENU=Import File;
+                                                                           ESP=Import File;
+                                                                           FRA=Import File;
+                                                                           NLD=Bestand importeren;
+                                                                           DEA=Import File];
+                                                                RunObjectType=Codeunit;
+                                                                RunObjectID=11102043;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{55F16E8F-61C0-4A46-890A-938454B5A7E7}] ;Name=Combine;
+                                                                CaptionML=[ENU=Combine;
+                                                                           ESP=Combine;
+                                                                           FRA=Combine;
+                                                                           NLD=Combineren;
+                                                                           DEA=Combine];
+                                                                RunObjectType=Codeunit;
+                                                                RunObjectID=11102092;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{AFBC138E-444F-4BE2-B074-0FFF69514725}] ;Name=Compare File;
+                                                                CaptionML=[ENU=Compare File;
+                                                                           ESP=Compare File;
+                                                                           FRA=Compare File;
+                                                                           NLD=Bestand vergelijken;
+                                                                           DEA=Compare File];
+                                                                RunObjectType=Codeunit;
+                                                                RunObjectID=11102093;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{29E51D09-4F3C-4190-A3DA-E09C9B13189F}] ;Name=Compare Directory;
+                                                                CaptionML=[ENU=Compare Directory;
+                                                                           ESP=Compare Directory;
+                                                                           FRA=Compare Directory;
+                                                                           NLD=Map vergelijken;
+                                                                           DEA=Compare Directory];
+                                                                RunObjectType=Codeunit;
+                                                                RunObjectID=11102094;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{12084CD5-C1FC-4FF3-869C-A7BD9159DD5F}] ;Name=Split;
+                                                                CaptionML=[ENU=Split;
+                                                                           ESP=Split;
+                                                                           FRA=Split;
+                                                                           NLD=Opsplitsen;
+                                                                           DEA=Split];
+                                                                RunObjectType=Codeunit;
+                                                                RunObjectID=11102091;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{F4B90C35-C5A6-4C20-B70F-D72578E6FD16}] ;Name=Properties;
+                                                                CaptionML=[ENU=Properties;
+                                                                           ESP=Properties;
+                                                                           FRA=Properties;
+                                                                           NLD=Eigenschappen;
+                                                                           DEA=Properties];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11175788;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{3E613D93-56C2-46A4-995E-3D94B564667E}] ;Name=Translations;
+                                                                CaptionML=[ENU=Translations;
+                                                                           ESP=Translations;
+                                                                           FRA=Translations;
+                                                                           NLD=Vertalingen;
+                                                                           DEA=Translations];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11175789;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{9CC69FEF-4807-4D07-A694-B2CBE9EEACE6}] ;Name=Check Guidelines;
+                                                                CaptionML=[ENU=Check Guidelines;
+                                                                           ESP=Check Guidelines;
+                                                                           FRA=Check Guidelines;
+                                                                           NLD=Richtlijnen controleren;
+                                                                           DEA=Check Guidelines];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11175790;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{F70B3C9A-000A-4545-BB50-CE08D5531732}] ;Name=Downgrade Objects;
+                                                                CaptionML=[ENU=Convert Objects;
+                                                                           ESP=Convert Objects;
+                                                                           FRA=Convert Objects;
+                                                                           NLD=Objecten converteren;
+                                                                           DEA=Convert Objects];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102114;
+                                                                Visible=Yes;
+                                                                NextNodeID=[{1DBD1D6D-6E50-485E-AF36-95D8DB9613BA}];
+                                                                DepartmentCategory=Tasks }
+    { MenuGroup      ;[{F73C844D-1080-4162-878D-079540AC7C54}] ;Name=Administration;
+                                                                CaptionML=[ENU=Administration;
+                                                                           ESP=Administration;
+                                                                           FRA=Administration;
+                                                                           NLD=Administratie;
+                                                                           DEA=Administration];
+                                                                Visible=Yes }
+    { MenuItem       ;[{2EB6299F-8052-4370-9C72-7D1D7B825859}] ;Name=Compress C/AL History;
+                                                                CaptionML=[ENU=Compress C/AL History;
+                                                                           ESP=Compress C/AL History;
+                                                                           FRA=Compress C/AL History;
+                                                                           NLD=C/AL Historie comprimeren;
+                                                                           DEA=Compress C/AL History];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102113;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{E0E071C6-EB74-4B54-BAAC-3AA1DA3C1513}] ;Name=Backup and Restore;
+                                                                CaptionML=[ENU=Backup and Restore;
+                                                                           ESP=Backup and Restore;
+                                                                           FRA=Backup and Restore;
+                                                                           NLD=Backup en restore;
+                                                                           DEA=Backup and Restore];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102112;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{31027BBA-F32D-4A2F-A2CC-F2AA05C9FAAB}] ;Name=Administration Tasks;
+                                                                CaptionML=[ENU=Administration Tasks;
+                                                                           ESP=Administration Tasks;
+                                                                           FRA=Administration Tasks;
+                                                                           NLD=Administratietaken;
+                                                                           DEA=Administration Tasks];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102132;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuGroup      ;[{271C2274-2D5D-465B-A84B-1714B47BE305}] ;Name=Setup;
+                                                                CaptionML=[ENU=Setup;
+                                                                           ESP=Setup;
+                                                                           FRA=Setup;
+                                                                           NLD=Instellingen;
+                                                                           DEA=Setup];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{779BBE12-FFF7-481C-A91A-15ABD9C2F15D}] }
+    { MenuItem       ;[{DB3CFF79-76E0-445C-B5EE-75A61188333C}] ;Name=Object Manager Setup;
+                                                                CaptionML=[ENU=Object Manager Setup;
+                                                                           ESP=Object Manager Setup;
+                                                                           FRA=Object Manager Setup;
+                                                                           NLD=Object Manager Instellingen;
+                                                                           DEA=Object Manager Setup];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102037;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{1C55ABFC-FA19-4B40-B178-018EEA315136}] ;Name=Project Types;
+                                                                CaptionML=[ENU=Project Types;
+                                                                           ESP=Project Types;
+                                                                           FRA=Project Types;
+                                                                           NLD=Projectsoorten;
+                                                                           DEA=Project Types];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11175781;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{F7E638FD-F7FA-422F-9FCB-A8E15202051F}] ;Name=Transport Types;
+                                                                CaptionML=[ENU=Transport Types;
+                                                                           ESP=Transport Types;
+                                                                           FRA=Transport Types;
+                                                                           NLD=Transportsoorten;
+                                                                           DEA=Transport Types];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11175783;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{E5E4B7BA-174A-4675-BBB1-FAA30A3401AE}] ;Name=Comment Types;
+                                                                CaptionML=[ENU=Comment Types;
+                                                                           ESP=Comment Types;
+                                                                           FRA=Comment Types;
+                                                                           NLD=Opmerkingssoorten;
+                                                                           DEA=Comment Types];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102056;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{74E2A3AE-A5AF-4B09-B544-BD7D4E8B52C1}] ;Name=Status Setup;
+                                                                CaptionML=[ENU=Status Setup;
+                                                                           ESP=Status Setup;
+                                                                           FRA=Status Setup;
+                                                                           NLD=Statusinstellingen;
+                                                                           DEA=Status Setup];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102045;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{71669509-F887-4546-B261-112EE40775E9}] ;Name=Flows;
+                                                                CaptionML=[ENU=Flows;
+                                                                           ESP=Flows;
+                                                                           FRA=Flows;
+                                                                           NLD=Verloop;
+                                                                           DEA=Flows];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102048;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{F854E834-D375-4555-99AA-EE1C679FF0FD}] ;Name=Users;
+                                                                CaptionML=[ENU=Users;
+                                                                           ESP=Users;
+                                                                           FRA=Users;
+                                                                           NLD=Gebruikers;
+                                                                           DEA=Users];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102077;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{370F56A0-F42A-4575-B970-D689EE8192F7}] ;Name=Roles;
+                                                                CaptionML=[ENU=Roles;
+                                                                           ESP=Roles;
+                                                                           FRA=Roles;
+                                                                           NLD=Rollen;
+                                                                           DEA=Roles];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102076;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{8AD94B1D-2E47-4DE7-9FE2-6113A484AE23}] ;Name=Databases;
+                                                                CaptionML=[ENU=Databases;
+                                                                           ESP=Databases;
+                                                                           FRA=Databases;
+                                                                           NLD=Databases;
+                                                                           DEA=Databases];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11175786;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{628B2278-35BE-4955-915F-C4E3DAE253FC}] ;Name=Objects to Ignore;
+                                                                CaptionML=[ENU=Objects to Ignore;
+                                                                           ESP=Objects to Ignore;
+                                                                           FRA=Objects to Ignore;
+                                                                           NLD=Te negeren objecten;
+                                                                           DEA=Objects to Ignore];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=11102107;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{6BB1287B-9C6E-4C79-8E84-4E6E28281D06}] ;Name=Fastfit translate;
+                                                                CaptionML=[ENU=Incadea Translation Tool;
+                                                                           NOR=Incadea Oversettelsesverkt›y];
+                                                                MemberOfMenu=[{19A352FE-D90D-424E-B85F-CF3B8E98CF0E}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=88001;
+                                                                ParentNodeID=[{83FEF2BD-D155-4203-ACAD-FE9AAE4C3033}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{AB7A5B62-68F4-458B-B591-C3E636ACF809}];
+                                                                DepartmentCategory=Administration }
+    {                ;[{DE989291-65DF-4E5B-9962-0B59289DFBA0}] ;NextNodeID=[{6BB1287B-9C6E-4C79-8E84-4E6E28281D06}] }
+  }
+}

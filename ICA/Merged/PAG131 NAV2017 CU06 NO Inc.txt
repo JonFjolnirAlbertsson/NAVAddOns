@@ -1,0 +1,292 @@
+OBJECT Page 131 Posted Sales Shpt. Subform
+{
+  OBJECT-PROPERTIES
+  {
+    Date=11.09.17;
+    Time=12:14:47;
+    Modified=Yes;
+    Version List=NAVW110.00,ICA2.01;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=[ENU=Lines;
+               NOR=Linjer];
+    LinksAllowed=No;
+    SourceTable=Table111;
+    PageType=ListPart;
+    AutoSplitKey=Yes;
+    ActionList=ACTIONS
+    {
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1906587504;1 ;ActionGroup;
+                      CaptionML=[ENU=F&unctions;
+                                 NOR=F&unksjoner];
+                      Image=Action }
+      { 1903098504;2 ;Action    ;
+                      CaptionML=[ENU=Order Tra&cking;
+                                 NOR=Ordresp&oring];
+                      Image=OrderTracking;
+                      OnAction=BEGIN
+                                 ShowTracking;
+                               END;
+                                }
+      { 1902740304;2 ;Action    ;
+                      Name=UndoShipment;
+                      CaptionML=[ENU=&Undo Shipment;
+                                 NOR=&Angre levering];
+                      ToolTipML=[ENU=Withdraw the line from the shipment. This is useful for making corrections, because the line is not deleted. You can make changes and post it again.;
+                                 NOR=Trekk linjen fra leveringen. Dette er nyttig n†r du foretar korrigeringer, fordi linjen ikke blir slettet. Du kan gj›re endringer og bokf›re linjen p† nytt.];
+                      ApplicationArea=#Basic,#Suite;
+                      Image=UndoShipment;
+                      OnAction=BEGIN
+                                 UndoShipmentPosting;
+                               END;
+                                }
+      { 1907935204;1 ;ActionGroup;
+                      CaptionML=[ENU=&Line;
+                                 NOR=&Linje];
+                      Image=Line }
+      { 1903100004;2 ;Action    ;
+                      Name=Dimensions;
+                      AccessByPermission=TableData 348=R;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=[ENU=Dimensions;
+                                 NOR=Dimensjoner];
+                      ToolTipML=[ENU=View or edit dimensions, such as area, project, or department, that you can assign to sales and purchase documents to distribute costs and analyze transaction history.;
+                                 NOR=Vis eller rediger dimensjoner, for eksempel omr†de, prosjekt eller avdeling, som du kan tilordne til salgs- og kj›psdokumenter for † distribuere kostnader og analysere transaksjonshistorikk.];
+                      ApplicationArea=#Suite;
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 ShowDimensions;
+                               END;
+                                }
+      { 1901092104;2 ;Action    ;
+                      Name=Comments;
+                      CaptionML=[ENU=Co&mments;
+                                 NOR=&Merknader];
+                      Image=ViewComments;
+                      OnAction=BEGIN
+                                 ShowLineComments;
+                               END;
+                                }
+      { 1905987604;2 ;Action    ;
+                      Name=ItemTrackingEntries;
+                      CaptionML=[ENU=Item &Tracking Entries;
+                                 NOR=Varesporingspos&ter];
+                      Image=ItemTrackingLedger;
+                      OnAction=BEGIN
+                                 ShowItemTrackingLines;
+                               END;
+                                }
+      { 3       ;2   ;Action    ;
+                      AccessByPermission=TableData 90=R;
+                      CaptionML=[ENU=Assemble-to-Order;
+                                 NOR=Monter til ordre];
+                      OnAction=BEGIN
+                                 ShowAsmToOrder;
+                               END;
+                                }
+      { 1900609704;2 ;Action    ;
+                      Name=ItemInvoiceLines;
+                      CaptionML=[ENU=Item Invoice &Lines;
+                                 NOR=&Varefakturalinjer];
+                      Image=ItemInvoice;
+                      OnAction=BEGIN
+                                 PageShowItemSalesInvLines;
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr=Type }
+
+    { 4   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of the record.;
+                           NOR=Angir nummeret p† posten.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="No." }
+
+    { 1101103000;2;Field  ;
+                SourceExpr="Calculation No." }
+
+    { 24  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the cross-referenced item number. If you enter a cross reference between yours and your vendor's or customer's item number, then this number will override the standard item number when you enter the cross-reference number on a sales or purchase document.;
+                           NOR=Angir varens kryssreferansenummer. Hvis du oppgir en kryssreferanse mellom ditt og leverand›rens eller kundens varenummer, vil dette nummeret overstyre standardvarenummeret n†r du oppgir kryssreferansenummeret i et salgs- eller kj›psdokument.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Cross-Reference No.";
+                Visible=FALSE }
+
+    { 14  ;2   ;Field     ;
+                SourceExpr="Variant Code";
+                Visible=FALSE }
+
+    { 6   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a description of the record.;
+                           NOR=Angir en beskrivelse av posten.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Description }
+
+    { 20  ;2   ;Field     ;
+                SourceExpr="Return Reason Code";
+                Visible=FALSE }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="Location Code" }
+
+    { 54  ;2   ;Field     ;
+                SourceExpr="Bin Code";
+                Visible=FALSE }
+
+    { 8   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of units of the item specified on the line.;
+                           NOR=Angir antall enheter av varen som er angitt p† linjen.];
+                ApplicationArea=#Basic,#Suite;
+                BlankZero=Yes;
+                SourceExpr=Quantity }
+
+    { 22  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the unit of measure code for the item.;
+                           NOR=Angir enhetskoden for varen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Unit of Measure Code" }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr="Unit of Measure";
+                Visible=FALSE }
+
+    { 12  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies how many units of the item on the line have already been invoiced.;
+                           NOR=Angir hvor mange enheter av varen som allerede er fakturert p† linjen.];
+                ApplicationArea=#Basic,#Suite;
+                BlankZero=Yes;
+                SourceExpr="Quantity Invoiced" }
+
+    { 44  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies how many units of the item on the line have been shipped and not yet invoiced.;
+                           NOR=Angir hvor mange enheter av varen p† linjen som er levert og enn† ikke fakturert.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Qty. Shipped Not Invoiced";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 18  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the date that the customer has asked for the order to be delivered.;
+                           NOR=Angir p† hvilken dato kunden har bedt om at ordren skal leveres.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Requested Delivery Date";
+                Visible=FALSE }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Promised Delivery Date";
+                Visible=FALSE }
+
+    { 36  ;2   ;Field     ;
+                SourceExpr="Planned Delivery Date" }
+
+    { 40  ;2   ;Field     ;
+                SourceExpr="Planned Shipment Date" }
+
+    { 16  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the date when the sales shipment was posted.;
+                           NOR=Angir datoen da f›lgeseddelen ble bokf›rt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Shipment Date";
+                Visible=TRUE }
+
+    { 32  ;2   ;Field     ;
+                SourceExpr="Shipping Time";
+                Visible=FALSE }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Job No.";
+                Visible=FALSE }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Outbound Whse. Handling Time";
+                Visible=FALSE }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Appl.-to Item Entry";
+                Visible=FALSE }
+
+    { 50  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for Shortcut Dimension 1.;
+                           NOR=Angir koden for Snarveisdimensjon 1.];
+                ApplicationArea=#Suite;
+                SourceExpr="Shortcut Dimension 1 Code";
+                Visible=FALSE }
+
+    { 48  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for Shortcut Dimension 2.;
+                           NOR=Angir koden for Snarveisdimensjon 2.];
+                ApplicationArea=#Suite;
+                SourceExpr="Shortcut Dimension 2 Code";
+                Visible=FALSE }
+
+    { 52  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies that this sales shipment line has been posted as a corrective entry.;
+                           NOR=Angir at denne salgsleveringslinjen er bokf›rt som en korreksjonspost.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Correction;
+                Visible=FALSE;
+                Editable=FALSE }
+
+  }
+  CODE
+  {
+
+    LOCAL PROCEDURE ShowTracking@1();
+    VAR
+      ItemLedgEntry@1000 : Record 32;
+      TempItemLedgEntry@1002 : TEMPORARY Record 32;
+      TrackingForm@1001 : Page 99000822;
+    BEGIN
+      TESTFIELD(Type,Type::Item);
+      IF "Item Shpt. Entry No." <> 0 THEN BEGIN
+        ItemLedgEntry.GET("Item Shpt. Entry No.");
+        TrackingForm.SetItemLedgEntry(ItemLedgEntry);
+      END ELSE
+        TrackingForm.SetMultipleItemLedgEntries(TempItemLedgEntry,
+          DATABASE::"Sales Shipment Line",0,"Document No.",'',0,"Line No.");
+
+      TrackingForm.RUNMODAL;
+    END;
+
+    LOCAL PROCEDURE UndoShipmentPosting@2();
+    VAR
+      SalesShptLine@1000 : Record 111;
+    BEGIN
+      SalesShptLine.COPY(Rec);
+      CurrPage.SETSELECTIONFILTER(SalesShptLine);
+      CODEUNIT.RUN(CODEUNIT::"Undo Sales Shipment Line",SalesShptLine);
+    END;
+
+    LOCAL PROCEDURE PageShowItemSalesInvLines@4();
+    BEGIN
+      TESTFIELD(Type,Type::Item);
+      ShowItemSalesInvLines;
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 08.09.17 JAL Item Calculation (Kalkyle)
+                       New field "Calulation No."
+    }
+    END.
+  }
+}
+

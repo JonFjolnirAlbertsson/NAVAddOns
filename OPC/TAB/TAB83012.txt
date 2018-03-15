@@ -1,0 +1,54 @@
+OBJECT Table 83012 Run Times Deduction
+{
+  OBJECT-PROPERTIES
+  {
+    Date=21.04.17;
+    Time=16.09.26;
+    Modified=Yes;
+    Version List=OPC1.0;
+  }
+  PROPERTIES
+  {
+    LookupPageID=Page83022;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Code                ;Code10        ;CaptionML=[ENU=Code;
+                                                              NOR=Kode] }
+    { 2   ;   ;Description         ;Text30        ;CaptionML=[ENU=Description;
+                                                              NOR=Beskrivelse] }
+    { 3   ;   ;From Time           ;Time          ;CaptionML=[ENU=From Time;
+                                                              NOR=Fra klokken] }
+    { 4   ;   ;To Time             ;Time          ;CaptionML=[ENU=To Time;
+                                                              NOR=Til klokken] }
+    { 9   ;   ;Deduct Prod.Order   ;Boolean       ;CaptionML=[ENU=Deduct Prod.Order;
+                                                              NOR=Trekkfra p† prod.ordre] }
+    { 10  ;   ;Deduct Type         ;Option        ;CaptionML=[ENU=Deduct type;
+                                                              NOR=Fratrekk type];
+                                                   OptionCaptionML=[ENU=,Lunch,Dinner,Other;
+                                                                    NOR=" ,Lunch,Middag,Annet"];
+                                                   OptionString=[ ,Lunch,Dinner,Other];
+                                                   Description=01. BVM }
+  }
+  KEYS
+  {
+    {    ;Code                                    ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 02.03.10 BVM Nytt felt for fratrekstype ved bruk av m›nstring
+    }
+    END.
+  }
+}
+

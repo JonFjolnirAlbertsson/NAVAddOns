@@ -1,0 +1,99 @@
+OBJECT Codeunit 83004 Post Output
+{
+  OBJECT-PROPERTIES
+  {
+    Date=20.04.17;
+    Time=16.20.12;
+    Modified=Yes;
+    Version List=OPC (RSI);
+  }
+  PROPERTIES
+  {
+    TableNo=83007;
+    OnRun=BEGIN
+            TESTFIELD("End Date");
+            TESTFIELD("End Time");
+            PostOutput("Machine Center", "End Date", "End Time");
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      MachineCenter@1000000000 : Record 99000758;
+
+    LOCAL PROCEDURE PostOutput@1000000000(MachineCenter@1000000002 : Code[20];EndDate@1000000004 : Date;EndTime@1000000005 : Time);
+    VAR
+      RunTimes@1000000001 : Record 83010;
+      ProdOrderLine@1000000003 : Record 5406;
+      ProdOrderRoutingLine@1000000010 : Record 5409;
+      ItemJnlLine@1000000000 : Record 83;
+      ItemJnlPostLine@1000000006 : Codeunit 22;
+      DimMgt@1000000009 : Codeunit 408;
+    BEGIN
+      RunTimes.RESET;
+      RunTimes.SETRANGE("Machine Center", MachineCenter);
+      RunTimes.SETFILTER("Starting Date", '<>%1', 0D);
+      RunTimes.SETFILTER("Starting Time", '<>%1', 0T);
+      RunTimes.SETRANGE("Ending Time", 0T);
+      RunTimes.SETRANGE(Post,  FALSE);
+      IF RunTimes.FINDFIRST THEN
+      REPEAT
+        ProdOrderLine.SETRANGE(Status, ProdOrderLine.Status::Released);
+        ProdOrderLine.SETRANGE("Prod. Order No.", RunTimes."Prod. Order No.");
+        ProdOrderLine.SETRANGE("Routing No.", RunTimes."Routing No.");
+        IF ProdOrderLine.FIND('-') THEN
+          REPEAT
+            ItemJnlLine.INIT;
+            ItemJnlLine.CopyDim(ProdOrderLine."Dimension Set ID"); //JAL
+            ItemJnlLine."Posting Date" := EndDate;
+            ItemJnlLine."Document Date" := EndDate;
+            ItemJnlLine."Entry Type" := ItemJnlLine."Entry Type"::Output;
+            ItemJnlLine."Operation No." := RunTimes."Operation No.";
+            ItemJnlLine.Type := ItemJnlLine.Type::"Machine Center";
+            ItemJnlLine.VALIDATE("No.", MachineCenter);
+            ItemJnlLine.VALIDATE("Order Type", ItemJnlLine."Order Type"::Production);
+            ItemJnlLine.VALIDATE("Order No.", RunTimes."Prod. Order No.");
+            ItemJnlLine.VALIDATE("Order Line No.", ProdOrderLine."Line No.");
+            ItemJnlLine.VALIDATE("Item No.", ProdOrderLine."Item No.");
+            ItemJnlLine."Starting Time" := RunTimes."Starting Time";
+            ItemJnlLine."Ending Time" := EndTime;
+            ItemJnlLine.VALIDATE("Run Time", ROUND(CalculateTime(RunTimes."Starting Date",
+              RunTimes."Starting Time", EndDate, EndTime),0.01,'='));
+
+            ItemJnlPostLine.RunWithCheck(ItemJnlLine);
+
+            ProdOrderRoutingLine.RESET;
+            ProdOrderRoutingLine.SETRANGE(Status, ProdOrderRoutingLine.Status::Released);
+            ProdOrderRoutingLine.SETRANGE("Prod. Order No.", RunTimes."Prod. Order No.");
+            ProdOrderRoutingLine.SETRANGE("Routing No.", RunTimes."Routing No.");
+            ProdOrderRoutingLine.SETRANGE("Operation No.", RunTimes."Operation No.");
+            ProdOrderRoutingLine.SETRANGE(Type, ProdOrderRoutingLine.Type::"Machine Center");
+            IF ProdOrderRoutingLine.FIND('-') THEN
+              RunTimes."Work done at M.C." := ProdOrderRoutingLine."No.";
+
+            RunTimes."Ending Date" := EndDate;
+            RunTimes."Ending Time" := EndTime;
+            RunTimes."Finish Now" := TRUE;
+            RunTimes.Post := TRUE;
+            RunTimes.MODIFY;
+
+          UNTIL ProdOrderLine.NEXT = 0;
+
+      UNTIL RunTimes.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE CalculateTime@1000000001(StartDate@1000000003 : Date;StartTime@1000000002 : Time;EndDate@1000000001 : Date;EndTime@1000000000 : Time) : Decimal;
+    BEGIN
+      IF (EndTime <> 0T) AND (StartTime <> 0T)
+        AND (EndDate <> 0D) AND (StartDate <> 0D) THEN
+          EXIT(((EndDate - StartDate) * 1440) + ((EndTime - StartTime) / 60000))
+      ELSE
+        EXIT(0);
+    END;
+
+    BEGIN
+    END.
+  }
+}
+

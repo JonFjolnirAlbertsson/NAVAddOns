@@ -1,0 +1,178 @@
+OBJECT Codeunit 91068 OPC Testing
+{
+  OBJECT-PROPERTIES
+  {
+    Date=30.08.17;
+    Time=14:29:48;
+    Modified=Yes;
+    Version List=OPC6.01,TST1.01;
+  }
+  PROPERTIES
+  {
+    Subtype=Test;
+    OnRun=BEGIN
+            IsInitializedG := FALSE;
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      LibraryVariableStorageG@1101103000 : Codeunit 131004;
+      LibraryManufacturingG@1101103002 : Codeunit 132202;
+      LibraryInventoryG@1101103006 : Codeunit 132201;
+      LibraryWarehouseG@1101103010 : Codeunit 132204;
+      LibraryCostingG@1101103008 : Codeunit 132200;
+      LibraryRandomG@1101103003 : Codeunit 130440;
+      AssertG@1101103007 : Codeunit 130000;
+      ErrorNoPurchLine@1101103045 : TextConst 'ENU=No purchase line has been found for item %1.';
+      ErrorNoEntryFound@1101103044 : TextConst 'ENU=No value entry found for item %1 of type %2.';
+      ErrorWrongCost@1101103043 : TextConst 'ENU=Cost per unit should be %1 (2 decimals) for item %2.';
+      ErrorWrongTotal@1101103042 : TextConst 'ENU=Total cost for value entries should be %1 for item %2.';
+      ErrorValueEntries@1101103041 : TextConst 'ENU=Expected %1 entries of ILE Type: %2, Entry Type: %3, Document Type: %4 for item %5.';
+      ErrorValueEntry@1101103040 : TextConst 'ENU="Value mismatch in value entry %1, field %2. "';
+      ErrorZeroQty@1101103039 : TextConst 'ENU=Transfer Qty should not be 0.';
+      DummyMessage@1101103038 : TextConst 'ENU=Message?';
+      ItemDeletionErr@1101103037 : TextConst '@@@="%1= Item.TABLECAPTION,%2= Item.No,%3=Planning Component.TABLECAPTION";ENU=You cannot delete %1 %2 because there is at least one %3 that includes this item.';
+      LibraryProductionIncG@1101103004 : Codeunit 91062;
+      LibraryOPCG@1101103009 : Codeunit 91061;
+      OPCSCMOnlineAdjustmentG@1101103005 : Codeunit 91064;
+      LibraryOPCPagesG@1101103011 : Codeunit 91066;
+      IsInitializedG@1101103001 : Boolean;
+
+    LOCAL PROCEDURE Initialize@6();
+    VAR
+      LibraryERMCountryData@1000 : Codeunit 131305;
+    BEGIN
+      LibraryVariableStorageG.Clear;
+      IF IsInitializedG THEN
+        EXIT;
+
+      LibraryERMCountryData.UpdateGeneralPostingSetup;
+      LibraryERMCountryData.CreateVATData;
+      LibraryProductionIncG.CreateLocationSetup();
+      LibraryProductionIncG.ItemJournalSetup('', '');
+      LibraryProductionIncG.ConsumptionJournalSetup('', '');
+      LibraryProductionIncG.OutputJournalSetup('', '');
+      LibraryProductionIncG.ManufacturingSetup();
+      LibraryOPCG.OPCSetup();
+      COMMIT;
+
+      IsInitializedG := TRUE
+    END;
+
+    [ConfirmHandler]
+    PROCEDURE ConfirmHandler@19(Question@1000 : Text[1024];VAR Reply@1001 : Boolean);
+    BEGIN
+      Reply := TRUE;
+    END;
+
+    [MessageHandler]
+    PROCEDURE MessageHandler@10(Message@1000 : Text[1024]);
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE ExecuteUIHandlers@1101103002();
+    BEGIN
+      MESSAGE('');
+      IF CONFIRM(DummyMessage) THEN ;
+    END;
+
+    [Test]
+    PROCEDURE OPCSetup@1101103006();
+    VAR
+      SCMProductionOrdersL@1101103000 : Codeunit 137069;
+      TempManufacturingSetupL@1101103001 : TEMPORARY Record 99000765;
+      TempSalesReceivablesSetupL@1101103002 : TEMPORARY Record 311;
+      ProductionOrderL@1101103003 : Record 5405;
+      MachineCenterL@1101103004 : Record 99000758;
+      WorkCenterL@1101103005 : Record 99000754;
+    BEGIN
+      // [FEATURE] [Manufacturing] [Production Order] [OPC]
+      // [SCENARIO 1.] Test Case OPC Setup
+      LibraryOPCG.OPCSetup();
+    END;
+
+    [Test]
+    PROCEDURE CreateMachineCenter@1101103000();
+    VAR
+      SCMProductionOrdersL@1101103000 : Codeunit 137069;
+      TempManufacturingSetupL@1101103001 : TEMPORARY Record 99000765;
+      TempSalesReceivablesSetupL@1101103002 : TEMPORARY Record 311;
+      ProductionOrderL@1101103003 : Record 5405;
+      MachineCenterL@1101103004 : Record 99000758;
+      WorkCenterL@1101103005 : Record 99000754;
+    BEGIN
+      Initialize;
+      LibraryManufacturingG.CreateWorkCenter(WorkCenterL);
+      LibraryManufacturingG.CreateMachineCenter(MachineCenterL, WorkCenterL."No.", LibraryRandomG.RandDec(100,2));
+    END;
+
+    [Test]
+    [HandlerFunctions(ConfirmHandler,MessageHandler)]
+    PROCEDURE CreateProductionOrder@1101103008();
+    VAR
+      SCMProductionOrdersL@1101103000 : Codeunit 137069;
+      TempManufacturingSetupL@1101103001 : TEMPORARY Record 99000765;
+      TempSalesReceivablesSetupL@1101103002 : TEMPORARY Record 311;
+      ProductionOrderL@1101103003 : Record 5405;
+      MachineCenterL@1101103004 : Record 99000758;
+      WorkCenterL@1101103005 : Record 99000754;
+    BEGIN
+      // [FEATURE] [Manufacturing] [Production Order] [OPC]
+      // [SCENARIO 2.] Test Case Create Production Order
+      OPCSCMOnlineAdjustmentG.OPCCreateProdOrder();
+    END;
+
+    [Test]
+    PROCEDURE OPCRegisterTimeIn@1101103003();
+    BEGIN
+      // [FEATURE] [Manufacturing] [Production Order] [OPC]
+      // [SCENARIO 3.] Test Case Register Time In
+      LibraryOPCPagesG.RegisterTimeInPage();
+    END;
+
+    [Test]
+    PROCEDURE OPCRegisterTimeOut@1101103010();
+    BEGIN
+      // [FEATURE] [Manufacturing] [Production Order] [OPC]
+      // [SCENARIO 4.] Test Case Register Time In
+      LibraryOPCPagesG.RegisterTimeOutPage();
+    END;
+
+    [Test]
+    [HandlerFunctions(MessageHandler,ConfirmHandler)]
+    PROCEDURE OPCPostOutputOnOperation@1101103009();
+    BEGIN
+      // [FEATURE] [Manufacturing] [Production Order] [OPC]
+      // [SCENARIO 5.] Test Case Post Output on Production Operation
+      LibraryOPCPagesG.PostOutputOnOperationPage();
+    END;
+
+    [Test]
+    [HandlerFunctions(MessageHandler,ConfirmHandler)]
+    PROCEDURE OPCRegisterTimInPostOutputRegisterOut@1101103001();
+    BEGIN
+      // [FEATURE] [Manufacturing] [Production Order] [OPC]
+      // [SCENARIO 6.] Test Case Register Time In, Post Output on Production Operation and Register Time Out
+      // [GIVEN] OPC Setup is configured
+      OPCSetup();
+      // [GIVEN] Production Order Exists
+      OPCSCMOnlineAdjustmentG.OPCCreateProdOrder();
+      // [GIVEN] User has Register Time In
+      LibraryOPCPagesG.RegisterTimeInPage();
+      // [GIVEN] User has Posted Output on Production Operation
+      LibraryOPCPagesG.PostOutputOnOperationPage();
+      // [GIVEN] User has Register Time Out
+      LibraryOPCPagesG.RegisterTimeOutPage();
+    END;
+
+    BEGIN
+    {
+      // [FEATURE] [Manufacturing] [Production Order] [OPC]
+      Tests for OPC:
+    }
+    END.
+  }
+}
+

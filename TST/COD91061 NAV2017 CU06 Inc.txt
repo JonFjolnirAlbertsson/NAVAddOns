@@ -1,0 +1,117 @@
+OBJECT Codeunit 91061 Library - OPC
+{
+  OBJECT-PROPERTIES
+  {
+    Date=05.09.17;
+    Time=11:52:07;
+    Modified=Yes;
+    Version List=TST1.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      FileManagementG@1101103001 : Codeunit 419;
+      LibraryProductionIncG@1101103000 : Codeunit 91062;
+      LibraryRandomG@1101103002 : Codeunit 130440;
+      LibraryManufacturingG@1101103003 : Codeunit 132202;
+
+    PROCEDURE OPCSetup@1101103005();
+    VAR
+      OPCSetupL@1101103000 : Record 83001;
+      TempBlobL@1101103003 : Record 99008535;
+      FilePathL@1101103001 : Text;
+      NameL@1101103002 : Text;
+      ServerFilePathL@1101103004 : Text;
+    BEGIN
+      IF NOT OPCSetupL.GET THEN
+        OPCSetupL.INSERT(TRUE);
+      LibraryProductionIncG.OutputJournalSetup('AVGANG', 'OPC');
+      OPCSetupL.VALIDATE("Output Jnl. Templ. Name Qty", 'AVGANG');
+      OPCSetupL.VALIDATE("Output Jnl. Batch Name Qty", 'OPC');
+      OPCSetupL.VALIDATE("Output Jnl. Templ. Name Time", 'AVGANG');
+      OPCSetupL.VALIDATE("Output Jnl. Batch Name Time", 'OPC');
+      LibraryProductionIncG.CapacityJournalSetup('KAPASITET', 'AUTO');
+      OPCSetupL.VALIDATE("Cap. Jnl. Templ. Name Corr", 'KAPASITET');
+      OPCSetupL.VALIDATE("Cap. Jnl. Batch Name Corr", 'AUTO');
+      LibraryProductionIncG.CapacityJournalSetup('KAPASITET', 'OPC-TO');
+      OPCSetupL.VALIDATE("Cap. Jnl. Templ. Name OPC", 'KAPASITET');
+      OPCSetupL.VALIDATE("Cap. Jnl. Batch Name OPC", 'OPC-TO');
+      OPCSetupL.VALIDATE("Work Center Prod time", 'PROD');
+      OPCSetupL.VALIDATE("Work Center Adm. time", 'ADMIN');
+      OPCSetupL.VALIDATE("Document No. Ind.Time", 'IND.TID');
+      FilePathL := 'C:\Git\NAV AddOns\OPC\Pictures\warning.png';
+      IF FileManagementG.ClientFileExists(FilePathL) THEN BEGIN
+        //FileManagementG.UploadFileSilent(FilePathL);
+        //FileManagementG.BLOBImport(TempBlobL, FilePathL);
+        ServerFilePathL := FileManagementG.UploadFileSilent(FilePathL);
+        OPCSetupL."Warning Icon".IMPORTFILE(ServerFilePathL, 'warning');
+        FileManagementG.BLOBImportFromServerFile(TempBlobL,ServerFilePathL);
+        OPCSetupL."Warning Picture" := TempBlobL.Blob;
+      END;
+      OPCSetupL.MODIFY(TRUE);
+    END;
+
+    PROCEDURE OPCGetRandomMachineCenterShowInOPC@1101103001() CodeR : Code[10];
+    VAR
+      MachineCenterL@1101103000 : Record 99000758;
+    BEGIN
+      MachineCenterL.SETRANGE("Show in OPC", TRUE);
+      EXIT(GetMachineCenter(MachineCenterL));
+    END;
+
+    PROCEDURE OPCGetRandomMachineCenterClocking@1101103000() CodeR : Code[10];
+    VAR
+      MachineCenterL@1101103000 : Record 99000758;
+    BEGIN
+      MachineCenterL.SETRANGE(Clocking, TRUE);
+      EXIT(GetMachineCenter(MachineCenterL));
+    END;
+
+    PROCEDURE GetMachineCenter@1101103004(VAR MachineCenterP@1101103001 : Record 99000758) CodeR : Code[10];
+    BEGIN
+      IF MachineCenterP.FINDSET THEN BEGIN
+        MachineCenterP.NEXT(LibraryRandomG.RandIntInRange(0, (MachineCenterP.COUNT - 1)));
+        CodeR := MachineCenterP."No.";
+      END;
+      EXIT(CodeR);
+    END;
+
+    PROCEDURE OPCGetRandomProdOrderRoutingLine@1101103002(VAR ProdOrderRoutingLine@1101103001 : Record 5409);
+    VAR
+      ProdOrderRoutingLineL@1101103000 : Record 5409;
+    BEGIN
+      IF ProdOrderRoutingLine.FINDSET THEN
+        ProdOrderRoutingLine.NEXT(LibraryRandomG.RandIntInRange(0, (ProdOrderRoutingLine.COUNT - 1)));
+    END;
+
+    PROCEDURE OPCCreateMachineCenter@1101103003(VAR MachineCenterP@1101103000 : Record 99000758);
+    VAR
+      WorkCenterL@1101103001 : Record 99000754;
+    BEGIN
+      LibraryManufacturingG.CreateWorkCenterWithCalendar(WorkCenterL);
+      WorkCenterL.VALIDATE("Flushing Method", WorkCenterL."Flushing Method"::Manual);
+      WorkCenterL.MODIFY(TRUE);
+      LibraryManufacturingG.CreateMachineCenterWithCalendar(MachineCenterP, WorkCenterL."No.", LibraryRandomG.RandDec(100, 2));
+      MachineCenterP.VALIDATE("Show in OPC", TRUE);
+      MachineCenterP.MODIFY(TRUE);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 18.08.17 JAL Common Incadea functions for OPC
+                       Hard coded text should be replaced with variables or config file.
+    }
+    END.
+  }
+}
+

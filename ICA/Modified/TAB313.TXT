@@ -1,0 +1,233 @@
+OBJECT Table 313 Inventory Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08.02.17;
+    Time=15.00.50;
+    Modified=Yes;
+    Version List=NAVW19.00,INC1.0;
+  }
+  PROPERTIES
+  {
+    Permissions=TableData 5896=m;
+    CaptionML=[ENU=Inventory Setup;
+               NOR=Lageroppsett];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Primary Key         ;Code10        ;CaptionML=[ENU=Primary Key;
+                                                              NOR=Primërnõkkel] }
+    { 2   ;   ;Automatic Cost Posting;Boolean     ;OnValidate=VAR
+                                                                GLSetup@1000 : Record 98;
+                                                              BEGIN
+                                                                IF "Automatic Cost Posting" THEN BEGIN
+                                                                  IF GLSetup.GET THEN
+                                                                    IF NOT GLSetup."Use Legacy G/L Entry Locking" THEN
+                                                                      MESSAGE(Text006,
+                                                                        FIELDCAPTION("Automatic Cost Posting"),
+                                                                        "Automatic Cost Posting",
+                                                                        GLSetup.FIELDCAPTION("Use Legacy G/L Entry Locking"),
+                                                                        GLSetup.TABLECAPTION,
+                                                                        GLSetup."Use Legacy G/L Entry Locking");
+                                                                END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Automatic Cost Posting;
+                                                              NOR=Automatisk kostbokfõring] }
+    { 3   ;   ;Location Mandatory  ;Boolean       ;AccessByPermission=TableData 14=R;
+                                                   CaptionML=[ENU=Location Mandatory;
+                                                              NOR=Lokasjon obligatorisk] }
+    { 4   ;   ;Item Nos.           ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=[ENU=Item Nos.;
+                                                              NOR=Varenr.] }
+    { 30  ;   ;Automatic Cost Adjustment;Option   ;OnValidate=BEGIN
+                                                                IF "Automatic Cost Adjustment" <> "Automatic Cost Adjustment"::Never THEN BEGIN
+                                                                  Item.SETCURRENTKEY("Cost is Adjusted","Allow Online Adjustment");
+                                                                  Item.SETRANGE("Cost is Adjusted",FALSE);
+                                                                  Item.SETRANGE("Allow Online Adjustment",FALSE);
+
+                                                                  UpdateInvtAdjmtEntryOrder;
+
+                                                                  InvtAdjmtEntryOrder.SETCURRENTKEY("Cost is Adjusted","Allow Online Adjustment");
+                                                                  InvtAdjmtEntryOrder.SETRANGE("Cost is Adjusted",FALSE);
+                                                                  InvtAdjmtEntryOrder.SETRANGE("Allow Online Adjustment",FALSE);
+                                                                  InvtAdjmtEntryOrder.SETRANGE("Is Finished",TRUE);
+
+                                                                  IF NOT (Item.ISEMPTY AND InvtAdjmtEntryOrder.ISEMPTY) THEN
+                                                                    MESSAGE(Text000);
+                                                                END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Automatic Cost Adjustment;
+                                                              NOR=Automatisk kostjustering];
+                                                   OptionCaptionML=[ENU=Never,Day,Week,Month,Quarter,Year,Always;
+                                                                    NOR=Aldri,Dag,Uke,MÜned,Kvartal,èr,Alltid];
+                                                   OptionString=Never,Day,Week,Month,Quarter,Year,Always }
+    { 40  ;   ;Prevent Negative Inventory;Boolean ;CaptionML=[ENU=Prevent Negative Inventory;
+                                                              NOR=Forhindre negativ beholdning] }
+    { 5700;   ;Transfer Order Nos. ;Code10        ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 5740=R;
+                                                   CaptionML=[ENU=Transfer Order Nos.;
+                                                              NOR=Overfõringsordrenr.] }
+    { 5701;   ;Posted Transfer Shpt. Nos.;Code10  ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 5740=R;
+                                                   CaptionML=[ENU=Posted Transfer Shpt. Nos.;
+                                                              NOR=Bokfõrte overfõringsseddelnr.] }
+    { 5702;   ;Posted Transfer Rcpt. Nos.;Code10  ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 5740=R;
+                                                   CaptionML=[ENU=Posted Transfer Rcpt. Nos.;
+                                                              NOR=Bokfõrte overf.mottaksnr.] }
+    { 5703;   ;Copy Comments Order to Shpt.;Boolean;
+                                                   InitValue=Yes;
+                                                   AccessByPermission=TableData 5740=R;
+                                                   CaptionML=[ENU=Copy Comments Order to Shpt.;
+                                                              NOR=Kopier ordremerk. til fõlges.] }
+    { 5704;   ;Copy Comments Order to Rcpt.;Boolean;
+                                                   InitValue=Yes;
+                                                   AccessByPermission=TableData 5740=R;
+                                                   CaptionML=[ENU=Copy Comments Order to Rcpt.;
+                                                              NOR=Kopier merk. fra ordre til mott.] }
+    { 5718;   ;Nonstock Item Nos.  ;Code10        ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 5718=R;
+                                                   CaptionML=[ENU=Nonstock Item Nos.;
+                                                              NOR=Katalogvarenr.] }
+    { 5790;   ;Outbound Whse. Handling Time;DateFormula;
+                                                   AccessByPermission=TableData 14=R;
+                                                   CaptionML=[ENU=Outbound Whse. Handling Time;
+                                                              NOR=UtgÜende lagerhÜndteringstid] }
+    { 5791;   ;Inbound Whse. Handling Time;DateFormula;
+                                                   AccessByPermission=TableData 14=R;
+                                                   CaptionML=[ENU=Inbound Whse. Handling Time;
+                                                              NOR=InngÜende lagerhÜndteringstid] }
+    { 5800;   ;Expected Cost Posting to G/L;Boolean;
+                                                   OnValidate=VAR
+                                                                ChangeExpCostPostToGL@1000 : Codeunit 5811;
+                                                              BEGIN
+                                                                IF "Expected Cost Posting to G/L" <> xRec."Expected Cost Posting to G/L" THEN
+                                                                  IF ItemLedgEntry.FINDFIRST THEN BEGIN
+                                                                    ChangeExpCostPostToGL.ChangeExpCostPostingToGL(Rec,"Expected Cost Posting to G/L");
+                                                                    FIND;
+                                                                  END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Expected Cost Posting to G/L;
+                                                              NOR=Bokf. av forventet kost i Finans] }
+    { 5804;   ;Average Cost Calc. Type;Option     ;InitValue=Item;
+                                                   OnValidate=BEGIN
+                                                                TESTFIELD("Average Cost Calc. Type");
+                                                                IF "Average Cost Calc. Type" <> xRec."Average Cost Calc. Type" THEN
+                                                                  UpdateAvgCostItemSettings(FIELDCAPTION("Average Cost Calc. Type"),FORMAT("Average Cost Calc. Type"));
+                                                              END;
+
+                                                   CaptionML=[ENU=Average Cost Calc. Type;
+                                                              NOR=Beregn.type for gj.snittskost];
+                                                   OptionCaptionML=[ENU=" ,Item,Item & Location & Variant";
+                                                                    NOR=" ,Vare,Vare og lokasjon og variant"];
+                                                   OptionString=[ ,Item,Item & Location & Variant];
+                                                   NotBlank=Yes }
+    { 5805;   ;Average Cost Period ;Option        ;InitValue=Day;
+                                                   OnValidate=BEGIN
+                                                                TESTFIELD("Average Cost Period");
+                                                                IF "Average Cost Period" <> xRec."Average Cost Period" THEN
+                                                                  UpdateAvgCostItemSettings(FIELDCAPTION("Average Cost Period"),FORMAT("Average Cost Period"));
+                                                              END;
+
+                                                   CaptionML=[ENU=Average Cost Period;
+                                                              NOR=Gjennomsnittskostperiode];
+                                                   OptionCaptionML=[ENU=" ,Day,Week,Month,Quarter,Year,Accounting Period";
+                                                                    NOR=" ,Dag,Uke,MÜned,Kvartal,èr,Regnskapsperiode"];
+                                                   OptionString=[ ,Day,Week,Month,Quarter,Year,Accounting Period];
+                                                   NotBlank=Yes }
+    { 7101;   ;Item Group Dimension Code;Code20   ;TableRelation=Dimension;
+                                                   CaptionML=[ENU=Item Group Dimension Code;
+                                                              NOR=Dimensjonskode for varegruppe] }
+    { 7300;   ;Inventory Put-away Nos.;Code10     ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 7340=R;
+                                                   CaptionML=[ENU=Inventory Put-away Nos.;
+                                                              NOR=Lagerplasseringsnr.] }
+    { 7301;   ;Inventory Pick Nos. ;Code10        ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 7342=R;
+                                                   CaptionML=[ENU=Inventory Pick Nos.;
+                                                              NOR=Lagerplukknr.] }
+    { 7302;   ;Posted Invt. Put-away Nos.;Code10  ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 7340=R;
+                                                   CaptionML=[ENU=Posted Invt. Put-away Nos.;
+                                                              NOR=Bokfõrte lagerplasseringsnr.] }
+    { 7303;   ;Posted Invt. Pick Nos.;Code10      ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 7342=R;
+                                                   CaptionML=[ENU=Posted Invt. Pick Nos.;
+                                                              NOR=Bokfõrte lagerplukknr.] }
+    { 7304;   ;Inventory Movement Nos.;Code10     ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 7331=R;
+                                                   CaptionML=[ENU=Inventory Movement Nos.;
+                                                              NOR=Lagerflyttingsnr.] }
+    { 7305;   ;Registered Invt. Movement Nos.;Code10;
+                                                   TableRelation="No. Series";
+                                                   AccessByPermission=TableData 7331=R;
+                                                   CaptionML=[ENU=Registered Invt. Movement Nos.;
+                                                              NOR=Registrert lagerflyttingsnr.] }
+    { 7306;   ;Internal Movement Nos.;Code10      ;TableRelation="No. Series";
+                                                   AccessByPermission=TableData 7331=R;
+                                                   CaptionML=[ENU=Internal Movement Nos.;
+                                                              NOR=Nr. for intern flytting] }
+    { 50051;  ;Price Calculation Nos.;Code20      ;TableRelation="No. Series".Code;
+                                                   CaptionML=[ENU=Price Calculation Nos.;
+                                                              NOR=Kalkylenr.] }
+  }
+  KEYS
+  {
+    {    ;Primary Key                             ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      ItemLedgEntry@1000 : Record 32;
+      Text000@1001 : TextConst 'ENU=Some unadjusted value entries will not be covered with the new setting. You must run the Adjust Cost - Item Entries batch job once to adjust these.;NOR=Enkelte ikke justerte verdioppfõringer vil ikke bli dekket med den nye innstillingen. Du mÜ sette i gang kjõrselen Juster kostverdi - vareposter Çn gang for Ü justere disse.';
+      Item@1002 : Record 27;
+      InvtAdjmtEntryOrder@1003 : Record 5896;
+      Text001@1005 : TextConst 'ENU=If you change the %1, the program must adjust all item entries.;NOR=Hvis du endrer pÜ %1, mÜ programmet justere alle varepostene.';
+      Text002@1006 : TextConst 'ENU=The adjustment of all entries can take several hours.\;NOR=Justeringen av alle postene kan ta flere timer.\';
+      Text003@1007 : TextConst 'ENU=Do you really want to change the %1?;NOR=Er du sikker pÜ at du vil endre pÜ %1?';
+      Text004@1008 : TextConst 'ENU=The program has cancelled the change that would have caused an adjustment of all items.;NOR=Programmet har avbrutt endringen som ville ha forÜrsaket justering av alle varene.';
+      Text005@1009 : TextConst 'ENU=%1 has been changed to %2. You should now run %3.;NOR=%1 er endret til %2. Du mÜ starte %3.';
+      ObjTransl@1011 : Record 377;
+      Text006@1004 : TextConst 'ENU=The field %1 should not be set to %2 if field %3 in %4 table is set to %5 because of possibility of deadlocks.;NOR=Feltet %1 mÜ ikke settes til %2 hvis feltet %3 i %4-tabellen er satt til %5 pÜ grunn av muligheten for lÜsing (deadlock).';
+
+    LOCAL PROCEDURE UpdateInvtAdjmtEntryOrder@2();
+    VAR
+      InvtAdjmtEntryOrder@1000 : Record 5896;
+    BEGIN
+      InvtAdjmtEntryOrder.SETCURRENTKEY("Cost is Adjusted","Allow Online Adjustment");
+      InvtAdjmtEntryOrder.SETRANGE("Cost is Adjusted",FALSE);
+      InvtAdjmtEntryOrder.SETRANGE("Allow Online Adjustment",FALSE);
+      InvtAdjmtEntryOrder.SETRANGE("Is Finished",FALSE);
+      InvtAdjmtEntryOrder.SETRANGE("Order Type",InvtAdjmtEntryOrder."Order Type"::Production);
+      InvtAdjmtEntryOrder.MODIFYALL("Allow Online Adjustment",TRUE);
+    END;
+
+    LOCAL PROCEDURE UpdateAvgCostItemSettings@1(FieldCaption@1000 : Text[80];FieldValue@1001 : Text[80]);
+    BEGIN
+      IF NOT
+         CONFIRM(
+           STRSUBSTNO(
+             Text001 +
+             Text002 +
+             Text003,FieldCaption),FALSE)
+      THEN
+        ERROR(Text004);
+
+      CODEUNIT.RUN(CODEUNIT::"Change Average Cost Setting",Rec);
+
+      MESSAGE(
+        Text005,FieldCaption,FieldValue,
+        ObjTransl.TranslateObject(ObjTransl."Object Type"::Report,REPORT::"Adjust Cost - Item Entries"));
+    END;
+
+    BEGIN
+    END.
+  }
+}
+

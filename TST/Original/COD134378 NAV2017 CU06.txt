@@ -1,0 +1,3834 @@
+OBJECT Codeunit 134378 ERM Sales Order
+{
+  OBJECT-PROPERTIES
+  {
+    Date=28.04.17;
+    Time=12:00:00;
+    Version List=NAVW110.00.00,Test;
+  }
+  PROPERTIES
+  {
+    Subtype=Test;
+    TestPermissions=Disabled;
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      TempDocumentEntry2@1011 : TEMPORARY Record 265;
+      Assert@1003 : Codeunit 130000;
+      LibraryERM@1007 : Codeunit 131300;
+      LibraryMarketing@1031 : Codeunit 131900;
+      LibrarySales@1002 : Codeunit 130509;
+      LibraryDimension@1015 : Codeunit 131001;
+      LibraryRandom@1001 : Codeunit 130440;
+      LibraryInventory@1017 : Codeunit 132201;
+      LibraryVariableStorage@1020 : Codeunit 131004;
+      LibraryUtility@1024 : Codeunit 131000;
+      LibrarySetupStorage@1012 : Codeunit 131009;
+      LibraryWarehouse@1030 : Codeunit 132204;
+      LibraryResource@1036 : Codeunit 130511;
+      LibraryPatterns@1038 : Codeunit 132212;
+      isInitialized@1000 : Boolean;
+      VATAmountErr@1005 : TextConst '@@@="%1 = value, %2 = field";ENU=VAT Amount must be %1 in %2.';
+      FieldErr@1004 : TextConst '@@@="%1,%2 = table name";ENU=Number of Lines for %1 and %2  must be Equal.';
+      AmountErr@1006 : TextConst '@@@="%1 = field, %2 = value, %3  = table";ENU=%1 must be %2 in %3.';
+      CurrencyErr@1008 : TextConst '@@@="%1 = field, %2 = table";ENU=%1 must be equal in %2.';
+      IncorrectDimSetIDErr@1032 : TextConst 'ENU=Incorrect Dimension Set ID in %1.';
+      DocumentNo2@1010 : Code[20];
+      PostingDate2@1009 : Date;
+      ValueErr@1013 : TextConst '@@@="%1 = value";ENU=Discount Amount must be equal to %1.';
+      PostingErr@1014 : TextConst '@@@="%1 must have a value in %2: %3=%4, %5=%6. It cannot be zero or empty.";ENU="%1 must have a value in %2: %3=%4, %5=%6. It cannot be zero or empty."';
+      StatusErr@1016 : TextConst '@@@="%1 = table,%2 = document type,%3 = document no.";ENU="Status must be equal to ''Open''  in %1: Document Type=%2, No.=%3. Current value is ''Released''."';
+      WrongDimValueErr@1019 : TextConst '@@@="%1 = value";ENU=Wrong dimension value in Sales Header %1.';
+      DocType@1018 : 'Quote,Blanket Order,Order,Invoice,Return Order,Credit Memo,Posted Shipment,Posted Invoice,Posted Return Receipt,Posted Credit Memo';
+      WrongValueSalesHeaderInvoiceErr@1021 : TextConst 'ENU=The value of field Invoice in copied Sales Order must be ''No''.';
+      WrongValueSalesHeaderShipErr@1022 : TextConst 'ENU=The value of field Ship in copied Sales Order must be ''No''.';
+      ShippedNotInvoicedErr@1025 : TextConst 'ENU=Wrong sales orders shipped not invoiced count';
+      WrongInvDiscAmountErr@1023 : TextConst 'ENU=Wrong Invoice Discount Amount in Sales Line.';
+      QtyToShipBaseErr@1026 : TextConst 'ENU=Qty. to Ship (Base) must be equal to Qty. to Shipe in Sales Line';
+      ReturnQtyToReceiveBaseErr@1027 : TextConst 'ENU=Return Qty. to Receive (Base) must be equal to Return Qty. to Receive in Sales Line';
+      QuantitytyToShipBaseErr@1028 : TextConst 'ENU=Qty. to Ship (Base) must be equal to Quantity in Sales Line';
+      ReturnQuantityToReceiveBaseErr@1029 : TextConst 'ENU=Return Qty. to Receive (Base) must be equal to Quantity in Sales Line';
+      YouMustDeleteExistingLinesErr@1033 : TextConst '@@@=%1 - Field Caption;ENU=You must delete the existing sales lines before you can change %1.';
+      PostedDocsToPrintCreatedMsg@1034 : TextConst 'ENU=One or more related posted documents have been generated during deletion to fill gaps in the posting number series. You can view or print the documents from the respective document archive.';
+      AmountToAssignErr@1035 : TextConst 'ENU=Wrong Amount to Assign on reassigned lines';
+      UnitPriceErr@1039 : TextConst 'ENU=Value of Unit Price must be positive.';
+
+    [Test]
+    PROCEDURE SalesOrderCreation@12();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesLine@1001 : Record 37;
+    BEGIN
+      // Test New Sales Order creation.
+
+      // Setup.
+      Initialize;
+
+      // Exercise: Create Sales Order.
+      CreateSalesOrder(SalesHeader,SalesLine);
+
+      // Verify: Verify Sales Order created.
+      SalesHeader.GET(SalesHeader."Document Type",SalesHeader."No.");
+      SalesLine.GET(SalesLine."Document Type",SalesLine."Document No.",SalesLine."Line No.");
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE VATAmountOnSalesOrder@4();
+    VAR
+      GeneralLedgerSetup@1008 : Record 98;
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      VATAmountLine@1002 : Record 290;
+      QtyType@1003 : 'General,Invoicing,Shipping';
+    BEGIN
+      // Create a Sales Order and calculates applicable VAT for a VAT Posting Group in Sales Order.
+
+      // Setup.
+      Initialize;
+      CreateSalesOrder(SalesHeader,SalesLine);
+
+      // Exercise: Calculate VAT Amount on Sales Order.
+      SalesLine.CalcVATAmountLines(QtyType::Invoicing,SalesHeader,SalesLine,VATAmountLine);
+
+      // Verify: Verify VAT Amount on Sales Order.
+      GeneralLedgerSetup.GET;
+      LibrarySales.ReleaseSalesDocument(SalesHeader);
+      SalesHeader.CALCFIELDS(Amount);
+      Assert.AreNearlyEqual(
+        SalesHeader.Amount * SalesLine."VAT %" / 100,VATAmountLine."VAT Amount",GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(VATAmountErr,SalesHeader.Amount * SalesLine."VAT %" / 100,VATAmountLine.TABLECAPTION));
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE SalesOrderReport@3();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      OrderConfirmation@1005 : Report 205;
+      LibraryUtility@1004 : Codeunit 131000;
+      FilePath@1003 : Text[1024];
+    BEGIN
+      // Create new Sales Order and Verify Order Confirmation report.
+
+      // Setup.
+      Initialize;
+      CreateSalesOrder(SalesHeader,SalesLine);
+
+      // Exercise: Generate Report as external file for Sales Order.
+      SalesHeader.SETRANGE("Document Type",SalesHeader."Document Type"::Order);
+      SalesHeader.SETRANGE("No.",SalesHeader."No.");
+      CLEAR(OrderConfirmation);
+      OrderConfirmation.SETTABLEVIEW(SalesHeader);
+      FilePath := TEMPORARYPATH + FORMAT(SalesHeader."Document Type") + SalesHeader."No." + '.xlsx';
+      OrderConfirmation.SAVEASEXCEL(FilePath);
+
+      // Verify: Verify that Saved files have some data.
+      LibraryUtility.CheckFileNotEmpty(FilePath);
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE SalesOrderAsShip@5();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      SalesShipmentHeader@1005 : Record 110;
+      SalesShipmentLine@1004 : Record 111;
+      SalesLineCount@1006 : Integer;
+      PostedSaleShipmentNo@1003 : Code[20];
+    BEGIN
+      // Check that Posted shipment has same Posted Line after Post Sales Order as Ship.
+
+      // Setup.
+      Initialize;
+      CreateSalesOrder(SalesHeader,SalesLine);
+      SalesLine.SETRANGE("Document No.",SalesHeader."No.");
+      SalesLine.SETRANGE("Document Type",SalesLine."Document Type"::Order);
+      SalesLineCount := SalesLine.COUNT;
+
+      // Exercise: Post Sales Order as Ship.
+      PostedSaleShipmentNo := LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+
+      // Verify: Verify Sales Shipment Line Count with Sales Line Count.
+      SalesShipmentHeader.GET(PostedSaleShipmentNo);
+      SalesShipmentLine.SETRANGE("Document No.",SalesShipmentHeader."No.");
+      Assert.AreEqual(SalesLineCount,SalesShipmentLine.COUNT,STRSUBSTNO(FieldErr,SalesLine.TABLECAPTION,
+          SalesShipmentLine.TABLECAPTION));
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE SalesOrderAsInvoice@14();
+    VAR
+      SalesHeader@1006 : Record 36;
+      SalesLine@1005 : Record 37;
+      SalesInvoiceHeader@1001 : Record 112;
+      PostedSaleInvoiceNo@1000 : Code[20];
+    BEGIN
+      // Post a Sales Order as Ship and Invoice and Verify Customer Ledger, GL Entry, Value Entry and VAT Entry.
+
+      // Setup.
+      Initialize;
+      CreateSalesOrder(SalesHeader,SalesLine);
+
+      // Exercise: Post Sales Order as Ship and Invoice.
+      PostedSaleInvoiceNo := LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify: GL Entry, VAT Entry, Value Entry and Customer Ledger Entry.
+      SalesInvoiceHeader.GET(PostedSaleInvoiceNo);
+      SalesInvoiceHeader.CALCFIELDS(Amount,"Amount Including VAT");
+      VerifyGLEntry(PostedSaleInvoiceNo,SalesInvoiceHeader."Amount Including VAT");
+      VerifyCustomerLedgerEntry(PostedSaleInvoiceNo,SalesInvoiceHeader."Amount Including VAT");
+      VerifyVATEntry(PostedSaleInvoiceNo,SalesInvoiceHeader."Amount Including VAT");
+      VerifyValueEntry(PostedSaleInvoiceNo,SalesInvoiceHeader.Amount);
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE PostedSalesInvoiceReport@6();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      SalesInvoiceHeader@1003 : Record 112;
+      SalesInvoice@1005 : Report 206;
+      LibraryUtility@1007 : Codeunit 131000;
+      FilePath@1006 : Text[1024];
+      PostedSaleInvoiceNo@1002 : Code[20];
+    BEGIN
+      // Test if Post a Sales Order and generate Posted Sales Invoice Report.
+
+      // Setup.
+      Initialize;
+      CreateSalesOrder(SalesHeader,SalesLine);
+      PostedSaleInvoiceNo := LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Exercise: Generate Report as external file for Posted Sales Invoice.
+      SalesInvoiceHeader.SETRANGE("No.",PostedSaleInvoiceNo);
+      CLEAR(SalesInvoice);
+      SalesInvoice.SETTABLEVIEW(SalesInvoiceHeader);
+      FilePath := TEMPORARYPATH + FORMAT('Sales - Invoice') + SalesInvoiceHeader."No." + '.xlsx';
+      SalesInvoice.SAVEASEXCEL(FilePath);
+
+      // Verify: Verify that Saved files have some data.
+      LibraryUtility.CheckFileNotEmpty(FilePath);
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE SalesOrderForWarehouseLocation@16();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      VATPostingSetup@1002 : Record 325;
+      SalesShipmentLine@1009 : Record 111;
+      NoSeriesManagement@1010 : Codeunit 396;
+      PostedSaleShipmentNo@1008 : Code[20];
+    BEGIN
+      // Test if Post a Sales Order with Warehouse Location and generate Posted Sales Shipment Entry.
+
+      // Setup
+      Initialize;
+      LibrarySales.SetStockoutWarning(FALSE);
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+
+      // Exercise: Create Sales Order for Warehouse Location. Using RANDOM Quantity for Sales Line, value is not important.
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(10));
+
+      // Update Sales Line with New Warehouse Location.
+      SalesLine.VALIDATE("Location Code",CreateWarehouseLocation);
+      SalesLine.MODIFY(TRUE);
+      PostedSaleShipmentNo := NoSeriesManagement.GetNextNo(SalesHeader."Shipping No. Series",WORKDATE,FALSE);
+      LibrarySales.ReleaseSalesDocument(SalesHeader);
+      LibraryWarehouse.CreateWhseShipmentFromSO(SalesHeader);
+
+      // Post Warehouse Document as Ship.
+      ShipWarehouseDocument(SalesHeader."No.",SalesLine."Line No.");
+
+      // Verify: Verify Quantity Posted Shipment Document.
+      SalesShipmentLine.SETRANGE("Document No.",PostedSaleShipmentNo);
+      SalesShipmentLine.FINDFIRST;
+      SalesLine.GET(SalesLine."Document Type",SalesLine."Document No.",SalesLine."Line No.");
+      Assert.AreEqual(SalesLine."Quantity Shipped",SalesShipmentLine.Quantity,STRSUBSTNO(FieldErr,SalesLine.TABLECAPTION,
+          SalesShipmentLine.TABLECAPTION));
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE LineDiscountOnSalesOrder@21();
+    VAR
+      SalesHeader@1004 : Record 36;
+      SalesLine@1003 : Record 37;
+      SalesLineDiscount@1005 : Record 7004;
+      PostedSaleInvoiceNo@1000 : Code[20];
+    BEGIN
+      // Test Line Discount on Sales Order, Post as Ship and Invoice and Verify Posted GL Entry.
+
+      // Setup: Create Line Discount Setup.
+      Initialize;
+      LibrarySales.SetStockoutWarning(FALSE);
+      SetupLineDiscount(SalesLineDiscount);
+
+      // Exercise: Create and Post Sales Order with Random Quantity. Take Quantity greater than Sales Line Discount Minimum Quantity.
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,SalesLineDiscount."Sales Code");
+      LibrarySales.CreateSalesLine(SalesLine,SalesHeader,SalesLine.Type::Item,SalesLineDiscount.Code,
+        SalesLineDiscount."Minimum Quantity" + LibraryRandom.RandInt(10));
+
+      PostedSaleInvoiceNo := LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify: Verify Sales Line and Posted G/L Entry for Line Discount Amount.
+      VerifyLineDiscountAmount(
+        SalesLine,PostedSaleInvoiceNo,(SalesLine.Quantity * SalesLine."Unit Price") * SalesLineDiscount."Line Discount %" / 100);
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE InvoiceDiscountOnSalesOrder@29();
+    VAR
+      CustInvoiceDisc@1002 : Record 19;
+      SalesHeader@1004 : Record 36;
+      SalesLine@1003 : Record 37;
+      VATPostingSetup@1006 : Record 325;
+      PostedSaleInvoiceNo@1000 : Code[20];
+    BEGIN
+      // Test Invoice Discount on Sales Order, Post as Ship and Invoice and Verify Posted GL Entry.
+
+      // Setup: Create Invoice Discount Setup.
+      Initialize;
+      LibrarySales.SetStockoutWarning(FALSE);
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      SetupInvoiceDiscount(CustInvoiceDisc);
+
+      // Exercise: Create Sales Order, calculate Invoice Discount and Post as Ship and Invoice.
+      // Using RANDOM Quantity for Sales Line, value is not important.
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CustInvoiceDisc.Code);
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(10));
+
+      // Order Value always greater than Minimum Amount of Invoice Discount Setup.
+      SalesLine.VALIDATE("Unit Price",CustInvoiceDisc."Minimum Amount");
+      SalesLine.MODIFY(TRUE);
+
+      LibrarySales.ReleaseSalesDocument(SalesHeader);
+      SalesHeader.CALCFIELDS(Amount);
+      CODEUNIT.RUN(CODEUNIT::"Sales-Calc. Discount",SalesLine);
+      SalesLine.GET(SalesLine."Document Type",SalesLine."Document No.",SalesLine."Line No.");
+      PostedSaleInvoiceNo := LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify: Verify Sales Line and Posted G/L Entry for Invoice Discount Amount.
+      VerifyInvoiceDiscountAmount(SalesLine,PostedSaleInvoiceNo,
+        (SalesLine.Quantity * SalesLine."Unit Price") * CustInvoiceDisc."Discount %" / 100);
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE SalesOrderWithFCY@25();
+    VAR
+      SalesHeader@1002 : Record 36;
+      SalesLine@1001 : Record 37;
+      VATPostingSetup@1003 : Record 325;
+      SalesInvoiceHeader@1005 : Record 112;
+      PostedSaleInvoiceNo@1000 : Code[20];
+    BEGIN
+      // Test if Post a Sales Order with Currency and generate Posted Sales Invoice Entry.
+
+      // Setup.
+      Initialize;
+      LibrarySales.SetStockoutWarning(FALSE);
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+
+      // Exercise: Create Sales Order, attach new Currency on Sales Order and Post as Ship and Invoice.
+      CreateSalesHeaderWithCurrency(SalesHeader,CreateCurrency);
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(10));
+      PostedSaleInvoiceNo := LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify: Verify Currency Code in Sales Line and Posted Sales Invoice Header.
+      SalesInvoiceHeader.GET(PostedSaleInvoiceNo);
+      Assert.AreEqual(SalesHeader."Currency Code",SalesLine."Currency Code",
+        STRSUBSTNO(CurrencyErr,SalesLine.FIELDCAPTION("Currency Code"),SalesLine.TABLECAPTION));
+      Assert.AreEqual(SalesHeader."Currency Code",SalesInvoiceHeader."Currency Code",
+        STRSUBSTNO(CurrencyErr,SalesInvoiceHeader.FIELDCAPTION("Currency Code"),SalesInvoiceHeader.TABLECAPTION));
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    [HandlerFunctions(MessageHandler)]
+    PROCEDURE BatchPostSalesOrder@28();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      SalesInvoiceHeader@1004 : Record 112;
+      VATPostingSetup@1006 : Record 325;
+      BatchPostSalesOrders@1005 : Report 296;
+      NoSeriesManagement@1003 : Codeunit 396;
+      PostedSaleInvoiceNo@1002 : Code[20];
+    BEGIN
+      // Setup: Create Sales Order.
+      Initialize;
+      LibrarySales.SetStockoutWarning(FALSE);
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(10));
+      PostedSaleInvoiceNo := NoSeriesManagement.GetNextNo(SalesHeader."Posting No. Series",WORKDATE,FALSE);
+      COMMIT;  // Must commit before running this particular batch job
+
+      // Exercise: Batch post sales order.
+      SalesHeader.SETRANGE("No.",SalesHeader."No.");
+      BatchPostSalesOrders.InitializeRequest(TRUE,TRUE,WORKDATE,FALSE,FALSE,FALSE);
+      BatchPostSalesOrders.SETTABLEVIEW(SalesHeader);
+      BatchPostSalesOrders.USEREQUESTPAGE := FALSE;
+      BatchPostSalesOrders.RUN;
+
+      // Verify: Verify Posted Sales Invoice Header exists.
+      Assert.IsTrue(SalesInvoiceHeader.GET(PostedSaleInvoiceNo),'Unable to find sales invoice header');
+
+      // Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    PROCEDURE InvDiscBeforePartialOrderPost@84();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesLine@1008 : Record 37;
+      PostedDocumentNo@1001 : Code[20];
+      InvoiceDiscountAmount@1004 : Decimal;
+    BEGIN
+      // Check Invoice Discount Amount on Posting Partial Sales Order.
+
+      // Setup: Create Sales Order with Partial Invoice.
+      Initialize;
+      CreateAndModifySalesOrder(SalesHeader,SalesLine);
+      InvoiceDiscountAmount :=
+        SalesLine."Unit Price" * SalesLine."Qty. to Invoice" * FindCustomerInvoiceDiscount(SalesHeader."Sell-to Customer No.") / 100;
+      CODEUNIT.RUN(CODEUNIT::"Sales-Calc. Discount",SalesLine);
+
+      // Exercise: Post Sales order.
+      PostedDocumentNo := LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify: Verify Posted Invoice with Invoice Discount Amount.
+      VerifyPostedSalesInvoice(PostedDocumentNo,InvoiceDiscountAmount);
+    END;
+
+    [Test]
+    PROCEDURE InvDiscAfterPartialOrderPost@83();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesLine@1008 : Record 37;
+      PostedDocumentNo@1001 : Code[20];
+    BEGIN
+      // Check Invoice Discount Amount on Posting Partial Sales Order with Custom values.
+
+      // Setup: Create and Post Sales Order with Partial Invoice.
+      Initialize;
+      CreateAndModifySalesOrder(SalesHeader,SalesLine);
+      CODEUNIT.RUN(CODEUNIT::"Sales-Calc. Discount",SalesLine);
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Exercise: Modify Sales Line with Custom Invoice Discount and Post it.
+      SalesHeader.GET(SalesHeader."Document Type",SalesHeader."No.");
+      SalesLine.GET(SalesHeader."Document Type",SalesHeader."No.",SalesLine."Line No.");
+      SalesLine.VALIDATE("Inv. Discount Amount",SalesLine."Inv. Discount Amount" + LibraryRandom.RandInt(10));
+      SalesLine.MODIFY(TRUE);
+      PostedDocumentNo := LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify: Verify Posted Invoice with Invoice Discount Amount.
+      VerifyPostedSalesInvoice(PostedDocumentNo,SalesLine."Inv. Discount Amount" / 2);
+    END;
+
+    [Test]
+    PROCEDURE SalesOrderPartialShipment@36();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      VATPostingSetup@1002 : Record 325;
+    BEGIN
+      // Check that Status changes from Open to Released after posting Sales Order with partial Shipment.
+
+      // Setup: Create Sales Header and Sales Line.
+      Initialize;
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+
+      // Use Random Number Generator to generate random Quantity.
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(10) * 2);
+      SalesLine.VALIDATE("Qty. to Ship",SalesLine.Quantity / 2);
+      SalesLine.MODIFY(TRUE);
+
+      // Exercise: Post Sales Order with Partial shipment
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify: Check that after posting partial shipment Status changes from Open to Raleased.
+      SalesHeader.TESTFIELD(Status,SalesHeader.Status::Released);
+    END;
+
+    [Test]
+    PROCEDURE LineDiscountOnSalsInvoice@35();
+    VAR
+      SalesHeader@1006 : Record 36;
+      SalesLine@1005 : Record 37;
+      Currency@1000 : Record 4;
+      LineDiscountAmount@1004 : Decimal;
+    BEGIN
+      // Check Sales Line fields after making Sales Invoice with Currency.
+
+      // Setup.
+      Initialize;
+      CreateSalesInvoiceWithCurrency(SalesHeader,SalesLine); // Prices Including VAT
+      IF SalesLine."Currency Code" = '' THEN
+        Currency.InitRoundingPrecision
+      ELSE
+        Currency.GET(SalesLine."Currency Code");
+
+      // Exercise: Calculate Line Discount Amount on Sales Line.
+      LineDiscountAmount :=
+        ROUND(
+          ROUND(SalesLine.Quantity * SalesLine."Unit Price",Currency."Amount Rounding Precision") *
+          SalesLine."Line Discount %" / 100,Currency."Amount Rounding Precision");
+
+      // Verify: Verify Line Discount, VAT Base amount on Sales Line.
+      SalesLine.TESTFIELD("Line Discount Amount",LineDiscountAmount);
+      SalesLine.TESTFIELD("VAT Base Amount",SalesLine.Amount);
+    END;
+
+    [Test]
+    PROCEDURE SalesInvoiceAfterRelease@34();
+    VAR
+      SalesHeader@1006 : Record 36;
+      SalesLine@1005 : Record 37;
+      Currency@1002 : Record 4;
+      LineAmount@1001 : Decimal;
+    BEGIN
+      // Check Sales Line fields after making Sales Invoice with Currency and Release.
+
+      // Setup: Calculate VAT Base Amount on Sales Line.
+      Initialize;
+      CreateSalesInvoiceWithCurrency(SalesHeader,SalesLine); // Prices Including VAT
+      IF SalesLine."Currency Code" = '' THEN
+        Currency.InitRoundingPrecision
+      ELSE
+        Currency.GET(SalesLine."Currency Code");
+
+      LineAmount :=
+        ROUND(
+          SalesLine."Line Amount" * 100 / (SalesLine."VAT %" + 100),Currency."Amount Rounding Precision");
+
+      // Exericse.
+      LibrarySales.ReleaseSalesDocument(SalesHeader);
+      SalesHeader.CALCFIELDS("Amount Including VAT");
+
+      // Verify: Verify Sales Line Fields after Releasing.
+      SalesLine.GET(SalesLine."Document Type",SalesLine."Document No.",SalesLine."Line No.");
+      SalesLine.TESTFIELD("VAT Base Amount",LineAmount);
+      SalesLine.TESTFIELD(Amount,LineAmount);
+      SalesLine.TESTFIELD("Amount Including VAT",SalesHeader."Amount Including VAT");
+    END;
+
+    [Test]
+    PROCEDURE SalesInvoiceAfterReopen@33();
+    VAR
+      SalesHeader@1006 : Record 36;
+      SalesLine@1005 : Record 37;
+      Currency@1000 : Record 4;
+      OutStandingAmountLCY@1009 : Decimal;
+      LineAmount@1001 : Decimal;
+    BEGIN
+      // Check Sales Line fields after making Sales Invoice with Currency and Reopen for LCY.
+
+      // Setup: Convert Currency in LCY on Sales Line.
+      Initialize;
+      CreateSalesInvoiceWithCurrency(SalesHeader,SalesLine);
+      OutStandingAmountLCY := ROUND(LibraryERM.ConvertCurrency(SalesLine."Line Amount",SalesHeader."Currency Code",'',WORKDATE));
+      IF SalesLine."Currency Code" = '' THEN
+        Currency.InitRoundingPrecision
+      ELSE
+        Currency.GET(SalesLine."Currency Code");
+
+      LineAmount :=
+        ROUND(
+          SalesLine."Line Amount" * 100 / (SalesLine."VAT %" + 100),Currency."Amount Rounding Precision");
+
+      // Exercise.
+      LibrarySales.ReopenSalesDocument(SalesHeader);
+
+      // Verify: Verify Sales Line Field after Releasing and Covert Currency in LCY.
+      SalesLine.GET(SalesLine."Document Type",SalesLine."Document No.",SalesLine."Line No.");
+      SalesLine.TESTFIELD(Amount,LineAmount);
+      SalesLine.TESTFIELD("Outstanding Amount (LCY)",OutStandingAmountLCY);
+    END;
+
+    [Test]
+    PROCEDURE DeleteShippedSalesOrders@41();
+    BEGIN
+      // DeleteShippedSalesOrders
+      // Tests that execution of report "Delete invoiced sales orders" may not delete sales orders,
+      // which are shipped but not invoiced.
+
+      // Setup & Exercise & Verify
+      Assert.IsFalse(PrepareAndDeleteSalesOrder(TRUE,FALSE),
+        'Shipped and uninvoiced sales order was deleted');
+    END;
+
+    [Test]
+    PROCEDURE DeleteShippedInvoicedSalOrders@40();
+    BEGIN
+      // DeleteShippedInvoicedSalOrders
+      // Tests that execution of report "Delete invoiced sales orders" deletes sales orders,
+      // which are shipped and invoiced.
+
+      // Setup & Exercise & Verify
+      Assert.IsTrue(PrepareAndDeleteSalesOrder(TRUE,TRUE),
+        'Shipped and invoiced sales order was not deleted');
+    END;
+
+    [Test]
+    PROCEDURE DeleteNotShippedSalesOrders@39();
+    BEGIN
+      // DeleteNotShippedSalesOrders
+      // Tests that execution of report "Delete invoiced sales orders" may NOT delete sales orders,
+      // which are not shipped. Even if there exists a similar sales invoice, it is not possible to
+      // link a sales order with a sales invoice w/o having shipment lines.
+
+      // Setup & Exercise & Verify
+      Assert.IsFalse(PrepareAndDeleteSalesOrder(FALSE,FALSE),
+        'Unshipped sales order was deleted');
+    END;
+
+    LOCAL PROCEDURE PrepareAndDeleteSalesOrder@42(Shipped@1000 : Boolean;Invoiced@1001 : Boolean) : Boolean;
+    VAR
+      SalesHeader@1002 : Record 36;
+      InvSalesHeader@1003 : Record 36;
+      SalesLine@1006 : Record 37;
+      DeleteInvoicedSalesOrders@1005 : Report 299;
+      SellToCustomerNo@1004 : Code[20];
+      SalesHeaderDocNo@1007 : Code[20];
+    BEGIN
+      // PrepareAndDeleteSalesOrder
+      // Creates a temporary sales order, post it depending on ship parameter,
+      // creates invoice and posting depending on invoice parameter and finally
+      // executes the "Delete invoiced sales order" batch job
+      // Returns TRUE if the sales order has been deleted, otherwise FALSE.
+
+      // Setup
+      Initialize;
+
+      // Prepare:
+      // Create sales order
+      CreateSalesOrder(SalesHeader,SalesLine);
+      SalesHeaderDocNo := SalesHeader."No.";
+
+      // Ship sales order
+      IF Shipped THEN
+        LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+
+      // Invoice sales order
+      IF Invoiced THEN BEGIN
+        // Create an sales invoice and link it to sales order shipment
+        InvoiceShippedSalesOrder(InvSalesHeader,SalesHeader);
+        // Post sales order as invoiced
+        LibrarySales.PostSalesDocument(InvSalesHeader,FALSE,TRUE);
+      END;
+
+      // Prepare report execution
+      SellToCustomerNo := SalesHeader."Sell-to Customer No.";
+      SalesHeader.RESET;
+      SalesHeader.SETRANGE("Sell-to Customer No.",SellToCustomerNo);
+      DeleteInvoicedSalesOrders.USEREQUESTPAGE(FALSE);
+      DeleteInvoicedSalesOrders.SETTABLEVIEW(SalesHeader);
+
+      // Delete - execute report:
+      DeleteInvoicedSalesOrders.RUN;
+
+      // Return TRUE if sales order was deleted, otherwise FALSE
+      EXIT(SalesHeader.GET(SalesHeader."Document Type"::Order,SalesHeaderDocNo) = FALSE);
+    END;
+
+    [Test]
+    [HandlerFunctions(NavigatePageHandler)]
+    PROCEDURE PostedSalesInvoiceNavigate@44();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesInvoiceHeader@1002 : Record 112;
+    BEGIN
+      // Test Navigate functionality for Posted Sales Invoice.
+
+      // 1. Setup. Create Sales Order.
+      Initialize;
+      InitGlobalVariables;
+      LibrarySales.SetStockoutWarning(FALSE);
+
+      // Create Sales Line with Random Quantity.
+      CreateSalesOrderWithSingleLine(SalesHeader);
+
+      // 2. Exercise: Post Sales Order as Ship & Invoice and open Navigate form.
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+      SalesInvoiceHeader.SETRANGE("Order No.",SalesHeader."No.");
+      SalesInvoiceHeader.FINDFIRST;
+
+      // Set global variable for page handler.
+      PostingDate2 := SalesInvoiceHeader."Posting Date";
+      DocumentNo2 := SalesInvoiceHeader."No.";
+
+      SalesInvoiceHeader.Navigate;
+
+      // 3. Verify: Verify Number of entries for all related tables.
+      VerifyPostedEntries(DocumentNo2);
+
+      // 4. Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    [HandlerFunctions(NavigatePageHandler)]
+    PROCEDURE PostedSalesShipmentNavigate@45();
+    VAR
+      ItemLedgerEntry@1003 : Record 32;
+      SalesHeader@1002 : Record 36;
+      SalesShipmentHeader@1000 : Record 110;
+    BEGIN
+      // Test Navigate functionality for Posted Sales Shipment.
+
+      // 1. Setup: Create Sales Order.
+      Initialize;
+      InitGlobalVariables;
+      LibrarySales.SetStockoutWarning(FALSE);
+
+      // Create Sales Line with Random Quantity.
+      CreateSalesOrderWithSingleLine(SalesHeader);
+
+      // 2. Exercise: Post Sales Order as Ship and open Navigate page.
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+      FindSalesShipmentHeader(SalesShipmentHeader,SalesHeader."No.");
+
+      // Set global variable for page handler.
+      PostingDate2 := SalesShipmentHeader."Posting Date";
+      DocumentNo2 := SalesShipmentHeader."No.";
+
+      SalesShipmentHeader.Navigate;
+
+      // 3. Verify: Verify Number of entries for all related tables.
+      ItemLedgerEntry.SETRANGE("Document No.",DocumentNo2);
+      VerifyNavigateRecords(TempDocumentEntry2,DATABASE::"Item Ledger Entry",ItemLedgerEntry.COUNT);
+
+      // 4. Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    [HandlerFunctions(NavigatePageHandler)]
+    PROCEDURE PostedSalesCreditMemoNavigate@46();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesCrMemoHeader@1002 : Record 114;
+      SalesLine@1001 : Record 37;
+      VATPostingSetup@1003 : Record 325;
+    BEGIN
+      // Test Navigate functionality for Posted Sales Credit Memo.
+
+      // 1. Setup: Create Sales Credit Memo.
+      Initialize;
+      InitGlobalVariables;
+      LibrarySales.SetStockoutWarning(FALSE);
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::"Credit Memo",CreateCustomer);
+
+      // Create Sales Line with Random Quantity.
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandDec(100,2));
+
+      // 2. Exercise: Post Sales Credit Memo and open Navigate page.
+      LibrarySales.PostSalesDocument(SalesHeader,FALSE,FALSE);
+      SalesCrMemoHeader.SETRANGE("Pre-Assigned No.",SalesHeader."No.");
+      SalesCrMemoHeader.FINDFIRST;
+
+      // Set global variable for page handler.
+      PostingDate2 := SalesCrMemoHeader."Posting Date";
+      DocumentNo2 := SalesCrMemoHeader."No.";
+
+      SalesCrMemoHeader.Navigate;
+
+      // 3. Verify: Verify Number of entries for all related tables.
+      VerifyPostedEntries(DocumentNo2);
+
+      // 4. Tear Down: Cleanup of Setup Done.
+      LibrarySales.SetStockoutWarning(TRUE);
+    END;
+
+    [Test]
+    [HandlerFunctions(NavigatePageHandler)]
+    PROCEDURE PostedPaymentNavigate@50();
+    VAR
+      GenJournalLine@1000 : Record 81;
+      GenJournalTemplate@1003 : Record 80;
+      GenJournalBatch@1001 : Record 232;
+      Navigate@1002 : Page 344;
+    BEGIN
+      // Test Navigate functionality for Financial Management.
+
+      // 1. Setup. Create General Journal Line.
+      Initialize;
+      InitGlobalVariables;
+
+      GenJournalTemplate.SETRANGE(Recurring,FALSE);
+      LibraryERM.FindGenJournalTemplate(GenJournalTemplate);
+      LibraryERM.CreateGenJournalBatch(GenJournalBatch,GenJournalTemplate.Name);
+      UpdateBalanceAccountNo(GenJournalBatch);
+
+      LibraryERM.CreateGeneralJnlLine(
+        GenJournalLine,GenJournalBatch."Journal Template Name",GenJournalBatch.Name,GenJournalLine."Document Type"::Payment,
+        GenJournalLine."Account Type"::Customer,CreateCustomer,
+        -LibraryRandom.RandDec(1000,2)); // Using RANDOM value for Amount.
+      UpdateDocumentNo(GenJournalLine);
+
+      // Set global variable for page handler.
+      DocumentNo2 := GenJournalLine."Document No.";
+      PostingDate2 := GenJournalLine."Posting Date";
+
+      // 2. Exercise: Post General Journal Line and open Navigate page.
+      LibraryERM.PostGeneralJnlLine(GenJournalLine);
+      Navigate.SetDoc(PostingDate2,DocumentNo2);
+      Navigate.RUN;
+
+      // 3. Verify: Verify Number of entries for all related tables.
+      VerifyPostedPaymentNavigation(DocumentNo2);
+    END;
+
+    [Test]
+    PROCEDURE BalanceLCYOnCustomer@47();
+    VAR
+      SalesHeader@1002 : Record 36;
+      SalesLine@1001 : Record 37;
+      Customer@1004 : Record 18;
+      SalesInvoiceHeader@1005 : Record 112;
+    BEGIN
+      // Post a Sales Invoice and see Balance in LCY on Customer.
+
+      // 1. Setup: Create Customer, Sales Header,and Sales Line.
+      Initialize;
+      LibrarySales.CreateCustomer(Customer);
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Invoice,Customer."No.");
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesHeader."Document Type"::Invoice,LibraryInventory.CreateItemNo,
+        LibraryRandom.RandDec(10,2));  // Use random quantity of Item as value is not important to test case.
+
+      // 2. Exercise: Post Sales Invoice.
+      SalesInvoiceHeader.GET(LibrarySales.PostSalesDocument(SalesHeader,FALSE,FALSE));
+
+      // 3. Verify: Check that the Amount of Invoice matches the Balance (LCY) on Customer.
+      SalesInvoiceHeader.CALCFIELDS("Amount Including VAT");
+      Customer.SETRANGE("No.",Customer."No.");
+      Customer.CALCFIELDS("Balance (LCY)");
+      Customer.TESTFIELD("Balance (LCY)",SalesInvoiceHeader."Amount Including VAT");
+    END;
+
+    [Test]
+    PROCEDURE RemainingAmountLCY@54();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1004 : Record 37;
+      VATPostingSetup@1000 : Record 325;
+      AmountLCY@1001 : Decimal;
+    BEGIN
+      // Test case to verify Sales Amount(LCY).
+
+      // Setup : Creating Customer,Currency and Sales Order with Random Quantity.
+      Initialize;
+      VATPostingSetup.SETRANGE("Unrealized VAT Type",VATPostingSetup."Unrealized VAT Type"::" ");
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Invoice,CreateCustomerWithCurrency(CreateCurrency));
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(10));
+      AmountLCY := ROUND(LibraryERM.ConvertCurrency(SalesLine."Amount Including VAT",SalesHeader."Currency Code",'',WORKDATE));
+
+      // Exercise.
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify : Verify Remaining Amount(LCY).
+      VerifyRemainingAmountLCY(SalesHeader."Sell-to Customer No.",AmountLCY);
+    END;
+
+    [Test]
+    PROCEDURE VATAmountOnSalesInvoice@72();
+    VAR
+      SalesHeader@1009 : Record 36;
+      SalesLine@1008 : Record 37;
+      Customer@1007 : Record 18;
+    BEGIN
+      // Test create a Sales Invoice and calculate applicable VAT for a VAT Posting Group in Sales Invoice.
+
+      // 1. Setup: Find a Customer.
+      Initialize;
+      LibrarySales.CreateCustomer(Customer);
+
+      // 2. Exercise: Create a Sales Invoice.
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Invoice,Customer."No.");
+      CreateSalesLines(SalesLine,SalesHeader);
+      LibrarySales.ReleaseSalesDocument(SalesHeader);
+
+      // 3. Verify: Verify VAT Amount on Sales Invoice.
+      VerifyVATOnSalesInvoice(SalesLine);
+    END;
+
+    [Test]
+    PROCEDURE PostedSalesInvoiceEntries@65();
+    VAR
+      SalesHeader@1006 : Record 36;
+      SalesLine@1005 : Record 37;
+      TempSalesLine@1008 : TEMPORARY Record 37;
+      Customer@1004 : Record 18;
+      SalesInvoiceHeader@1001 : Record 112;
+    BEGIN
+      // Test post a Sales Invoice and verify Customer Ledger Entry, GL Entry, Value Entry and VAT Entry.
+      // Check if system is creating Sales Shipment Line after posting.
+
+      // 1. Setup: Create a Sales Order.
+      Initialize;
+      LibrarySales.CreateCustomer(Customer);
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,Customer."No.");
+      CreateSalesLines(SalesLine,SalesHeader);
+      CopySalesLines(TempSalesLine,SalesLine);
+      LibrarySales.ReleaseSalesDocument(SalesHeader);
+      SalesHeader.CALCFIELDS(Amount,"Amount Including VAT");
+
+      // 2. Exercise: Post Sales Order as Ship and Invoice.
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // 3. Verify: Verify posted Sales Shipment Line, G/L Entry, VAT Entry, Value Entry and Customer Ledger Entry.
+      VerifyPostedShipmentLine(TempSalesLine);
+      FindSalesInvoiceHeader(SalesInvoiceHeader,SalesHeader."No.");
+      SalesInvoiceHeader.CALCFIELDS("Amount Including VAT");
+      VerifyGLEntry(SalesInvoiceHeader."No.",SalesHeader."Amount Including VAT");
+      VerifyVATEntry(SalesInvoiceHeader."No.",SalesHeader."Amount Including VAT");
+      VerifyCustomerLedgerEntry(SalesInvoiceHeader."No.",SalesHeader."Amount Including VAT");
+      VerifyValueEntry(SalesInvoiceHeader."No.",SalesHeader.Amount);
+    END;
+
+    [Test]
+    PROCEDURE LineDiscountOnSalesInvoice@114();
+    VAR
+      SalesHeader@1009 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesLineDiscount@1005 : Record 7004;
+    BEGIN
+      // Test Line Discount on Sales Invoice.
+
+      // 1. Setup: Setup Line Discount.
+      Initialize;
+      SetupLineDiscount(SalesLineDiscount);
+
+      // 2. Exercise: Create a Sales Invoice.
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Invoice,SalesLineDiscount."Sales Code");
+      SalesLinesWithMinimumQuantity(SalesLine,SalesHeader,SalesLineDiscount);
+
+      // 3. Verify: Verify Sales Line Discount Amount.
+      VerifyLineDiscountOnInvoice(SalesLine);
+    END;
+
+    [Test]
+    PROCEDURE LineDiscountOnGLEntry@62();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1002 : Record 37;
+      TempSalesLine@1003 : TEMPORARY Record 37;
+      SalesLineDiscount@1000 : Record 7004;
+      SalesInvoiceHeader@1004 : Record 112;
+    BEGIN
+      // Test post the Sales Invoice and verify GL Entry for the Line Discount Amount.
+
+      // 1. Setup: Setup Line Discount and create a Sales Order.
+      Initialize;
+      SetupLineDiscount(SalesLineDiscount);
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,SalesLineDiscount."Sales Code");
+      SalesLinesWithMinimumQuantity(SalesLine,SalesHeader,SalesLineDiscount);
+      CopySalesLines(TempSalesLine,SalesLine);
+
+      // 2. Exercise: Post Sales Order as Ship and Invoice.
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // 3. Verify: Verify that GL Entry exists for the Line Discount on Sales Invoice.
+      FindSalesInvoiceHeader(SalesInvoiceHeader,SalesHeader."No.");
+      Assert.AreEqual(
+        SumLineDiscountAmount(TempSalesLine,SalesHeader."No."),TotalLineDiscountInGLEntry(TempSalesLine,SalesInvoiceHeader."No."),
+        STRSUBSTNO(ValueErr,TempSalesLine.FIELDCAPTION("Line Discount Amount")));
+    END;
+
+    [Test]
+    PROCEDURE InvoiceDiscountOnSalesInvoice@59();
+    VAR
+      SalesHeader@1007 : Record 36;
+      SalesLine@1003 : Record 37;
+      CustInvoiceDisc@1004 : Record 19;
+    BEGIN
+      // Test Invoice Discount on Sales Invoice.
+
+      // 1. Setup: Setup Invoice Discount.
+      Initialize;
+      SetupInvoiceDiscount(CustInvoiceDisc);
+
+      // 2. Exercise: Create a Sales Invoice, calculate Invoice Discount.
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Invoice,CustInvoiceDisc.Code);
+      CreateSalesLines(SalesLine,SalesHeader);
+      CODEUNIT.RUN(CODEUNIT::"Sales-Calc. Discount",SalesLine);
+
+      // 3. Verify: Verify Invoice Discount Amount.
+      VerifyInvoiceDiscountOnInvoice(SalesLine,CustInvoiceDisc);
+    END;
+
+    [Test]
+    PROCEDURE InvoiceDiscountOnGLEntry@143();
+    VAR
+      SalesHeader@1009 : Record 36;
+      SalesLine@1008 : Record 37;
+      TempSalesLine@1001 : TEMPORARY Record 37;
+      CustInvoiceDisc@1006 : Record 19;
+      SalesInvoiceHeader@1000 : Record 112;
+    BEGIN
+      // Test Invoice Discount posted in GL Entry for the Sales Invoice.
+
+      // 1. Setup: Setup Invoice Discount and create a Sales Order.
+      Initialize;
+      SetupInvoiceDiscount(CustInvoiceDisc);
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CustInvoiceDisc.Code);
+      CreateSalesLines(SalesLine,SalesHeader);
+      CODEUNIT.RUN(CODEUNIT::"Sales-Calc. Discount",SalesLine);
+      CopySalesLines(TempSalesLine,SalesLine);
+
+      // 2. Exercise: Post the Sales Order as Ship and Invoice.
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // 3. Verify: Verify the Invoice Discount in GL Entry for the Sales Invoice.
+      FindSalesInvoiceHeader(SalesInvoiceHeader,SalesHeader."No.");
+      Assert.AreEqual(
+        SumInvoiceDiscountAmount(TempSalesLine,SalesHeader."No."),
+        TotalInvoiceDiscountInGLEntry(TempSalesLine,SalesInvoiceHeader."No."),
+        STRSUBSTNO(ValueErr,TempSalesLine.FIELDCAPTION("Inv. Discount Amount")));
+    END;
+
+    [Test]
+    PROCEDURE ExtendedTextInSaleOrder@73();
+    VAR
+      Customer@1005 : Record 18;
+      Item@1004 : Record 27;
+      SalesHeader@1006 : Record 36;
+      SalesLine@1007 : Record 37;
+      SalesOrder@1002 : TestPage 42;
+      Text@1003 : Text[50];
+      OldStockoutWarning@1009 : Boolean;
+    BEGIN
+      // Check Extended Text in Sales Orders with Extended Text Line.
+
+      // 1. Setup: Create Customer, Item, Extended Text. Update Stockout Warning field on Sales & Receivables Setup.
+      // Create Sales Order.
+      Initialize;
+      LibrarySales.CreateCustomer(Customer);
+      Text := CreateItemAndExtendedText(Item);
+      UpdateSalesReceivablesSetup(OldStockoutWarning,FALSE);
+      CreateSalesDocument(SalesHeader,SalesLine,SalesHeader."Document Type"::Order,Customer."No.",Item."No.");
+
+      // 2. Exercise: Insert Extended Text in Sales Line.
+      SalesOrder.OPENEDIT;
+      SalesOrder.FILTER.SETFILTER("No.",SalesHeader."No.");
+      SalesOrder.SalesLines."Insert Ext. Texts".INVOKE;
+
+      // 3. Verify: Check Desription and No. of Sales Order must match with Extended Text Line.
+      SalesLine.SETRANGE("Document No.",SalesHeader."No.");
+      SalesLine.SETRANGE(Type,SalesLine.Type::" ");
+      SalesLine.FINDFIRST;
+      SalesLine.TESTFIELD(Description,Text);
+
+      // 4. Tear Down: Rollback Stockout Warning field on Sales & Receivables Setup.
+      UpdateSalesReceivablesSetup(OldStockoutWarning,OldStockoutWarning);
+    END;
+
+    [Test]
+    PROCEDURE SalesOrderWithPostingDateBlank@57();
+    VAR
+      SalesHeader@1002 : Record 36;
+      SalesLine@1001 : Record 37;
+      VATPostingSetup@1003 : Record 325;
+    BEGIN
+      // Try to Post a Sales Order with Blank Posting Date.
+
+      // Setup: Create Sales Order with Modified Sales and Receivables Setup.
+      Initialize;
+      UpdateSalesReceivableSetup;
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,CreateItem(VATPostingSetup."VAT Prod. Posting Group"),
+        LibraryRandom.RandDec(10,2));
+
+      // Exercise: Try to Post Sales Order.
+      ASSERTERROR LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify: Verify posting error message.
+      Assert.AreEqual(
+        STRSUBSTNO(
+          PostingErr,SalesHeader.FIELDCAPTION("Posting Date"),SalesHeader.TABLECAPTION,SalesHeader.FIELDCAPTION("Document Type"),
+          SalesHeader."Document Type",SalesHeader.FIELDCAPTION("No."),SalesHeader."No."),GETLASTERRORTEXT,'Error must be same.');
+    END;
+
+    [Test]
+    [HandlerFunctions(ConfirmHandlerYes)]
+    PROCEDURE UndoSalesShipmentWithDefaultQtyBlank@106();
+    VAR
+      SalesReceivablesSetup@1000 : Record 311;
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesShipmentLine@1004 : Record 111;
+      VATPostingSetup@1005 : Record 325;
+    BEGIN
+      // Verify that Qty to Ship in Sales Line is blank after doing Undo shipment when Default Quantity To Ship field is balnk in Sales & Receivable setup.
+
+      // Setup: Update Sales & Receivable setup, Create and post sales order.
+      Initialize;
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Blank);
+
+      CreateSalesDocument(
+        SalesHeader,SalesLine,SalesHeader."Document Type"::Order,CreateCustomer,CreateItem(VATPostingSetup."VAT Prod. Posting Group"));
+      SalesLine.VALIDATE("Qty. to Ship",SalesLine.Quantity / LibraryRandom.RandIntInRange(2,4)); // To make sure Qty. to ship must be less than Quantity.
+      SalesLine.MODIFY(TRUE);
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+      FindSalesShipmentLine(SalesShipmentLine,SalesLine."Document No.");
+
+      // Exercise: Undo sales shipment.
+      LibrarySales.UndoSalesShipmentLine(SalesShipmentLine);
+
+      // Verify: Verify Quantity after Undo Shipment on Posted Sales Shipment And Quantity to Ship is blank on Sales Line.
+      VerifyUndoShipmentLineOnPostedShipment(SalesLine."Document No.",SalesLine."Qty. to Ship");
+      VerifyQuantitytoShipOnSalesLine(SalesHeader."No.",SalesHeader."Document Type");
+    END;
+
+    [Test]
+    PROCEDURE SalesOrderWithGLAccAndUOMDefaultQtyBlank@206();
+    VAR
+      SalesReceivablesSetup@1007 : Record 311;
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      VATPostingSetup@1004 : Record 325;
+      GLAccount@1005 : Record 15;
+      UnitOfMeasure@1006 : Record 204;
+    BEGIN
+      // Verify that Qty to ship in Sales Line is blank after enering G/L Account with UoM
+
+      // Setup: Update Sales & Receivables setup, Create sales order.
+      Initialize;
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Blank);
+
+      CreateSalesDocument(
+        SalesHeader,SalesLine,SalesHeader."Document Type"::Order,CreateCustomer,CreateItem(VATPostingSetup."VAT Prod. Posting Group"));
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      GLAccount.GET(LibraryERM.CreateGLAccountWithVATPostingSetup(VATPostingSetup,GLAccount."Gen. Posting Type"::Sale));
+
+      // Exercise: create sales line for G/L account and update Unit of Measure
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::"G/L Account",GLAccount."No.",LibraryRandom.RandInt(10));
+      LibraryInventory.CreateUnitOfMeasureCode(UnitOfMeasure);
+      SalesLine.VALIDATE("Unit of Measure",UnitOfMeasure.Code);
+
+      // Verify: Verify Quantity to Ship is blank on Sales Line.
+      Assert.AreEqual(0,SalesLine."Qty. to Ship",'qty. to ship should be 0');
+    END;
+
+    [Test]
+    [TransactionModel(AutoRollback)]
+    PROCEDURE QtyToShipBaseInSalesLineIsValidatedWhileDefaultQtyToShipIsRemainder@124();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesReceivablesSetup@1000 : Record 311;
+      Qty@1001 : Decimal;
+    BEGIN
+      // [FEATURE] [Default Qty]
+      // [SCENARIO 361537] "Qty. to ship (Base)" in Sales Line is validated while "Default Qty. to Ship" is "Remainder"
+      Initialize;
+
+      // [GIVEN] "Default Quantity to Ship" is "Remainder" in Sales and Receivables Setup.
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Remainder);
+
+      // [GIVEN] Sales Line with "Qty. To Ship" = 0.
+      Qty := LibraryRandom.RandDec(1000,2);
+      CreateSalesLineWithQty(SalesLine,Qty,SalesHeader."Document Type"::Order);
+
+      // [WHEN] Set "Qty. to Ship" in Sales Order Line to "X"
+      SalesLine.VALIDATE("Qty. to Ship",Qty);
+
+      // [THEN] "Qty. to Ship (Base)" in Sales Order Line is "X"
+      Assert.AreEqual(Qty,SalesLine."Qty. to Ship (Base)",QtyToShipBaseErr);
+    END;
+
+    [Test]
+    [TransactionModel(AutoRollback)]
+    PROCEDURE QtyToShipBaseInSalesLineIsValidatedWhileDefaultQtyToShipIsBlank@111();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesReceivablesSetup@1000 : Record 311;
+      Qty@1001 : Decimal;
+    BEGIN
+      // [FEATURE] [Default Qty]
+      // [SCENARIO 361537] "Qty. to ship (Base)" in Sales Line is validated while "Default Qty. to Ship" is "Blank"
+      Initialize;
+
+      // [GIVEN] "Default Quantity to Ship" is "Blank" in Sales and Receivables Setup.
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Blank);
+
+      // [GIVEN] Sales Line with "Qty. To Ship" = 0.
+      Qty := LibraryRandom.RandDec(1000,2);
+      CreateSalesLineWithQty(SalesLine,Qty,SalesHeader."Document Type"::Order);
+
+      // [WHEN] Set "Qty. to Ship" in Sales Order Line to "X"
+      SalesLine.VALIDATE("Qty. to Ship",Qty);
+
+      // [THEN] "Qty. to Ship (Base)" in Sales Order Line is "X"
+      Assert.AreEqual(Qty,SalesLine."Qty. to Ship (Base)",QtyToShipBaseErr);
+    END;
+
+    [Test]
+    [TransactionModel(AutoRollback)]
+    PROCEDURE ReturnQtyToReceiveBaseInSalesLineIsValidatedWhileDefaultQtyToShipIsRemainder@125();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesReceivablesSetup@1000 : Record 311;
+      Qty@1001 : Decimal;
+    BEGIN
+      // [FEATURE] [Default Qty]
+      // [SCENARIO 361537] "Return Qty. to Receive (Base)" in Sales Line is validated while "Default Qty. to Ship" is "Remainder"
+      Initialize;
+
+      // [GIVEN] "Default Quantity to Ship" is "Remainder" in Sales and Receivables Setup.
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Remainder);
+
+      // [GIVEN] Sales Line with "Return Qty. To Receive" = 0.
+      Qty := LibraryRandom.RandDec(1000,2);
+      CreateSalesLineWithQty(SalesLine,Qty,SalesHeader."Document Type"::Order);
+
+      // [WHEN] Set "Return Qty. To Receive" in Sales Order Line to "X"
+      SalesLine.VALIDATE("Return Qty. to Receive",Qty);
+
+      // [THEN] "Return Qty. To Receive (Base)" in Sales Order Line is "X"
+      Assert.AreEqual(Qty,SalesLine."Return Qty. to Receive (Base)",ReturnQtyToReceiveBaseErr);
+    END;
+
+    [Test]
+    [TransactionModel(AutoRollback)]
+    PROCEDURE ReturnQtyToReceiveBaseInSalesLineIsValidatedWhileDefaultQtyToShipIsBlank@131();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesReceivablesSetup@1000 : Record 311;
+      Qty@1001 : Decimal;
+    BEGIN
+      // [FEATURE] [Default Qty]
+      // [SCENARIO 361537] "Return Qty. to Receive (Base)" in Sales Line is validated while "Default Qty. to Ship" is "Blank"
+      Initialize;
+
+      // [GIVEN] "Default Quantity to Ship" is "Blank" in Sales and Receivables Setup.
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Blank);
+
+      // [GIVEN] Sales Line with "Return Qty. To Receive" = 0.
+      Qty := LibraryRandom.RandDec(1000,2);
+      CreateSalesLineWithQty(SalesLine,Qty,SalesHeader."Document Type"::Order);
+
+      // [WHEN] Set "Return Qty. To Receive" in Sales Order Line to "X"
+      SalesLine.VALIDATE("Return Qty. to Receive",Qty);
+
+      // [THEN] "Return Qty. To Receive (Base)" in Sales Order Line is "X"
+      Assert.AreEqual(Qty,SalesLine."Return Qty. to Receive (Base)",ReturnQtyToReceiveBaseErr);
+    END;
+
+    [Test]
+    [TransactionModel(AutoRollback)]
+    PROCEDURE ReturnQtyToReceiveBaseInCreditMemoLineIsValidatedWhileDefaultQtyToShipIsRemainder@126();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesReceivablesSetup@1000 : Record 311;
+      Qty@1001 : Decimal;
+    BEGIN
+      // [FEATURE] [Default Qty]
+      // [SCENARIO 361731] "Return Qty. to Receive (Base)" in Credit Memo Line is validated while "Default Qty. to Ship" is "Remainder"
+      Initialize;
+
+      // [GIVEN] "Default Quantity to Ship" is "Remainder" in Sales and Receivables Setup
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Remainder);
+
+      // [GIVEN] Credit Memo Line with "Quantity" = 0
+      CreateSalesLineWithQty(SalesLine,0,SalesHeader."Document Type"::"Credit Memo");
+
+      // [WHEN] Set "Quantity" in Sales Order Line to "X"
+      Qty := LibraryRandom.RandDec(1000,2);
+      SalesLine.VALIDATE(Quantity,Qty);
+
+      // [THEN] "Return Qty. To Receive (Base)" in Sales Credit Memo Line is "X"
+      Assert.AreEqual(Qty,SalesLine."Return Qty. to Receive (Base)",ReturnQuantityToReceiveBaseErr);
+    END;
+
+    [Test]
+    [TransactionModel(AutoRollback)]
+    PROCEDURE ReturnQtyToReceiveBaseInCreditMemoLineIsValidatedWhileDefaultQtyToShipIsBlank@123();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesReceivablesSetup@1000 : Record 311;
+      Qty@1001 : Decimal;
+    BEGIN
+      // [FEATURE] [Default Qty]
+      // [SCENARIO 361731] "Return Qty. to Receive (Base)" in Credit Memo Line is validated while "Default Qty. to Ship" is "Blank"
+      Initialize;
+
+      // [GIVEN] "Default Quantity to Ship" is "Receive" in Sales and Receivables Setup
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Blank);
+
+      // [GIVEN] Credit Memo Line with "Quantity" = 0
+      CreateSalesLineWithQty(SalesLine,0,SalesHeader."Document Type"::"Credit Memo");
+
+      // [WHEN] Set "Quantity" in Sales Order Line to "X"
+      Qty := LibraryRandom.RandDec(1000,2);
+      SalesLine.VALIDATE(Quantity,Qty);
+
+      // [THEN] "Return Qty. To Receive (Base)" in Sales Credit Memo Line is "X"
+      Assert.AreEqual(Qty,SalesLine."Return Qty. to Receive (Base)",ReturnQuantityToReceiveBaseErr);
+    END;
+
+    [Test]
+    [TransactionModel(AutoRollback)]
+    PROCEDURE QtyToShipBaseInInvoiceLineIsValidatedWhileDefaultQtyToShipIsRemainder@122();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesReceivablesSetup@1000 : Record 311;
+      Qty@1001 : Decimal;
+    BEGIN
+      // [FEATURE] [Default Qty]
+      // [SCENARIO 361731] "Qty. to Ship (Base)" in Invoice Line is validated while "Default Qty. to Ship" is "Remainder"
+      Initialize;
+
+      // [GIVEN] "Default Quantity to Ship" is "Remainder" in Sales and Receivables Setup.
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Remainder);
+
+      // [GIVEN] Invoice Line with "Quantity" = 0.
+      CreateSalesLineWithQty(SalesLine,0,SalesHeader."Document Type"::Invoice);
+
+      // [WHEN] Set "Quantity" in Sales Order Line to "X"
+      Qty := LibraryRandom.RandDec(1000,2);
+      SalesLine.VALIDATE(Quantity,Qty);
+
+      // [THEN] "Qty. to Ship (Base) (Base)" in Sales Invoice Line is "X"
+      Assert.AreEqual(Qty,SalesLine."Qty. to Ship (Base)",QuantitytyToShipBaseErr);
+    END;
+
+    [Test]
+    [TransactionModel(AutoRollback)]
+    PROCEDURE QtyToShipBaseInInvoiceLineIsValidatedWhileDefaultQtyToShipIsBlank@120();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      SalesReceivablesSetup@1000 : Record 311;
+      Qty@1001 : Decimal;
+    BEGIN
+      // [FEATURE] [Default Qty]
+      // [SCENARIO 361731] "Qty. to Ship (Base)" in Invoice Line is validated while "Default Qty. to Ship" is "Blank"
+      Initialize;
+
+      // [GIVEN] "Default Quantity to Ship" is "Blank" in Sales and Receivables Setup
+      UpdateDefaultQtyToShip(SalesReceivablesSetup."Default Quantity to Ship"::Blank);
+
+      // [GIVEN] Invoice Line with "Quantity" = 0
+      CreateSalesLineWithQty(SalesLine,0,SalesHeader."Document Type"::Invoice);
+
+      // [WHEN] Set "Quantity" in Sales Order Line to "X"
+      Qty := LibraryRandom.RandDec(1000,2);
+      SalesLine.VALIDATE(Quantity,Qty);
+
+      // [THEN] "Qty. to Ship (Base) (Base)" in Sales Invoice Line is "X"
+      Assert.AreEqual(Qty,SalesLine."Qty. to Ship (Base)",QuantitytyToShipBaseErr);
+    END;
+
+    [Test]
+    [HandlerFunctions(ShipAndInvoiceStrMenuHandler)]
+    PROCEDURE PostedSalesInvoiceWithPartialQuantity@70();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesLine@1001 : Record 37;
+      VATPostingSetup@1002 : Record 325;
+    BEGIN
+      // Check the Quantity on Posted Sales Invoice Line when Sales Order Posted using Sales Order Page.
+
+      // Setup: Create Sales Order with Partial Quantity.
+      Initialize;
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      CreateSalesDocument(
+        SalesHeader,SalesLine,SalesHeader."Document Type"::Order,CreateCustomer,CreateItem(VATPostingSetup."VAT Prod. Posting Group"));
+      SalesLine.VALIDATE("Qty. to Invoice",SalesLine."Qty. to Invoice" / LibraryRandom.RandIntInRange(2,5));
+      SalesLine.MODIFY(TRUE);
+
+      // Exercise:  Open Created Sales Header from Sales Order Page and Post using Page.
+      OpenSalesOrderAndPost(SalesHeader."No.",SalesHeader.Status);
+
+      // Verify: Verify Quantity on Posted Sales Invoice Line is equal to Sales Line Quantity to Invoice.
+      VerifyQuantityOnSalesInvoiceLine(SalesHeader."No.",SalesHeader."Sell-to Customer No.",SalesLine."Qty. to Invoice");
+    END;
+
+    [Test]
+    PROCEDURE CheckNoOverFlowErrorExistOnSalesLine@71();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesLine@1001 : Record 37;
+      Item@1002 : Record 27;
+      LibraryInventory@1003 : Codeunit 132201;
+    BEGIN
+      // Verify that no Overflow error on sales line with more ranges.
+
+      // Setup. Create Sales order.
+      Initialize;
+      CreateSalesDocument(SalesHeader,SalesLine,SalesHeader."Document Type"::Order,CreateCustomer,LibraryInventory.CreateItem(Item));
+
+      // Exercise: Taken large random values.
+      SalesLine.VALIDATE("Unit Price",LibraryRandom.RandDecInRange(0,1,3));
+      SalesLine.VALIDATE(Quantity,LibraryRandom.RandIntInRange(10000000,2147483647));
+
+      // Verify: Verify Sales Line amount.
+      Assert.AreEqual(
+        ROUND(SalesLine.Quantity * SalesLine."Unit Price"),SalesLine."Line Amount",
+        STRSUBSTNO(AmountErr,SalesLine.FIELDCAPTION("Line Amount"),SalesLine."Line Amount",SalesLine.TABLECAPTION));
+    END;
+
+    [Test]
+    PROCEDURE CheckStatusOpenErrorWithReleasedSalesOrder@80();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesLine@1001 : Record 37;
+      Item@1003 : Record 27;
+    BEGIN
+      // Verify the Status open error when one more Sales Line added on released Sales Order.
+
+      // Setup: Create released sales order.
+      Initialize;
+      CreateSalesDocument(SalesHeader,SalesLine,SalesHeader."Document Type"::Order,CreateCustomer,LibraryInventory.CreateItem(Item));
+      LibrarySales.ReleaseSalesDocument(SalesHeader);
+
+      // Exercise: Add one more sales line.
+      ASSERTERROR LibrarySales.CreateSalesLine(SalesLine,SalesHeader,SalesLine.Type,SalesLine."No.",SalesLine.Quantity);
+
+      // Verify: Verifying Open status error.
+      Assert.ExpectedError(
+        STRSUBSTNO(StatusErr,SalesHeader.TABLECAPTION,SalesHeader."Document Type",SalesHeader."No."));
+    END;
+
+    [Test]
+    PROCEDURE SalesOrderWithFCYDiscount@85();
+    VAR
+      SalesHeader@1002 : Record 36;
+      SalesLine@1001 : Record 37;
+      VATPostingSetup@1003 : Record 325;
+      AmountLCY@1004 : Decimal;
+    BEGIN
+      // Verify no error will appear while posting a Sales Order with discount on Currency rounding.
+
+      // Setup: Create Sales order with Currency Code.
+      Initialize;
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      CreateSalesHeaderWithCurrency(SalesHeader,CreateAndUpdateCurrency);
+      LibrarySales.CreateSalesLine(SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandDec(10,2));
+      AmountLCY := ROUND(LibraryERM.ConvertCurrency(SalesLine."Amount Including VAT",SalesHeader."Currency Code",'',WORKDATE));
+
+      // Exercise: Post Sales document.
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+
+      // Verify: Verify Remaining Amount LCY on Cust. ledger Entry.
+      VerifyRemainingAmountLCY(SalesHeader."Sell-to Customer No.",AmountLCY);
+    END;
+
+    [Test]
+    PROCEDURE SalesHeaderDimWithSalesPerson@99();
+    VAR
+      SalesHeader@1004 : Record 36;
+      SalespersonPurchaser@1011 : Record 13;
+      DimensionValue@1012 : Record 349;
+      Dimension@1013 : Record 348;
+      DefaultDimension@1015 : Record 352;
+    BEGIN
+      // Setup.
+      Initialize;
+      LibraryDimension.CreateDimension(Dimension);
+      LibraryDimension.CreateDimensionValue(DimensionValue,Dimension.Code);
+      LibrarySales.CreateSalesperson(SalespersonPurchaser);
+      LibraryDimension.CreateDefaultDimension(
+        DefaultDimension,DATABASE::"Salesperson/Purchaser",SalespersonPurchaser.Code,Dimension.Code,DimensionValue.Code);
+
+      // Exercise.
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+      SalesHeader.VALIDATE("Salesperson Code",SalespersonPurchaser.Code);
+      SalesHeader.MODIFY(TRUE);
+
+      // Verify.
+      VerifySalesHeaderDimensions(SalesHeader,DefaultDimension."Dimension Code");
+    END;
+
+    [Test]
+    [HandlerFunctions(CopySalesDocumentHandler,SendNotificationHandler)]
+    PROCEDURE CopySalesOrderFromPartialPostingSalesOrder@240();
+    VAR
+      SalesHeader@1000 : Record 36;
+      FromSalesOrderNo@1001 : Code[20];
+    BEGIN
+      // [SCENARIO] Verifies Ship and Invoice fiels in document copied for posted Sales Order
+      Initialize;
+      // [GIVEN] Create Sales Order with two lines
+      // [GIVEN] In second line set Qty. to Ship = 0
+      // [GIVEN] Release, Post (Ship) and Post (Invoice) sales order
+      FromSalesOrderNo := CreatePostSalesOrder;
+      // [WHEN] Coping sales order to new sales order
+      CreateCopySalesOrder(SalesHeader,FromSalesOrderNo);
+      // [THEN] Invoice and Ship fields must not get value from original document
+      Assert.IsFalse(SalesHeader.Invoice,WrongValueSalesHeaderInvoiceErr);
+      Assert.IsFalse(SalesHeader.Ship,WrongValueSalesHeaderShipErr);
+    END;
+
+    [Test]
+    PROCEDURE SBOwnerCueSOsNotInvoicedIncrease@96();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SBOwnerCue@1004 : Record 9060;
+      PreviousCount@1005 : Integer;
+    BEGIN
+      // [SCENARIO 123574] Shipped Sales Order increases "SOs Shipped Not Invoiced" flow field in SB Owner Cue
+      Initialize;
+
+      // [GIVEN] Shipped X Sales Orders shipped not invoiced
+
+      SBOwnerCue.CALCFIELDS("SOs Shipped Not Invoiced");
+      PreviousCount := SBOwnerCue."SOs Shipped Not Invoiced";
+
+      // [WHEN] When one more Sales Order shipped and not invoiced
+      ShipSalesOrder(SalesHeader);
+
+      // [THEN] Then "SOs Shipped Not Invoiced" in table "SB Owner Cue" must be equal to X + 1
+      SBOwnerCue.CALCFIELDS("SOs Shipped Not Invoiced");
+      Assert.AreEqual(PreviousCount + 1,SBOwnerCue."SOs Shipped Not Invoiced",ShippedNotInvoicedErr);
+    END;
+
+    [Test]
+    PROCEDURE SBOwnerCueSOsNotInvoicedDecrease@110();
+    VAR
+      SalesHeader@1007 : Record 36;
+      SalesHeaderInvoice@1006 : Record 36;
+      SBOwnerCue@1005 : Record 9060;
+      PreviousCount@1004 : Integer;
+    BEGIN
+      // [SCENARIO 123574] Posted invoice after shipment desreases "SOs Shipped Not Invoiced" flow field in SB Owner Cue
+      Initialize;
+
+      // [GIVEN] Shipped X Sales Orders shipped not invoiced
+      SBOwnerCue.CALCFIELDS("SOs Shipped Not Invoiced");
+      PreviousCount := SBOwnerCue."SOs Shipped Not Invoiced";
+
+      // [GIVEN] Sales Order shipped and not invoiced
+      ShipSalesOrder(SalesHeader);
+
+      // [WHEN] Sales Invoice posted
+      InvoiceShippedSalesOrder(SalesHeaderInvoice,SalesHeader);
+      LibrarySales.PostSalesDocument(SalesHeaderInvoice,FALSE,TRUE);
+
+      // [THEN] Then "SOs Shipped Not Invoiced" in table "SB Owner Cue" must be equal to X
+      SBOwnerCue.CALCFIELDS("SOs Shipped Not Invoiced");
+      Assert.AreEqual(PreviousCount,SBOwnerCue."SOs Shipped Not Invoiced",ShippedNotInvoicedErr);
+    END;
+
+    [Test]
+    [HandlerFunctions(ConfirmHandlerYes)]
+    PROCEDURE CreateSalesLineFromSalesShipmentLine@90();
+    VAR
+      SalesShipmentLine@1004 : Record 111;
+      SalesLine@1003 : Record 37;
+      SalesHeader@1001 : Record 36;
+      ExpectedInvDiscAmount@1000 : Decimal;
+      InvoiceDiscountValue@1002 : Decimal;
+    BEGIN
+      // [SCENARIO 375185] Invoice Discount is recalculated on Sales Line created from Posted Shipment Line but not in Sales Header
+      Initialize;
+      LibrarySales.SetCalcInvDiscount(TRUE);
+      // [GIVEN] Create sales order and calcucate "Inv. Discount Amount" = "X" excl. VAT
+      CreateSalesOrderAndGetDiscountWithoutVAT(SalesHeader);
+      // [GIVEN] Set "Prices Including VAT" = TRUE and Ship order
+      ExpectedInvDiscAmount := PostShipSalesOrderWithVAT(SalesShipmentLine,SalesHeader);
+      // [GIVEN] Create Sales Invoice excl. VAT with "Invoice Discount Value" in Header = "Y"
+      CLEAR(SalesHeader);
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Invoice,SalesShipmentLine."Bill-to Customer No.");
+      CreateSimpleSalesLine(SalesLine,SalesHeader,SalesLine.Type::Item);
+      InvoiceDiscountValue := SalesHeader."Invoice Discount Value";
+      // [WHEN] Run InsertInvLineFromShptLine on Invoice
+      SalesShipmentLine.InsertInvLineFromShptLine(SalesLine);
+      // [THEN] Created Sales Line in Invoice, where "Inv. Discount Amount" = "X"
+      SalesLine.FIND;
+      Assert.AreNearlyEqual(
+        ExpectedInvDiscAmount,SalesLine."Inv. Discount Amount",LibraryERM.GetAmountRoundingPrecision,WrongInvDiscAmountErr);
+      // [THEN] Invoice Header is not changed, "Invoice Discount Value" = "Y"
+      SalesHeader.FIND;
+      SalesHeader.TESTFIELD("Invoice Discount Value",InvoiceDiscountValue);
+    END;
+
+    [Test]
+    PROCEDURE InvDiscAmtAfterGetShipmentLinesAndEnabledCalcDiscSetup@238();
+    VAR
+      SalesHeader@1001 : Record 36;
+      NewSalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+    BEGIN
+      // [FEATURE] [Discount] [Shipment Lines]
+      // [SCENARIO 364443] Invoice Discount Amount remains after "Get Shipment Lines" from posted Sales Order. "Sales & Receivables Setup"."Calc. Inv. Discount" = TRUE.
+      Initialize;
+      UpdateCalcInvDiscountSetup(TRUE);
+
+      // [GIVEN] Create and Ship Sales Order with Invoice Discount Amount = "A"
+      ShipSalesOrderWithInvDiscAmount(SalesHeader,SalesLine);
+
+      // [WHEN] Run "Get Shipment Lines" from new Sales Invoice
+      InvoiceShippedSalesOrder(NewSalesHeader,SalesHeader);
+
+      // [THEN] Sales Invoice Discount Amount = "A"
+      NewSalesHeader.CALCFIELDS("Invoice Discount Amount");
+      Assert.AreEqual(
+        SalesLine."Inv. Discount Amount",
+        NewSalesHeader."Invoice Discount Amount",
+        NewSalesHeader.FIELDCAPTION("Invoice Discount Amount"));
+    END;
+
+    [Test]
+    PROCEDURE InvDiscAmtAfterGetShipmentLinesAndDisabledCalcDiscSetup@250();
+    VAR
+      SalesHeader@1003 : Record 36;
+      NewSalesHeader@1002 : Record 36;
+      SalesLine@1001 : Record 37;
+    BEGIN
+      // [FEATURE] [Discount] [Shipment Lines]
+      // [SCENARIO 364443] Invoice Discount Amount remains after "Get Shipment Lines" from posted Sales Order. "Sales & Receivables Setup"."Calc. Inv. Discount" = FALSE.
+      Initialize;
+      UpdateCalcInvDiscountSetup(FALSE);
+
+      // [GIVEN] Create and Ship Sales Order with Invoice Discount Amount = "A"
+      ShipSalesOrderWithInvDiscAmount(SalesHeader,SalesLine);
+
+      // [WHEN] Run "Get Shipment Lines" from new Sales Invoice
+      InvoiceShippedSalesOrder(NewSalesHeader,SalesHeader);
+
+      // [THEN] Sales Invoice Discount Amount = "A"
+      NewSalesHeader.CALCFIELDS("Invoice Discount Amount");
+      Assert.AreEqual(
+        SalesLine."Inv. Discount Amount",
+        NewSalesHeader."Invoice Discount Amount",
+        NewSalesHeader.FIELDCAPTION("Invoice Discount Amount"));
+    END;
+
+    [Test]
+    PROCEDURE InvDiscAmtAfterGetReturnReceiptLinesAndEnabledCalcDiscSetup@128();
+    VAR
+      SalesHeader@1001 : Record 36;
+      NewSalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+    BEGIN
+      // [FEATURE] [Discount] [Return Receipt Lines]
+      // [SCENARIO 364443] Invoice Discount Amount remains after "Get Return Receipt Lines" from posted Sales Return Order. "Sales & Receivables Setup"."Calc. Inv. Discount" = TRUE.
+      Initialize;
+      UpdateCalcInvDiscountSetup(TRUE);
+
+      // [GIVEN] Create and Ship Sales Return Order with Invoice Discount Amount = "A"
+      ShipSalesReturnOrderWithInvDiscAmount(SalesHeader,SalesLine);
+
+      // [WHEN] Run "Get Return Receipt Lines" from new Sales Credit Memo
+      CrMemoShippedSalesReturnOrder(NewSalesHeader,SalesHeader);
+
+      // [THEN] Sales Credit Memo Discount Amount = "A"
+      NewSalesHeader.CALCFIELDS("Invoice Discount Amount");
+      Assert.AreEqual(
+        SalesLine."Inv. Discount Amount",
+        NewSalesHeader."Invoice Discount Amount",
+        NewSalesHeader.FIELDCAPTION("Invoice Discount Amount"));
+    END;
+
+    [Test]
+    PROCEDURE InvDiscAmtAfterGetReturnReceiptLinesAndDisabledCalcDiscSetup@135();
+    VAR
+      SalesHeader@1001 : Record 36;
+      NewSalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+    BEGIN
+      // [FEATURE] [Discount] [Return Receipt Lines]
+      // [SCENARIO 364443] Invoice Discount Amount remains after "Get Return Receipt Lines" from posted Sales Return Order. "Sales & Receivables Setup"."Calc. Inv. Discount" = FALSE.
+      Initialize;
+      UpdateCalcInvDiscountSetup(FALSE);
+
+      // [GIVEN] Create and Ship Sales Return Order with Invoice Discount Amount = "A"
+      ShipSalesReturnOrderWithInvDiscAmount(SalesHeader,SalesLine);
+
+      // [WHEN] Run "Get Return Receipt Lines" from new Sales Credit Memo
+      CrMemoShippedSalesReturnOrder(NewSalesHeader,SalesHeader);
+
+      // [THEN] Sales Credit Memo Discount Amount = "A"
+      NewSalesHeader.CALCFIELDS("Invoice Discount Amount");
+      Assert.AreEqual(
+        SalesLine."Inv. Discount Amount",
+        NewSalesHeader."Invoice Discount Amount",
+        NewSalesHeader.FIELDCAPTION("Invoice Discount Amount"));
+    END;
+
+    [Test]
+    PROCEDURE TwoGLEntriesAfterZeroAmountSalesInvoice@261();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      GLEntry@1006 : Record 17;
+      DocumentNo@1004 : Code[20];
+    BEGIN
+      // [SCENARIO 364561] Two G/L Entries with zero amount are created after posting of Sales Invoice with zero amount
+      Initialize;
+
+      // [GIVEN] Customer Posting Setup, where "Receivables Account No." = "X", "Sales Account No." = "Y"
+      // [WHEN] Post Sales Invoice with zero amount
+      DocumentNo := CreatePostSalesInvoiceWithZeroAmount(SalesHeader,SalesLine);
+
+      // [THEN] Two G/L Entries with zero Amount are posted to G/L accounts "X" and "Y"
+      FindGLEntry(GLEntry,DocumentNo,GetReceivablesAccountNo(SalesHeader."Bill-to Customer No."));
+      Assert.AreEqual(0,GLEntry.Amount,GLEntry.FIELDCAPTION(Amount));
+
+      FindGLEntry(
+        GLEntry,DocumentNo,
+        GetSalesAccountNo(SalesLine."Gen. Bus. Posting Group",SalesLine."Gen. Prod. Posting Group"));
+      Assert.AreEqual(0,GLEntry.Amount,GLEntry.FIELDCAPTION(Amount));
+    END;
+
+    [Test]
+    PROCEDURE GLRegInSyncWithCLEAfterZeroAmountSalesInvoice@248();
+    VAR
+      SalesHeader@1003 : Record 36;
+      SalesLine@1002 : Record 37;
+      CustLedgerEntry@1005 : Record 21;
+      GLRegister@1007 : Record 45;
+      DocumentNo@1004 : Code[20];
+    BEGIN
+      // [SCENARIO 364561] G/L Register should be in sync with Vendor Ledger Entry after posting of Sales Invoice with zero amount
+      Initialize;
+
+      // [GIVEN] Create Sales Invoice with zero amount
+      // [WHEN] Post Sales Invoice
+      DocumentNo := CreatePostSalesInvoiceWithZeroAmount(SalesHeader,SalesLine);
+
+      // [THEN] Customer Ledger Entry No. in range ["From Entry No.",..,"To Entry No."] of G/L Register
+      FindCustLedgerEntry(CustLedgerEntry,SalesHeader."Bill-to Customer No.",DocumentNo);
+      GLRegister.FINDLAST;
+      Assert.IsTrue(
+        CustLedgerEntry."Entry No." IN [GLRegister."From Entry No."..GLRegister."To Entry No."],
+        CustLedgerEntry.FIELDCAPTION("Entry No."));
+    END;
+
+    [Test]
+    PROCEDURE CreateSalesLineFromShptLineWithDiscountAmount@92();
+    VAR
+      SalesShipmentLine@1004 : Record 111;
+      SalesLine@1003 : Record 37;
+      SalesHeader@1001 : Record 36;
+      SalesCalcDiscByType@1005 : Codeunit 56;
+      InvoiceDiscountValue@1002 : Decimal;
+    BEGIN
+      // [FEATURE] [Sales] [Invoice Discount]
+      // [SCENARIO 158032] Invoice Discount is not recalculated on Sales Line created from Posted Shipment Line if "Sales & Receivables Setup"."Calc. Inv. Discount" = FALSE
+
+      // [GIVEN] Create Sales Order with Customer with Discount percent, set "Invoice Discount Amount" to "Y"
+      Initialize;
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomerInvDiscount);
+      CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,LibraryInventory.CreateItemNo,
+        LibraryRandom.RandInt(10),LibraryRandom.RandDec(1000,2));
+      SalesCalcDiscByType.ApplyInvDiscBasedOnAmt(
+        LibraryRandom.RandDecInRange(10,20,2),SalesHeader);
+      InvoiceDiscountValue := SalesHeader."Invoice Discount Value";
+
+      // [GIVEN] Ship Sales Order.
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+      FindSalesShipmentLine(SalesShipmentLine,SalesHeader."No.");
+
+      // [GIVEN] Create Sales Invoice.
+      CLEAR(SalesHeader);
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Invoice,SalesShipmentLine."Bill-to Customer No.");
+      CreateSimpleSalesLine(SalesLine,SalesHeader,SalesLine.Type::Item);
+
+      // [WHEN] Run "Get Shipment Lines".
+      SalesShipmentLine.InsertInvLineFromShptLine(SalesLine);
+
+      // [THEN] Sales Invoice "Invoice Discount Amount" = "Y"
+      WITH SalesHeader DO BEGIN
+        FIND;
+        CALCFIELDS("Invoice Discount Amount");
+        TESTFIELD("Invoice Discount Amount",InvoiceDiscountValue);
+      END;
+    END;
+
+    [Test]
+    [HandlerFunctions(ConfirmHandlerNo)]
+    PROCEDURE FillSalespersonCodeFromContact@19();
+    VAR
+      Contact@1000 : Record 5050;
+      DummySalesHeader@1001 : Record 36;
+    BEGIN
+      // [FEATURE] [Salesperson Code]
+      // [SCENARIO 377079] Salesperson Code must be filled in Sales Header if Contact has one.
+
+      Initialize;
+
+      // [GIVEN] Contact having Salespersone Code "SC"
+      LibraryMarketing.CreateCompanyContact(Contact);
+
+      // [WHEN] Setting Contact as Sell-To Contact in Sales Header
+      DummySalesHeader.VALIDATE("Sell-to Contact No.",Contact."No.");
+
+      // [THEN] Sales Header's "Salesperson Code" equals "SC"
+      DummySalesHeader.TESTFIELD("Salesperson Code",Contact."Salesperson Code");
+    END;
+
+    [Test]
+    [HandlerFunctions(ConfirmHandlerNo)]
+    PROCEDURE NotToRefillSalespersonCodeFromContact@94();
+    VAR
+      Contact@1000 : Record 5050;
+      DummySalesHeader@1001 : Record 36;
+    BEGIN
+      // [FEATURE] [Salesperson Code]
+      // [SCENARIO 377079] Existing Salesperson Code must not be re-filled in Sales Header if Contact has one.
+
+      Initialize;
+
+      // [GIVEN] Contact having Salespersone Code "SC"
+      LibraryMarketing.CreateCompanyContact(Contact);
+
+      // [GIVEN] Sales Header having filled "Salesperson Code" "XX"
+      DummySalesHeader."Salesperson Code" := 'XX';
+
+      // [WHEN] Setting Contact as Sell-To Contact in Sales Header
+      DummySalesHeader.VALIDATE("Sell-to Contact No.",Contact."No.");
+
+      // [THEN] Sales Header's "Salesperson Code" equals "XX"
+      DummySalesHeader.TESTFIELD("Salesperson Code",'XX');
+    END;
+
+    [Test]
+    PROCEDURE CombinedDimOnSalesInvoiceWithItemChargeAssignedOnShpmt@169();
+    VAR
+      ConflictDimension@1001 : Record 348;
+      ItemDimValue@1003 : Record 349;
+      ItemChargeDimValue@1004 : Record 349;
+      SalesHeader@1005 : Record 36;
+      DimensionMgt@1008 : Codeunit 408;
+      ConflictDimValue@1000 : ARRAY [2] OF Code[20];
+      ExpShortcutDimCode1@1007 : Code[20];
+      ExpShortcutDimCode2@1009 : Code[20];
+      DimNo@1002 : ' ,Item,ItemCharge';
+      DimSetID@1006 : ARRAY [10] OF Integer;
+      ExpectedDimSetID@1010 : Integer;
+    BEGIN
+      // [FEATURE] [Dimension]
+      // [SCENARIO 377443] Posted Sales Invoice with Item Charge should inherit dimensions from assigned Shipment
+      Initialize;
+
+      // [GIVEN] Item with Dimension
+      CreateDimValues(ConflictDimension,ConflictDimValue);
+      CreateDimValue(ItemDimValue);
+      CreateDimValue(ItemChargeDimValue);
+
+      // [GIVEN] Sales Shipment with Dimensions
+      DimSetID[2] :=
+        CreatePostSalesOrderWithDimension(SalesHeader,ItemDimValue,ConflictDimension.Code,ConflictDimValue[DimNo::Item]);
+
+      // [WHEN] Post Sales Invoice for Shipment
+      DimSetID[1] :=
+        CreatePostInvoiceWithShipmentLines(
+          ItemChargeDimValue,ConflictDimension.Code,ConflictDimValue[DimNo::ItemCharge],SalesHeader);
+
+      // [THEN] Value Entry is created with Dimension Set ID inherited from Shipment
+      ExpectedDimSetID :=
+        DimensionMgt.GetCombinedDimensionSetID(DimSetID,ExpShortcutDimCode1,ExpShortcutDimCode2);
+      VerifyDimSetIDOnItemLedgEntry(ExpectedDimSetID);
+    END;
+
+    [Test]
+    [HandlerFunctions(SalesStatisticsHandler)]
+    PROCEDURE SalesInvoiceForItemChargeWithVATDifferencePostValuesPricesInclVAT@294();
+    VAR
+      SalesInvoiceLine@1009 : Record 113;
+      ValueEntry@1004 : Record 5802;
+      SalesInvoiceNo@1003 : Code[20];
+      MaxVATDifference@1008 : Decimal;
+      AmountToAssign@1007 : Decimal;
+    BEGIN
+      // [FEATURE] [Statistics] [Item Charge]
+      // [SCENARIO 378379] Create Sales Invoice with Item Charge Assignment (Prices Incl. VAT = TRUE), change VAT difference and post
+      Initialize;
+
+      // [GIVEN] "Sales & Receivables Setup"."Allow VAT Difference" = TRUE
+      // [GIVEN] "General Ledger Setup"."Max. VAT Difference Allowed" = "D"
+      MaxVATDifference := EnableVATDiffAmount;
+      LibraryVariableStorage.Enqueue(MaxVATDifference);
+
+      // [GIVEN] Sales Invoice ("Prices Incl. VAT" = TRUE) with Item Charge of amount "A" assigned to Posted Sales Order
+      // [GIVEN] "VAT Amount" is increased by "D" on "Sales Statistics" page
+      // [WHEN] Post Sales Invoice
+      PostSalesInvoiceWithItemCharge(SalesInvoiceNo,AmountToAssign,TRUE);
+
+      // [THEN] SalesInvoiceLine.Amount = "A-D"
+      SalesInvoiceLine.SETRANGE("Document No.",SalesInvoiceNo);
+      SalesInvoiceLine.FINDFIRST;
+      SalesInvoiceLine.TESTFIELD(Amount,AmountToAssign - MaxVATDifference);
+
+      // [THEN] ValueEntry."Sales Amount (Actual)" = "A-D"
+      ValueEntry.SETRANGE("Document No.",SalesInvoiceNo);
+      ValueEntry.FINDFIRST;
+      ValueEntry.TESTFIELD("Sales Amount (Actual)",AmountToAssign - MaxVATDifference);
+    END;
+
+    [Test]
+    [HandlerFunctions(SalesStatisticsHandler)]
+    PROCEDURE SalesInvoiceForItemChargeWithVATDifferencePostValuesPricesWoVAT@139();
+    VAR
+      SalesInvoiceLine@1009 : Record 113;
+      ValueEntry@1004 : Record 5802;
+      SalesInvoiceNo@1003 : Code[20];
+      MaxVATDifference@1008 : Decimal;
+      AmountToAssign@1007 : Decimal;
+    BEGIN
+      // [FEATURE] [Statistics] [Item Charge]
+      // [SCENARIO 378379] Create Sales Invoice with Item Charge Assignment (Prices Incl. VAT = FALSE), change VAT difference and post
+      Initialize;
+
+      // [GIVEN] "Sales & Receivables Setup"."Allow VAT Difference" = TRUE
+      // [GIVEN] "General Ledger Setup"."Max. VAT Difference Allowed" = "D"
+      MaxVATDifference := EnableVATDiffAmount;
+      LibraryVariableStorage.Enqueue(MaxVATDifference);
+
+      // [GIVEN] Sales Invoice ("Prices Incl. VAT" = FALSE) with Item Charge of amount "A" assigned to Posted Sales Order
+      // [GIVEN] "VAT Amount" is increased by "D" on "Sales Statistics" page
+      // [WHEN] Post Sales Invoice
+      PostSalesInvoiceWithItemCharge(SalesInvoiceNo,AmountToAssign,FALSE);
+
+      // [THEN] SalesInvoiceLine.Amount = "A"
+      SalesInvoiceLine.SETRANGE("Document No.",SalesInvoiceNo);
+      SalesInvoiceLine.FINDFIRST;
+      SalesInvoiceLine.TESTFIELD(Amount,AmountToAssign);
+
+      // [THEN] ValueEntry."Sales Amount (Actual)" = "A"
+      ValueEntry.SETRANGE("Document No.",SalesInvoiceNo);
+      ValueEntry.FINDFIRST;
+      ValueEntry.TESTFIELD("Sales Amount (Actual)",AmountToAssign);
+    END;
+
+    [Test]
+    [HandlerFunctions(ConfirmHandlerYes)]
+    PROCEDURE GenBusinessPostingGroupInLinesUpdated@137();
+    VAR
+      GenBusPostingGroup@1000 : Record 250;
+      SalesHeader@1002 : Record 36;
+      SalesLine@1001 : Record 37;
+    BEGIN
+      // [FEATURE] [UT]
+      // [SCENARIO 164950] Field "Gen. Bus. Posting Group" is updated in lines when user changes it in the document header and Gen. Business Posting Group has "Auto Insert Default" = False
+
+      // [GIVEN] Gen. Bus. Posting Group "B" with "Auto Insert Default" = False,
+      Initialize;
+      LibraryERM.CreateGenBusPostingGroup(GenBusPostingGroup);
+      GenBusPostingGroup."Auto Insert Default" := FALSE;
+      GenBusPostingGroup.MODIFY;
+      // [GIVEN] Customer "C" with  "Gen. Bus. Posting Group" = "X",
+      // [GIVEN] Sales Order for Customer "C" with one line
+      CreateOrderCheckVATSetup(SalesHeader,SalesLine);
+
+      // [WHEN] Validate field "Gen. Bus. Posting Group" = "B" in Sales Order header
+      SalesHeader.VALIDATE("Gen. Bus. Posting Group",GenBusPostingGroup.Code);
+
+      // [THEN] field "Gen. Bus. Posting Group" in Sales Order line is "B"
+      SalesLine.FIND;
+      SalesLine.TESTFIELD("Gen. Bus. Posting Group",GenBusPostingGroup.Code);
+    END;
+
+    [Test]
+    [HandlerFunctions(ConfirmHandlerNo)]
+    PROCEDURE GenBusinessPostingGroupInLinesNotUpdated@100();
+    VAR
+      GenBusPostingGroup@1000 : Record 250;
+      SalesHeader@1002 : Record 36;
+      SalesLine@1001 : Record 37;
+      OldGenBusPostingGroup@1003 : Code[10];
+    BEGIN
+      // [FEATURE] [UT]
+
+      // [SCENARIO 164950] Field "Gen. Bus. Posting Group" is not updated in lines when user changes it in the document header and chooses "No" in Confirm dialog
+
+      // [GIVEN] Gen. Bus. Posting Group "B" with "Auto Insert Default" = False,
+      Initialize;
+      LibraryERM.CreateGenBusPostingGroup(GenBusPostingGroup);
+      GenBusPostingGroup."Auto Insert Default" := FALSE;
+      GenBusPostingGroup.MODIFY;
+
+      // [GIVEN] Customer "C" with  "Gen. Bus. Posting Group" = "X",
+      // [GIVEN] Sales Order for Customer "C" with one line
+      CreateOrderCheckVATSetup(SalesHeader,SalesLine);
+      OldGenBusPostingGroup := SalesLine."Gen. Bus. Posting Group";
+      COMMIT;
+
+      // [WHEN] Validate field "Gen. Bus. Posting Group" = "B" in Sales Order header
+      ASSERTERROR SalesHeader.VALIDATE("Gen. Bus. Posting Group",GenBusPostingGroup.Code);
+
+      // [THEN] field "Gen. Bus. Posting Group" in Sales Order line is not changed because of error message
+      Assert.ExpectedError(STRSUBSTNO(YouMustDeleteExistingLinesErr,SalesLine.FIELDCAPTION("Gen. Bus. Posting Group")));
+      SalesLine.FIND;
+      SalesLine.TESTFIELD("Gen. Bus. Posting Group",OldGenBusPostingGroup);
+    END;
+
+    [Test]
+    [HandlerFunctions(ExactMessageHandler)]
+    PROCEDURE PostedDocToPrintMessageRaisedWhenDeleteSalesInvithNoInPostedInvoiceNos@203();
+    VAR
+      SalesReceivablesSetup@1000 : Record 311;
+      SalesHeader@1002 : Record 36;
+    BEGIN
+      // [FEATURE] [UI]
+      // [SCENARIO 379123] Message raised when delete Sales Invoice with "Posted Invoice Nos." = "Invoice Nos."
+
+      Initialize;
+      // [GIVEN] Purchase Invoice with "Posting No. Series" = "No. Series"
+      SalesReceivablesSetup.GET;
+      LibrarySales.CreateSalesHeader(
+        SalesHeader,SalesHeader."Document Type"::Invoice,'');
+      SalesHeader.VALIDATE("No. Series",SalesReceivablesSetup."Posted Invoice Nos.");
+      SalesHeader.VALIDATE("Posting No. Series",SalesReceivablesSetup."Posted Invoice Nos.");
+      SalesHeader.MODIFY(TRUE);
+      LibraryVariableStorage.Enqueue(PostedDocsToPrintCreatedMsg);
+
+      // [WHEN] Delete Sales Invoice
+      SalesHeader.DELETE(TRUE);
+
+      // [THEN] Message "One or more documents have been posted during deletion which you can print" was raised
+      // Verification done in ExactMessageHandler
+    END;
+
+    [Test]
+    [HandlerFunctions(ItemChargeAssignmentHandler,ItemChargeAssignMenuHandler)]
+    PROCEDURE SalesOrderEquallyItemChargeAssignment@141();
+    VAR
+      SalesLine@1003 : Record 37;
+      ItemChargeAssignmentSales@1002 : Record 5809;
+      AmountToAssign@1001 : Decimal;
+      QtyToAssign@1000 : Decimal;
+    BEGIN
+      // [FEATURE] [Item Charge]
+      // [SCENARIO 379418] Equally Item Charge Assignment line Amount to Assign calculation
+      Initialize;
+
+      // [GIVEN] Sales Order with 3 item lines and equally assigned item charge line (Suggest Choice = 1 - Equally)
+      // [GIVEN] AmountToAssign = "A", QtyToAssign = "Q"
+      SalesOrderItemChargeAssignment(SalesLine,AmountToAssign,QtyToAssign,1);
+
+      // [WHEN] Reassign all qty "Q" to one line
+      AssignQtyToOneLine(ItemChargeAssignmentSales,SalesLine,QtyToAssign);
+
+      // [THEN] Amount to Assign is equal "A"
+      ItemChargeAssignmentSales.CALCSUMS("Amount to Assign");
+      Assert.AreEqual(AmountToAssign,ItemChargeAssignmentSales."Amount to Assign",AmountToAssignErr);
+    END;
+
+    [Test]
+    [HandlerFunctions(ItemChargeAssignmentHandler,ItemChargeAssignMenuHandler)]
+    PROCEDURE SalesOrderAmountItemChargeAssignment@322();
+    VAR
+      SalesLine@1003 : Record 37;
+      ItemChargeAssignmentSales@1002 : Record 5809;
+      AmountToAssign@1001 : Decimal;
+      QtyToAssign@1000 : Decimal;
+    BEGIN
+      // [FEATURE] [Item Charge]
+      // [SCENARIO 379418] Item Charge Assignment by amount line Amount to Assign calculation
+      Initialize;
+
+      // [GIVEN] Sales Order with 3 item lines and assigned item charge line by amount (Suggest Choice = 2 - Amount)
+      // [GIVEN] AmountToAssign = "A", QtyToAssign = "Q"
+      SalesOrderItemChargeAssignment(SalesLine,AmountToAssign,QtyToAssign,2);
+
+      // [WHEN] Reassign all qty "Q" to one line
+      AssignQtyToOneLine(ItemChargeAssignmentSales,SalesLine,QtyToAssign);
+
+      // [THEN] Amount to Assign is equal "A"
+      ItemChargeAssignmentSales.CALCSUMS("Amount to Assign");
+      Assert.AreEqual(AmountToAssign,ItemChargeAssignmentSales."Amount to Assign",AmountToAssignErr);
+    END;
+
+    [Test]
+    PROCEDURE SalesLine_FindRecordByDescription_GLAccount@115();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      GLAccount@1004 : Record 15;
+      No@1002 : Code[20];
+      Description@1003 : Text[50];
+    BEGIN
+      // [FEATURE] [Find Record By Description] [G/L Account]
+      // [SCENARIO 203978]  Sales Line's G/L Account validation can be done using "Description" field
+      Initialize;
+      No := 'GLACC_TEST_GLACC';
+      Description := 'Description_Test_Description';
+
+      // [GIVEN] G/L Account "GLACC" with "Name" = "Desc"
+      MockGLAccountWithNoAndDescription(No,Description);
+      // [GIVEN] Sales order line, "Type" = "G/L Account"
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,LibrarySales.CreateCustomerNo);
+      MockSalesLine(SalesLine,SalesHeader);
+      SalesLine.VALIDATE(Type,SalesLine.Type::"G/L Account");
+
+      // [WHEN] Validate sales line's "Description" = "glacc"/"desc"/"ite"/"glac"/"acc"/"esc"/"xesc"
+      // [THEN] Sales line's: "No." = "GLACC", "Description" = "Desc"
+      VerifySalesLineFindRecordByDescription(SalesLine,'glacc_test_glacc',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'glacc_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_glacc',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'discriptyon_tezt_discriptyon',No,Description);
+
+      // Tear down
+      GLAccount.GET(No);
+      GLAccount.DELETE;
+    END;
+
+    [Test]
+    PROCEDURE SalesLine_FindRecordByDescription_Item@328();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      Item@1004 : Record 27;
+      No@1002 : Code[20];
+      Description@1003 : Text[50];
+    BEGIN
+      // [FEATURE] [Find Record By Description] [Item]
+      // [SCENARIO 203978]  Purchase Line's Item validation can be done using "Description" field
+      Initialize;
+      No := 'ITEM_TEST_ITEM';
+      Description := 'Description_Test_Description';
+
+      // [GIVEN] Item "ITEM" with "Description" = "Desc"
+      MockItemWithNoAndDescription(No,Description);
+      // [GIVEN] Sales order line, "Type" = "Item"
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,LibrarySales.CreateCustomerNo);
+      MockSalesLine(SalesLine,SalesHeader);
+      SalesLine.VALIDATE(Type,SalesLine.Type::Item);
+
+      // [WHEN] Validate sales line's "Description" = "item"/"desc"/"ite"/"des"/"tem"/"esc"/"xesc"
+      // [THEN] Sales line's: "No." = "ITEM", "Description" = "Desc"
+      VerifySalesLineFindRecordByDescription(SalesLine,'item_test_item',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'item_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_item',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'discriptyon_tezt_discriptyon',No,Description);
+
+      // Tear down
+      Item.GET(No);
+      Item.DELETE;
+    END;
+
+    [Test]
+    PROCEDURE SalesLine_FindRecordByDescription_ItemCharge@317();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      ItemCharge@1004 : Record 5800;
+      No@1002 : Code[20];
+      Description@1003 : Text[50];
+    BEGIN
+      // [FEATURE] [Find Record By Description] [Item Charge]
+      // [SCENARIO 203978]  Purchase Line's Item Charge validation can be done using "Description" field
+      Initialize;
+      No := 'ITEMCH_TEST_ITEMCH';
+      Description := 'Description_Test_Description';
+
+      // [GIVEN] Item Charge "ITEMCHARGE" with "Description" = "Desc"
+      MockItemChargeWithNoAndDescription(No,Description);
+      // [GIVEN] Sales order line, "Type" = "Charge (Item)"
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,LibrarySales.CreateCustomerNo);
+      MockSalesLine(SalesLine,SalesHeader);
+      SalesLine.VALIDATE(Type,SalesLine.Type::"Charge (Item)");
+
+      // [WHEN] Validate sales line's "Description" = "itemcharge"/"desc"/"itemch"/"des"/"charge"/"esc"/"xesc"
+      // [THEN] Sales line's: "No." = "ITEMCHARGE", "Description" = "Desc"
+      VerifySalesLineFindRecordByDescription(SalesLine,'itemch_test_itemch',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'itemch_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_itemch',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'discriptyon_tezt_discriptyon',No,Description);
+
+      // Tear down
+      ItemCharge.GET(No);
+      ItemCharge.DELETE;
+    END;
+
+    [Test]
+    PROCEDURE SalesLine_FindRecordByDescription_FixedAsset@311();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      FixedAsset@1004 : Record 5600;
+      No@1002 : Code[20];
+      Description@1003 : Text[50];
+    BEGIN
+      // [FEATURE] [Find Record By Description] [Fixed Asset]
+      // [SCENARIO 203978]  Purchase Line's Fixed Asset validation can be done using "Description" field
+      Initialize;
+      No := 'FA_TEST_FA';
+      Description := 'Description_Test_Description';
+
+      // [GIVEN] Fixed Asset "FIXEDASSET" with "Description" = "Desc"
+      MockFAWithNoAndDescription(No,Description);
+      // [GIVEN] Sales order line, "Type" = "Fixed Asset"
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,LibrarySales.CreateCustomerNo);
+      MockSalesLine(SalesLine,SalesHeader);
+      SalesLine.VALIDATE(Type,SalesLine.Type::"Fixed Asset");
+
+      // [WHEN] Validate sales line's "Description" = "fixedasset"/"desc"/"fixed"/"des"/"asset"/"esc"/"xesc"
+      // [THEN] Sales line's: "No." = "FIXEDASSET", "Description" = "Desc"
+      VerifySalesLineFindRecordByDescription(SalesLine,'fa_test_fa',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'fa_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_fa',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'discriptyon_tezt_discriptyon',No,Description);
+
+      // Tear down
+      FixedAsset.GET(No);
+      FixedAsset.DELETE;
+    END;
+
+    [Test]
+    PROCEDURE SalesLine_FindRecordByDescription_Resource@140();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1000 : Record 37;
+      Resource@1004 : Record 156;
+      No@1002 : Code[20];
+      Description@1003 : Text[50];
+    BEGIN
+      // [FEATURE] [Find Record By Description] [Resource]
+      // [SCENARIO 203978]  Purchase Line's Resource validation can be done using "Description" field
+      Initialize;
+      No := 'RES_TEST_RES';
+      Description := 'Description_Test_Description';
+
+      // [GIVEN] Resource "RESOURCE" with "Description" = "Desc"
+      MockResourceWithNoAndDescription(No,Description);
+      // [GIVEN] Sales order line, "Type" = "Resource"
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,LibrarySales.CreateCustomerNo);
+      MockSalesLine(SalesLine,SalesHeader);
+      SalesLine.VALIDATE(Type,SalesLine.Type::Resource);
+
+      // [WHEN] Validate sales line's "Description" = "resource"/"desc"/"res"/"des"/"ource"/"esc"/"xesc"
+      // [THEN] Sales line's: "No." = "RESOURCE", "Description" = "Desc"
+      VerifySalesLineFindRecordByDescription(SalesLine,'res_test_res',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'res_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'description_test',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_res',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'test_description',No,Description);
+      VerifySalesLineFindRecordByDescription(SalesLine,'discriptyon_tezt_discriptyon',No,Description);
+
+      // Tear down
+      Resource.GET(No);
+      Resource.DELETE;
+    END;
+
+    [Test]
+    [HandlerFunctions(AutoReservePageHandler)]
+    PROCEDURE TestPostShipSalesOrderReleasedWithLineReservation@145();
+    VAR
+      SalesHeader@1001 : Record 36;
+      SalesLine@1004 : Record 37;
+      CustInvoiceDisc@1002 : Record 19;
+      Item@1006 : Record 27;
+      SalesOrder@1000 : TestPage 42;
+    BEGIN
+      // [FEATURE] [Sales] [Invoice Discount]
+      // [SCENARIO 205130] Posting of the Sales Order without errors when THE Sales Order has been released and after that the Sales Line was reserved.
+      Initialize;
+
+      // [GIVEN] Calc. Inv. Discount is TRUE at Sales & Receivables Setup
+      UpdateCalcInvDiscountSetup(TRUE);
+
+      // [GIVEN] An item "ITEM" available to reserve and to ship.
+      LibraryInventory.CreateItem(Item);
+      LibraryPatterns.POSTPositiveAdjustment(Item,'','','',1000,WORKDATE,0);
+
+      // [GIVEN] A Customer "CUST" with Invoice discounts for all items
+      CustInvoiceDisc.GET(CreateCustomerInvDiscount,'',0);
+
+      // [GIVEN] Sales Order "SO" created for "CUST" with an "ITEM" in the line.
+      CreateSalesDocument(SalesHeader,SalesLine,SalesHeader."Document Type"::Order,CustInvoiceDisc.Code,Item."No.");
+
+      // [GIVEN] "SO" is released
+      LibrarySales.ReleaseSalesDocument(SalesHeader);
+
+      // [GIVEN] "ITEM" is Auto Reserved by AutoReservePageHandler
+      SalesOrder.OPENEDIT;
+      SalesOrder.GOTORECORD(SalesHeader);
+      SalesOrder.SalesLines.Reserve.INVOKE;
+
+      // [WHEN] "SO" Post invoked with "Shipped" selected
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+
+      // [THEN] "SO" posted (shipped) without errors
+      VerifySalesShptDocExists(SalesHeader."No.");
+    END;
+
+    [Test]
+    PROCEDURE UnitPriceResLedgerEntryAfterPostSalesInvoiceSalesLineQuantityPositive@149();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesLine@1001 : Record 37;
+      DocNo@1005 : Code[20];
+      ResNo@1006 : Code[20];
+    BEGIN
+      // [FEATURE] [Credit Memo] [Resources]
+      // [SCENARIO 210924] Value of "Unit Price" of Resource Ledger Entry must be positive when Quantity of Sales Line of Sales Credit Memo is positive
+      Initialize;
+
+      // [GIVEN] Sales Credit Memo with Resource Sales Invoice line with Quanity > 0
+      ResNo := LibraryResource.CreateResourceNo;
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::"Credit Memo",LibrarySales.CreateCustomerNo);
+      LibrarySales.CreateSalesLine(SalesLine,SalesHeader,SalesLine.Type::Resource,ResNo,LibraryRandom.RandIntInRange(5,10));
+
+      // [WHEN] Post Sales Credit Memo
+      DocNo := LibrarySales.PostSalesDocument(SalesHeader,FALSE,FALSE);
+
+      // [THEN] "Res. Ledger Entry"."Unit Price" > 0
+      VerifyUnitPriceSignResLedgerEntry(DocNo,ResNo,SalesLine.Quantity);
+    END;
+
+    [Test]
+    PROCEDURE UnitPriceResLedgerEntryAfterPostSalesInvoiceSalesLineQuantityNegative@146();
+    VAR
+      SalesHeader@1000 : Record 36;
+      SalesLine@1001 : Record 37;
+      DocNo@1005 : Code[20];
+      ResNo@1006 : Code[20];
+    BEGIN
+      // [FEATURE] [Credit Memo] [Resources]
+      // [SCENARIO 210924] Value of "Unit Price" of Resource Ledger Entry must be positive when Quantity of Sales Line of Sales Credit Memo is Negative
+      Initialize;
+
+      // [GIVEN] Sales Credit Memo with Resource Sales Invoice line with Quanity > 0 and Resource Sales Invoice line with Quantity < 0
+      ResNo := LibraryResource.CreateResourceNo;
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::"Credit Memo",LibrarySales.CreateCustomerNo);
+      LibrarySales.CreateSalesLine(SalesLine,SalesHeader,SalesLine.Type::Resource,ResNo,LibraryRandom.RandIntInRange(50,100)); // Needed for posting sales cr. memo
+      LibrarySales.CreateSalesLine(SalesLine,SalesHeader,SalesLine.Type::Resource,ResNo,-LibraryRandom.RandIntInRange(5,10));
+
+      // [WHEN] Post Sales Credit Memo
+      DocNo := LibrarySales.PostSalesDocument(SalesHeader,FALSE,FALSE);
+
+      // [THEN] "Res. Ledger Entry"."Unit Price" > 0
+      VerifyUnitPriceSignResLedgerEntry(DocNo,ResNo,SalesLine.Quantity);
+    END;
+
+    LOCAL PROCEDURE Initialize@8();
+    VAR
+      LibraryERMCountryData@1001 : Codeunit 131305;
+    BEGIN
+      LibraryVariableStorage.Clear;
+      LibrarySetupStorage.Restore;
+
+      IF isInitialized THEN
+        EXIT;
+
+      LibraryERMCountryData.CreateVATData;
+      LibraryERMCountryData.UpdateGeneralLedgerSetup;
+      LibraryERMCountryData.UpdateSalesReceivablesSetup;
+      LibraryERMCountryData.UpdateGeneralPostingSetup;
+      LibrarySetupStorage.Save(DATABASE::"Sales & Receivables Setup");
+      isInitialized := TRUE;
+      COMMIT;
+    END;
+
+    LOCAL PROCEDURE CreateAndModifySalesOrder@32(VAR SalesHeader@1000 : Record 36;VAR SalesLine@1001 : Record 37);
+    VAR
+      VATPostingSetup@1002 : Record 325;
+    BEGIN
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomerInvDiscount);
+
+      CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(10) * 2,
+        LibraryRandom.RandInt(100));
+      SalesLine.VALIDATE("Qty. to Invoice",SalesLine."Qty. to Invoice" / 2);
+      SalesLine.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreateCustomer@1() : Code[20];
+    VAR
+      Customer@1001 : Record 18;
+      VATPostingSetup@1000 : Record 325;
+    BEGIN
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySales.CreateCustomer(Customer);
+      Customer.VALIDATE("VAT Bus. Posting Group",VATPostingSetup."VAT Bus. Posting Group");
+      Customer.MODIFY(TRUE);
+      EXIT(Customer."No.");
+    END;
+
+    LOCAL PROCEDURE CreateCustomerInvDiscount@38() : Code[20];
+    VAR
+      CustInvoiceDisc@1000 : Record 19;
+    BEGIN
+      LibraryERM.CreateInvDiscForCustomer(CustInvoiceDisc,CreateCustomer,'',0);  // Set Zero for Charge Amount.
+      CustInvoiceDisc.VALIDATE("Discount %",LibraryRandom.RandDecInRange(10,20,2));  // Take Random Discount.
+      CustInvoiceDisc.MODIFY(TRUE);
+      EXIT(CustInvoiceDisc.Code);
+    END;
+
+    LOCAL PROCEDURE CreateCustomerWithCurrency@53(CurrencyCode@1000 : Code[10]) : Code[20];
+    VAR
+      Customer@1001 : Record 18;
+    BEGIN
+      LibrarySales.CreateCustomer(Customer);
+      Customer.VALIDATE("Currency Code",CurrencyCode);
+      Customer.MODIFY(TRUE);
+      EXIT(Customer."No.");
+    END;
+
+    LOCAL PROCEDURE CreateCurrency@27() : Code[10];
+    VAR
+      Currency@1001 : Record 4;
+    BEGIN
+      LibraryERM.CreateCurrency(Currency);
+      LibraryERM.CreateRandomExchangeRate(Currency.Code);
+      EXIT(Currency.Code);
+    END;
+
+    LOCAL PROCEDURE CreateAndUpdateCurrency@91() : Code[10];
+    VAR
+      Currency@1001 : Record 4;
+    BEGIN
+      WITH Currency DO BEGIN
+        GET(CreateCurrency);
+        VALIDATE("Invoice Rounding Precision",1);
+        VALIDATE("Amount Rounding Precision",1);
+        VALIDATE("Amount Decimal Places",'0:0');
+        MODIFY(TRUE);
+        EXIT(Code);
+      END;
+    END;
+
+    LOCAL PROCEDURE CreatePostSalesOrderWithDimension@187(VAR SalesHeader@1008 : Record 36;ItemDimValue@1000 : Record 349;DimensionCode@1006 : Code[20];DimValueCode@1007 : Code[20]) : Integer;
+    VAR
+      SalesLine@1002 : Record 37;
+      VATPostingSetup@1001 : Record 325;
+    BEGIN
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(100));
+      ModifyDimOnSalesLine(SalesLine,ItemDimValue,DimensionCode,DimValueCode);
+      SalesLine.MODIFY(TRUE);
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+      EXIT(SalesLine."Dimension Set ID");
+    END;
+
+    LOCAL PROCEDURE CreatePostInvoiceWithShipmentLines@202(ItemChargeDimValue@1000 : Record 349;DimensionCode@1001 : Code[20];DimValueCode@1002 : Code[20];OrderSalesHeader@1003 : Record 36) : Integer;
+    VAR
+      SalesHeader@1004 : Record 36;
+      SalesLine@1005 : Record 37;
+    BEGIN
+      LibrarySales.CreateSalesHeader(
+        SalesHeader,SalesHeader."Document Type"::Invoice,OrderSalesHeader."Sell-to Customer No.");
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::"Charge (Item)",CreateItemCharge,LibraryRandom.RandInt(100));
+      SalesLine.VALIDATE("Unit Price",100);
+      ModifyDimOnSalesLine(SalesLine,ItemChargeDimValue,DimensionCode,DimValueCode);
+      SalesLine.MODIFY(TRUE);
+      AssignItemChargeToShipment(OrderSalesHeader."No.",SalesLine);
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE);
+      EXIT(SalesLine."Dimension Set ID");
+    END;
+
+    LOCAL PROCEDURE CreateItemAndExtendedText@81(VAR Item@1001 : Record 27) : Text[50];
+    VAR
+      ExtendedTextHeader@1003 : Record 279;
+      ExtendedTextLine@1002 : Record 280;
+      LibraryInventory@1004 : Codeunit 132201;
+      LibraryService@1000 : Codeunit 131902;
+    BEGIN
+      LibraryInventory.CreateItem(Item);
+      LibraryService.CreateExtendedTextHeaderItem(ExtendedTextHeader,Item."No.");
+      LibraryService.CreateExtendedTextLineItem(ExtendedTextLine,ExtendedTextHeader);
+      UpdateTextInExtendedTextLine(ExtendedTextLine,Item."No.");
+      EXIT(ExtendedTextLine.Text);
+    END;
+
+    LOCAL PROCEDURE CreateItemCharge@208() : Code[20];
+    VAR
+      ItemCharge@1000 : Record 5800;
+    BEGIN
+      LibraryInventory.CreateItemCharge(ItemCharge);
+      EXIT(ItemCharge."No.");
+    END;
+
+    LOCAL PROCEDURE CreateItem@9(VATProdPostingGroup@1005 : Code[10]) : Code[20];
+    VAR
+      Item@1000 : Record 27;
+      LibraryInventory@1001 : Codeunit 132201;
+    BEGIN
+      LibraryInventory.CreateItem(Item);
+      Item.VALIDATE("VAT Prod. Posting Group",VATProdPostingGroup);
+
+      // Using RANDOM value for Unit Price.
+      Item.VALIDATE("Unit Price",LibraryRandom.RandInt(100));
+      Item.MODIFY(TRUE);
+      EXIT(Item."No.");
+    END;
+
+    LOCAL PROCEDURE CreateSalesInvoiceWithCurrency@37(VAR SalesHeader@1000 : Record 36;VAR SalesLine@1001 : Record 37);
+    VAR
+      Currency@1003 : Record 4;
+      VATPostingSetup@1002 : Record 325;
+    BEGIN
+      // Create Sales Invoice with Currency.
+      LibraryERM.FindCurrency(Currency);
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Invoice,CreateCustomer);
+      SalesHeader.VALIDATE("Prices Including VAT",TRUE);
+      SalesHeader.VALIDATE("Currency Code",Currency.Code);
+      SalesHeader.MODIFY(TRUE);
+
+      // Take Random Values for Quantity and Line Discount fields.
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(10));
+      SalesLine.VALIDATE("Line Discount %",LibraryRandom.RandDec(10,2));
+      SalesLine.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreateSalesLine@48(VAR SalesLine@1001 : Record 37;SalesHeader@1000 : Record 36;Type@1002 : Option;No@1003 : Code[20];Quantity@1004 : Decimal;UnitPrice@1005 : Decimal);
+    BEGIN
+      LibrarySales.CreateSalesLine(SalesLine,SalesHeader,Type,No,Quantity);
+      SalesLine.VALIDATE("Unit Price",UnitPrice);
+      SalesLine.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreateSalesLines@74(VAR SalesLine@1000 : Record 37;SalesHeader@1002 : Record 36);
+    VAR
+      VATPostingSetup@1003 : Record 325;
+      Counter@1001 : Integer;
+    BEGIN
+      // Using random value because value is not important.
+      FOR Counter := 1 TO 1 + LibraryRandom.RandInt(5) DO BEGIN
+        VATPostingSetup.SETRANGE("Unrealized VAT Type",VATPostingSetup."Unrealized VAT Type"::" ");
+        LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+        LibrarySales.CreateSalesLine(
+          SalesLine,SalesHeader,SalesLine.Type::Item,
+          CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandDec(10,2));
+      END;
+    END;
+
+    LOCAL PROCEDURE CreateDimValue@185(VAR DimensionValue@1000 : Record 349);
+    VAR
+      Dimension@1001 : Record 348;
+    BEGIN
+      LibraryDimension.CreateDimension(Dimension);
+      LibraryDimension.CreateDimensionValue(DimensionValue,Dimension.Code);
+    END;
+
+    LOCAL PROCEDURE CreateDimValues@177(VAR Dimension@1002 : Record 348;VAR DimensionValueCode@1001 : ARRAY [2] OF Code[20]);
+    VAR
+      DimensionValue@1000 : Record 349;
+      i@1003 : Integer;
+    BEGIN
+      LibraryDimension.CreateDimension(Dimension);
+      FOR i := 1 TO ARRAYLEN(DimensionValueCode) DO BEGIN
+        LibraryDimension.CreateDimensionValue(DimensionValue,Dimension.Code);
+        DimensionValueCode[i] := DimensionValue.Code;
+      END;
+    END;
+
+    LOCAL PROCEDURE CreateDimSetIDFromDimValue@192(VAR DimSetID@1001 : Integer;DimensionValue@1003 : Record 349);
+    VAR
+      TempDimSetEntry@1002 : TEMPORARY Record 480;
+      DimensionMgt@1000 : Codeunit 408;
+    BEGIN
+      IF DimSetID <> 0 THEN
+        DimensionMgt.GetDimensionSet(TempDimSetEntry,DimSetID);
+      WITH TempDimSetEntry DO BEGIN
+        "Dimension Code" := DimensionValue."Dimension Code";
+        "Dimension Value Code" := DimensionValue.Code;
+        "Dimension Value ID" := DimensionValue."Dimension Value ID";
+        IF NOT INSERT THEN
+          MODIFY;
+        DimSetID := DimensionMgt.GetDimensionSetID(TempDimSetEntry);
+      END;
+    END;
+
+    LOCAL PROCEDURE CreateSalesLineWithQty@121(VAR SalesLine@1000 : Record 37;Qty@1001 : Decimal;DocType@1003 : Option);
+    VAR
+      SalesHeader@1002 : Record 36;
+      Item@1004 : Record 27;
+    BEGIN
+      LibrarySales.CreateSalesHeader(SalesHeader,DocType,CreateCustomer);
+      LibraryInventory.CreateItem(Item);
+      LibrarySales.CreateSalesLine(SalesLine,SalesHeader,SalesLine.Type::Item,Item."No.",Qty);
+    END;
+
+    LOCAL PROCEDURE CreateSalesDocument@75(VAR SalesHeader@1001 : Record 36;VAR SalesLine@1002 : Record 37;DocumentType@1004 : Option;CustomerNo@1005 : Code[20];ItemNo@1003 : Code[20]);
+    BEGIN
+      LibrarySales.CreateSalesHeader(SalesHeader,DocumentType,CustomerNo);
+      CreateSalesLine(SalesLine,SalesHeader,SalesLine.Type::Item,ItemNo,LibraryRandom.RandDec(20,2),
+        LibraryRandom.RandDec(100,2));
+    END;
+
+    LOCAL PROCEDURE CreateSimpleSalesLine@134(VAR SalesLine@1000 : Record 37;SalesHeader@1003 : Record 36;LineType@1001 : Option);
+    VAR
+      RecRef@1002 : RecordRef;
+    BEGIN
+      WITH SalesLine DO BEGIN
+        INIT;
+        VALIDATE("Document Type",SalesHeader."Document Type"::Invoice);
+        VALIDATE("Document No.",SalesHeader."No.");
+        RecRef.GETTABLE(SalesLine);
+        VALIDATE("Line No.",LibraryUtility.GetNewLineNo(RecRef,FIELDNO("Line No.")));
+        VALIDATE(Type,LineType);
+        INSERT(TRUE);
+      END;
+    END;
+
+    LOCAL PROCEDURE FindSalesShipmentHeader@116(VAR SalesShipmentHeader@1000 : Record 110;OrderNo@1001 : Code[20]);
+    BEGIN
+      SalesShipmentHeader.SETRANGE("Order No.",OrderNo);
+      SalesShipmentHeader.FINDFIRST;
+    END;
+
+    LOCAL PROCEDURE FindSalesShipmentLine@103(VAR SalesShipmentLine@1001 : Record 111;OrderNo@1000 : Code[20]);
+    BEGIN
+      SalesShipmentLine.SETRANGE("Order No.",OrderNo);
+      SalesShipmentLine.FINDFIRST;
+    END;
+
+    LOCAL PROCEDURE SalesLinesWithMinimumQuantity@89(VAR SalesLine@1000 : Record 37;SalesHeader@1001 : Record 36;SalesLineDiscount@1003 : Record 7004);
+    VAR
+      VATPostingSetup@1005 : Record 325;
+      Counter@1002 : Integer;
+    BEGIN
+      // Using random value for the Quantity. Take Quantity greater than Sales Line Discount Minimum Quantity.
+      FOR Counter := 1 TO 1 + LibraryRandom.RandInt(5) DO BEGIN
+        LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+        LibrarySales.CreateSalesLine(
+          SalesLine,SalesHeader,SalesLine.Type::Item,SalesLineDiscount.Code,
+          SalesLineDiscount."Minimum Quantity" + LibraryRandom.RandDec(10,2));
+      END;
+    END;
+
+    LOCAL PROCEDURE CreateSalesOrder@10(VAR SalesHeader@1000 : Record 36;VAR SalesLine@1001 : Record 37);
+    VAR
+      VATPostingSetup@1003 : Record 325;
+      Counter@1002 : Integer;
+    BEGIN
+      // Set Stock out Warnings to No in Sales and Receivables Setup.
+      LibrarySales.SetStockoutWarning(FALSE);
+      VATPostingSetup.SETRANGE("Unrealized VAT Type",VATPostingSetup."Unrealized VAT Type"::" ");
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      // Create Sales Order.
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+
+      // Create Random Sales Lines. Make sure that No. of Sales Lines always more than 1.
+      FOR Counter := 1 TO 1 + LibraryRandom.RandInt(8) DO
+        LibrarySales.CreateSalesLine(
+          SalesLine,SalesHeader,SalesLine.Type::Item,
+          CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandInt(10));
+    END;
+
+    LOCAL PROCEDURE CreateSalesOrderWithSingleLine@107(VAR SalesHeader@1001 : Record 36);
+    VAR
+      VATPostingSetup@1000 : Record 325;
+      SalesLine@1002 : Record 37;
+    BEGIN
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::Item,
+        CreateItem(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandom.RandDec(100,2));
+    END;
+
+    LOCAL PROCEDURE CreateSalesOrderAndGetDiscountWithoutVAT@102(VAR SalesHeader@1005 : Record 36) ExpectedInvDiscAmount : Decimal;
+    VAR
+      SalesLine@1001 : Record 37;
+      Item@1003 : Record 27;
+    BEGIN
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomerInvDiscount);
+      LibraryInventory.CreateItem(Item);
+      WITH SalesLine DO BEGIN
+        CreateSalesLine(SalesLine,SalesHeader,Type::Item,Item."No.",
+          LibraryRandom.RandInt(10),LibraryRandom.RandDec(1000,2));
+        CODEUNIT.RUN(CODEUNIT::"Sales-Calc. Discount",SalesLine);
+        GET("Document Type","Document No.","Line No.");
+        ExpectedInvDiscAmount := "Inv. Discount Amount";
+      END;
+    END;
+
+    LOCAL PROCEDURE PostShipSalesOrderWithVAT@105(VAR SalesShipmentLine@1001 : Record 111;SalesHeader@1000 : Record 36) ExpectedInvDiscAmount : Decimal;
+    BEGIN
+      WITH SalesHeader DO BEGIN
+        VALIDATE("Prices Including VAT",TRUE);
+        CALCFIELDS("Invoice Discount Amount");
+        ExpectedInvDiscAmount := "Invoice Discount Amount";
+        LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+        FindSalesShipmentLine(SalesShipmentLine,"No.");
+      END;
+    END;
+
+    LOCAL PROCEDURE CreateWarehouseLocation@17() : Code[10];
+    VAR
+      Location@1002 : Record 14;
+      WarehouseEmployee@1001 : Record 7301;
+      LibraryWarehouse@1000 : Codeunit 132204;
+    BEGIN
+      LibraryWarehouse.CreateLocationWithInventoryPostingSetup(Location);
+      Location.VALIDATE("Require Shipment",TRUE);
+      Location.MODIFY(TRUE);
+      LibraryWarehouse.CreateWarehouseEmployee(WarehouseEmployee,Location.Code,FALSE);
+      EXIT(Location.Code);
+    END;
+
+    LOCAL PROCEDURE CreateSalesHeaderWithCurrency@86(VAR SalesHeader@1000 : Record 36;CurrencyCode@1001 : Code[10]);
+    BEGIN
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+      SalesHeader.VALIDATE("Currency Code",CurrencyCode);
+      SalesHeader.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreatePostSalesInvoiceWithZeroAmount@127(VAR SalesHeader@1003 : Record 36;VAR SalesLine@1002 : Record 37) : Code[20];
+    BEGIN
+      CreateSalesDocument(
+        SalesHeader,SalesLine,SalesHeader."Document Type"::Invoice,LibrarySales.CreateCustomerNo,LibraryInventory.CreateItemNo);
+      SalesLine.VALIDATE("Unit Price",0);
+      SalesLine.MODIFY;
+      EXIT(LibrarySales.PostSalesDocument(SalesHeader,TRUE,TRUE));
+    END;
+
+    LOCAL PROCEDURE MockGLAccountWithNoAndDescription@312(NewNo@1002 : Code[20];NewName@1001 : Text[50]);
+    VAR
+      GLAccount@1000 : Record 15;
+      VATPostingSetup@1003 : Record 325;
+      GeneralPostingSetup@1004 : Record 252;
+    BEGIN
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibraryERM.FindGeneralPostingSetup(GeneralPostingSetup);
+
+      WITH GLAccount DO BEGIN
+        INIT;
+        "No." := NewNo;
+        Name := NewName;
+        "Gen. Prod. Posting Group" := GeneralPostingSetup."Gen. Prod. Posting Group";
+        "VAT Prod. Posting Group" := VATPostingSetup."VAT Prod. Posting Group";
+        INSERT;
+      END;
+    END;
+
+    LOCAL PROCEDURE MockItemWithNoAndDescription@332(NewNo@1002 : Code[20];NewDescription@1001 : Text[50]);
+    VAR
+      Item@1000 : Record 27;
+      VATPostingSetup@1004 : Record 325;
+      GeneralPostingSetup@1003 : Record 252;
+      InventoryPostingGroup@1005 : Record 94;
+    BEGIN
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibraryERM.FindGeneralPostingSetup(GeneralPostingSetup);
+      IF NOT InventoryPostingGroup.FINDFIRST THEN
+        LibraryInventory.CreateInventoryPostingGroup(InventoryPostingGroup);
+
+      WITH Item DO BEGIN
+        INIT;
+        "No." := NewNo;
+        Description := NewDescription;
+        "Gen. Prod. Posting Group" := GeneralPostingSetup."Gen. Prod. Posting Group";
+        "VAT Prod. Posting Group" := VATPostingSetup."VAT Prod. Posting Group";
+        "Inventory Posting Group" := InventoryPostingGroup.Code;
+        INSERT;
+      END;
+    END;
+
+    LOCAL PROCEDURE MockItemChargeWithNoAndDescription@319(NewNo@1002 : Code[20];NewDescription@1001 : Text[50]);
+    VAR
+      ItemCharge@1000 : Record 5800;
+      VATPostingSetup@1005 : Record 325;
+      GeneralPostingSetup@1004 : Record 252;
+    BEGIN
+      LibraryERM.FindGeneralPostingSetup(GeneralPostingSetup);
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+
+      WITH ItemCharge DO BEGIN
+        INIT;
+        "No." := NewNo;
+        Description := NewDescription;
+        "Gen. Prod. Posting Group" := GeneralPostingSetup."Gen. Prod. Posting Group";
+        "VAT Prod. Posting Group" := VATPostingSetup."VAT Prod. Posting Group";
+        INSERT;
+      END;
+    END;
+
+    LOCAL PROCEDURE MockFAWithNoAndDescription@323(NewNo@1002 : Code[20];NewDescription@1001 : Text[50]);
+    VAR
+      FixedAsset@1000 : Record 5600;
+    BEGIN
+      WITH FixedAsset DO BEGIN
+        INIT;
+        "No." := NewNo;
+        Description := NewDescription;
+        INSERT;
+      END;
+    END;
+
+    LOCAL PROCEDURE MockResourceWithNoAndDescription@148(NewNo@1002 : Code[20];NewName@1001 : Text[50]);
+    VAR
+      Resource@1000 : Record 156;
+      VATPostingSetup@1004 : Record 325;
+      GeneralPostingSetup@1003 : Record 252;
+      UnitOfMeasure@1005 : Record 204;
+      ResourceUnitOfMeasure@1006 : Record 205;
+    BEGIN
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibraryERM.FindGeneralPostingSetup(GeneralPostingSetup);
+      LibraryInventory.FindUnitOfMeasure(UnitOfMeasure);
+
+      WITH Resource DO BEGIN
+        INIT;
+        "No." := NewNo;
+        Name := NewName;
+        "Gen. Prod. Posting Group" := GeneralPostingSetup."Gen. Prod. Posting Group";
+        "VAT Prod. Posting Group" := VATPostingSetup."VAT Prod. Posting Group";
+        "Base Unit of Measure" := UnitOfMeasure.Code;
+        INSERT;
+      END;
+
+      LibraryResource.CreateResourceUnitOfMeasure(ResourceUnitOfMeasure,Resource."No.",UnitOfMeasure.Code,1);
+    END;
+
+    LOCAL PROCEDURE MockSalesLine@305(VAR SalesLine@1000 : Record 37;SalesHeader@1001 : Record 36);
+    BEGIN
+      WITH SalesLine DO BEGIN
+        "Document Type" := SalesHeader."Document Type";
+        "Document No." := SalesHeader."No.";
+        "Line No." := LibraryUtility.GetNewRecNo(SalesLine,FIELDNO("Line No."));
+        INSERT;
+      END;
+    END;
+
+    LOCAL PROCEDURE FindCustomerInvoiceDiscount@30(Code@1001 : Code[20]) : Decimal;
+    VAR
+      CustInvoiceDisc@1000 : Record 19;
+    BEGIN
+      CustInvoiceDisc.SETRANGE(Code,Code);
+      CustInvoiceDisc.FINDFIRST;
+      EXIT(CustInvoiceDisc."Discount %");
+    END;
+
+    LOCAL PROCEDURE FindShipmentLine@210(VAR SalesShipmentLine@1000 : Record 111;OrderNo@1001 : Code[20]);
+    VAR
+      SalesShipmentHeader@1002 : Record 110;
+    BEGIN
+      FindSalesShipmentHeader(SalesShipmentHeader,OrderNo);
+      SalesShipmentLine.SETRANGE("Document No.",SalesShipmentHeader."No.");
+      SalesShipmentLine.FINDFIRST;
+    END;
+
+    LOCAL PROCEDURE FindSalesLines@79(VAR SalesLine@1000 : Record 37);
+    BEGIN
+      SalesLine.SETRANGE("Document Type",SalesLine."Document Type");
+      SalesLine.SETRANGE("Document No.",SalesLine."Document No.");
+      SalesLine.FINDSET;
+    END;
+
+    LOCAL PROCEDURE FindGLEntry@130(VAR GLEntry@1002 : Record 17;DocumentNo@1001 : Code[20];GLAccountNo@1000 : Code[20]);
+    BEGIN
+      WITH GLEntry DO BEGIN
+        SETRANGE("Document No.",DocumentNo);
+        SETRANGE("G/L Account No.",GLAccountNo);
+        FINDFIRST;
+      END;
+    END;
+
+    LOCAL PROCEDURE FindCustLedgerEntry@136(VAR CustLedgerEntry@1000 : Record 21;CustomerNo@1001 : Code[20];DocumentNo@1002 : Code[20]);
+    BEGIN
+      WITH CustLedgerEntry DO BEGIN
+        SETRANGE("Customer No.",CustomerNo);
+        SETRANGE("Document No.",DocumentNo);
+        FINDFIRST;
+      END;
+    END;
+
+    LOCAL PROCEDURE FindSalesLineWithType@258(VAR SalesLine@1000 : Record 37;DocumentNo@1002 : Code[20];DocumentType@1001 : Option;LineType@1003 : Option);
+    BEGIN
+      SalesLine.SETRANGE("Document Type",DocumentType);
+      SalesLine.SETRANGE("Document No.",DocumentNo);
+      SalesLine.SETRANGE(Type,LineType);
+      SalesLine.FINDSET;
+    END;
+
+    LOCAL PROCEDURE FindItemChargeAssignmentSalesLine@264(VAR ItemChargeAssignmentSales@1004 : Record 5809;SalesLine@1000 : Record 37);
+    BEGIN
+      ItemChargeAssignmentSales.SETRANGE("Document Type",SalesLine."Document Type");
+      ItemChargeAssignmentSales.SETRANGE("Document No.",SalesLine."Document No.");
+      ItemChargeAssignmentSales.SETRANGE("Document Line No.",SalesLine."Line No.");
+      ItemChargeAssignmentSales.FINDSET;
+    END;
+
+    LOCAL PROCEDURE GetReceivablesAccountNo@132(CustomerNo@1000 : Code[20]) : Code[20];
+    VAR
+      Customer@1001 : Record 18;
+      CustomerPostingGroup@1002 : Record 92;
+    BEGIN
+      Customer.GET(CustomerNo);
+      CustomerPostingGroup.GET(Customer."Customer Posting Group");
+      EXIT(CustomerPostingGroup."Receivables Account");
+    END;
+
+    LOCAL PROCEDURE GetSalesAccountNo@133(GenBusPostingGroupCode@1001 : Code[10];GenProdPostingGroupCode@1002 : Code[10]) : Code[20];
+    VAR
+      GeneralPostingSetup@1000 : Record 252;
+    BEGIN
+      GeneralPostingSetup.GET(GenBusPostingGroupCode,GenProdPostingGroupCode);
+      EXIT(GeneralPostingSetup."Sales Account");
+    END;
+
+    LOCAL PROCEDURE CopySalesLines@63(VAR SalesLine@1001 : Record 37;SalesLine2@1000 : Record 37);
+    BEGIN
+      FindSalesLines(SalesLine2);
+      REPEAT
+        SalesLine.INIT;
+        SalesLine := SalesLine2;
+        SalesLine.INSERT;
+      UNTIL SalesLine2.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE TotalLineDiscountInGLEntry@60(VAR SalesLine@1003 : Record 37;DocumentNo@1002 : Code[20]) : Decimal;
+    VAR
+      GLEntry@1000 : Record 17;
+      GeneralPostingSetup@1001 : Record 252;
+    BEGIN
+      SalesLine.FINDSET;
+      GeneralPostingSetup.GET(SalesLine."Gen. Bus. Posting Group",SalesLine."Gen. Prod. Posting Group");
+      GLEntry.SETRANGE("Document No.",DocumentNo);
+      GLEntry.SETRANGE("G/L Account No.",GeneralPostingSetup."Sales Line Disc. Account");
+      EXIT(TotalAmountInGLEntry(GLEntry));
+    END;
+
+    LOCAL PROCEDURE TotalInvoiceDiscountInGLEntry@64(VAR SalesLine@1003 : Record 37;DocumentNo@1002 : Code[20]) : Decimal;
+    VAR
+      GLEntry@1000 : Record 17;
+      GeneralPostingSetup@1001 : Record 252;
+    BEGIN
+      SalesLine.FINDSET;
+      GeneralPostingSetup.GET(SalesLine."Gen. Bus. Posting Group",SalesLine."Gen. Prod. Posting Group");
+      GLEntry.SETRANGE("Document No.",DocumentNo);
+      GLEntry.SETRANGE("G/L Account No.",GeneralPostingSetup."Sales Inv. Disc. Account");
+      EXIT(TotalAmountInGLEntry(GLEntry));
+    END;
+
+    LOCAL PROCEDURE ModifyDimOnSalesLine@227(VAR SalesLine@1001 : Record 37;BaseDimValue@1004 : Record 349;DimensionCode@1003 : Code[20];DimValueCode@1002 : Code[20]);
+    VAR
+      DimValue@1000 : Record 349;
+    BEGIN
+      CreateDimSetIDFromDimValue(SalesLine."Dimension Set ID",BaseDimValue);
+      DimValue.GET(DimensionCode,DimValueCode);
+      CreateDimSetIDFromDimValue(SalesLine."Dimension Set ID",DimValue);
+    END;
+
+    LOCAL PROCEDURE AssignItemChargeToShipment@229(OrderNo@1000 : Code[20];SalesLine@1001 : Record 37);
+    VAR
+      SalesShipmentLine@1003 : Record 111;
+      ItemChargeAssignmentSales@1002 : Record 5809;
+    BEGIN
+      FindShipmentLine(SalesShipmentLine,OrderNo);
+      LibraryInventory.CreateItemChargeAssignment(
+        ItemChargeAssignmentSales,SalesLine,ItemChargeAssignmentSales."Applies-to Doc. Type"::Shipment,
+        SalesShipmentLine."Document No.",SalesShipmentLine."Line No.",SalesShipmentLine."No.");
+    END;
+
+    LOCAL PROCEDURE AssignQtyToOneLine@313(VAR ItemChargeAssignmentSales@1000 : Record 5809;SalesLine@1002 : Record 37;QtyToAssign@1001 : Decimal);
+    BEGIN
+      FindItemChargeAssignmentSalesLine(ItemChargeAssignmentSales,SalesLine);
+      REPEAT
+        ItemChargeAssignmentSales.VALIDATE("Qty. to Assign",0);
+        ItemChargeAssignmentSales.MODIFY(TRUE);
+      UNTIL ItemChargeAssignmentSales.NEXT = 0;
+      ItemChargeAssignmentSales.VALIDATE("Qty. to Assign",QtyToAssign);
+      ItemChargeAssignmentSales.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE TotalAmountInGLEntry@69(VAR GLEntry@1000 : Record 17) TotalAmount : Decimal;
+    BEGIN
+      GLEntry.FINDSET;
+      REPEAT
+        TotalAmount += GLEntry.Amount;
+      UNTIL GLEntry.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE FindSalesInvoiceHeader@77(VAR SalesInvoiceHeader@1000 : Record 112;OrderNo@1001 : Code[20]);
+    BEGIN
+      SalesInvoiceHeader.SETRANGE("Order No.",OrderNo);
+      SalesInvoiceHeader.FINDFIRST;
+    END;
+
+    LOCAL PROCEDURE InitGlobalVariables@26();
+    BEGIN
+      CLEAR(TempDocumentEntry2);
+      CLEAR(PostingDate2);
+      DocumentNo2 := '';
+    END;
+
+    LOCAL PROCEDURE InvoiceShippedSalesOrder@67(VAR InvSalesHeader@1000 : Record 36;ShippedSalesHeader@1001 : Record 36);
+    VAR
+      SalesShipmentHeader@1002 : Record 110;
+      SalesShipmentLine@1003 : Record 111;
+      SalesGetShipment@1004 : Codeunit 64;
+    BEGIN
+      LibrarySales.CreateSalesHeader(
+        InvSalesHeader,InvSalesHeader."Document Type"::Invoice,ShippedSalesHeader."Sell-to Customer No.");
+
+      SalesGetShipment.SetSalesHeader(InvSalesHeader);
+      WITH SalesShipmentHeader DO BEGIN
+        SETRANGE("Order No.",ShippedSalesHeader."No.");
+        FINDSET;
+        REPEAT
+          SalesShipmentLine.SETRANGE("Document No.","No.");
+          SalesGetShipment.CreateInvLines(SalesShipmentLine);
+        UNTIL NEXT = 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE CrMemoShippedSalesReturnOrder@129(VAR CrMemoSalesHeader@1000 : Record 36;ShippedSalesHeader@1001 : Record 36);
+    VAR
+      ReturnReceiptHeader@1002 : Record 6660;
+      ReturnReceiptLine@1003 : Record 6661;
+      SalesGetReturnReceipts@1004 : Codeunit 6638;
+    BEGIN
+      LibrarySales.CreateSalesHeader(
+        CrMemoSalesHeader,CrMemoSalesHeader."Document Type"::"Credit Memo",ShippedSalesHeader."Sell-to Customer No.");
+
+      SalesGetReturnReceipts.SetSalesHeader(CrMemoSalesHeader);
+      WITH ReturnReceiptHeader DO BEGIN
+        SETRANGE("Return Order No.",ShippedSalesHeader."No.");
+        FINDSET;
+        REPEAT
+          ReturnReceiptLine.SETRANGE("Document No.","No.");
+          SalesGetReturnReceipts.CreateInvLines(ReturnReceiptLine);
+        UNTIL NEXT = 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE OpenSalesOrderAndPost@88(SalesHeaderNo@1000 : Code[20];Status@1001 : Option);
+    VAR
+      SalesOrder@1002 : TestPage 42;
+    BEGIN
+      SalesOrder.OPENEDIT;
+      SalesOrder.FILTER.SETFILTER(Status,FORMAT(Status));
+      SalesOrder.FILTER.SETFILTER("No.",SalesHeaderNo);
+      SalesOrder.Post.INVOKE;
+    END;
+
+    LOCAL PROCEDURE SetupInvoiceDiscount@31(VAR CustInvoiceDisc@1001 : Record 19);
+    BEGIN
+      // Required random value for Minimum Amount and Discount Pct fields, value is not important.
+      LibraryERM.CreateInvDiscForCustomer(CustInvoiceDisc,CreateCustomer,'',LibraryRandom.RandInt(100));
+      CustInvoiceDisc.VALIDATE("Discount %",LibraryRandom.RandDec(99,2));
+      CustInvoiceDisc.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE SetupLineDiscount@22(VAR SalesLineDiscount@1000 : Record 7004);
+    VAR
+      Item@1002 : Record 27;
+      VATPostingSetup@1001 : Record 325;
+    BEGIN
+      LibraryERM.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      // Required random Value for Minimum Quantity and Line Discount Pct fields, value is not important.
+      Item.GET(CreateItem(VATPostingSetup."VAT Prod. Posting Group"));
+      LibraryERM.CreateLineDiscForCustomer(SalesLineDiscount,SalesLineDiscount.Type::Item,Item."No.",
+        SalesLineDiscount."Sales Type"::Customer,CreateCustomer,WORKDATE,'',Item."Variant Filter",
+        Item."Base Unit of Measure",LibraryRandom.RandInt(10));
+      SalesLineDiscount.VALIDATE("Line Discount %",LibraryRandom.RandDec(99,2));
+      SalesLineDiscount.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE UpdateSalesReceivableSetup@78();
+    VAR
+      SalesReceivablesSetup@1000 : Record 311;
+    BEGIN
+      SalesReceivablesSetup.GET;
+      SalesReceivablesSetup.VALIDATE("Default Posting Date",SalesReceivablesSetup."Default Posting Date"::"No Date");
+      SalesReceivablesSetup.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE UpdateDefaultQtyToShip@108(NewDefaultQtyToShip@1000 : Option);
+    VAR
+      SalesReceivablesSetup@1001 : Record 311;
+    BEGIN
+      WITH SalesReceivablesSetup DO BEGIN
+        GET;
+        VALIDATE("Default Quantity to Ship",NewDefaultQtyToShip);
+        MODIFY(TRUE);
+      END;
+    END;
+
+    LOCAL PROCEDURE SumLineDiscountAmount@93(VAR SalesLine@1003 : Record 37;DocumentNo@1001 : Code[20]) LineDiscountAmount : Decimal;
+    BEGIN
+      SalesLine.SETRANGE("Document No.",DocumentNo);
+      SalesLine.FINDSET;
+      REPEAT
+        LineDiscountAmount += SalesLine."Line Discount Amount";
+      UNTIL SalesLine.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE SumInvoiceDiscountAmount@58(VAR SalesLine@1000 : Record 37;DocumentNo@1001 : Code[20]) InvoiceDiscountAmount : Decimal;
+    BEGIN
+      SalesLine.SETRANGE("Document No.",DocumentNo);
+      SalesLine.FINDSET;
+      REPEAT
+        InvoiceDiscountAmount += SalesLine."Inv. Discount Amount";
+      UNTIL SalesLine.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE ShipSalesOrder@113(VAR SalesHeader@1000 : Record 36);
+    VAR
+      SalesLine@1001 : Record 37;
+    BEGIN
+      CreateSalesOrder(SalesHeader,SalesLine);
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+    END;
+
+    LOCAL PROCEDURE ShipSalesOrderWithInvDiscAmount@95(VAR SalesHeader@1000 : Record 36;VAR SalesLine@1002 : Record 37);
+    BEGIN
+      CreateSalesOrder(SalesHeader,SalesLine);
+      SalesLine.VALIDATE("Inv. Discount Amount",ROUND(SalesLine."Line Amount" * LibraryRandom.RandDec(1,2)));
+      SalesLine.MODIFY;
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+    END;
+
+    LOCAL PROCEDURE ShipSalesReturnOrderWithInvDiscAmount@98(VAR SalesHeader@1000 : Record 36;VAR SalesLine@1001 : Record 37);
+    BEGIN
+      CreateSalesDocument(
+        SalesHeader,SalesLine,SalesHeader."Document Type"::"Return Order",CreateCustomer,LibraryInventory.CreateItemNo);
+      SalesLine.VALIDATE("Inv. Discount Amount",ROUND(SalesLine."Line Amount" * LibraryRandom.RandDec(1,2)));
+      SalesLine.MODIFY;
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+    END;
+
+    LOCAL PROCEDURE ShipWarehouseDocument@20(DocumentNo@1000 : Code[20];LineNo@1001 : Integer);
+    VAR
+      WarehouseShipmentLine@1002 : Record 7321;
+    BEGIN
+      WarehouseShipmentLine.SETRANGE("Source No.",DocumentNo);
+      WarehouseShipmentLine.SETRANGE("Source Line No.",LineNo);
+      WarehouseShipmentLine.FINDFIRST;
+      CODEUNIT.RUN(CODEUNIT::"Whse.-Post Shipment",WarehouseShipmentLine);
+    END;
+
+    LOCAL PROCEDURE UpdateBalanceAccountNo@61(VAR GenJournalBatch@1000 : Record 232);
+    BEGIN
+      GenJournalBatch.VALIDATE("Bal. Account Type",GenJournalBatch."Bal. Account Type"::"G/L Account");
+      GenJournalBatch.VALIDATE("Bal. Account No.",LibraryERM.CreateGLAccountWithSalesSetup);
+      GenJournalBatch.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE UpdateDocumentNo@66(VAR GenJournalLine@1000 : Record 81);
+    BEGIN
+      GenJournalLine.VALIDATE("Document No.",GenJournalLine."Account No.");
+      GenJournalLine.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE UpdateTextInExtendedTextLine@82(VAR ExtendedTextLine@1000 : Record 280;Text@1001 : Code[20]);
+    BEGIN
+      ExtendedTextLine.VALIDATE(Text,Text);
+      ExtendedTextLine.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE UpdateSalesReceivablesSetup@76(VAR OldStockoutWarning@1000 : Boolean;NewStockoutWarning@1002 : Boolean);
+    VAR
+      SalesReceivablesSetup@1001 : Record 311;
+    BEGIN
+      SalesReceivablesSetup.GET;
+      OldStockoutWarning := SalesReceivablesSetup."Stockout Warning";
+      SalesReceivablesSetup.VALIDATE("Stockout Warning",NewStockoutWarning);
+      SalesReceivablesSetup.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE UpdateCalcInvDiscountSetup@112(NewCalcInvDiscount@1001 : Boolean);
+    VAR
+      SalesReceivablesSetup@1000 : Record 311;
+    BEGIN
+      WITH SalesReceivablesSetup DO BEGIN
+        GET;
+        VALIDATE("Calc. Inv. Discount",NewCalcInvDiscount);
+        MODIFY;
+      END;
+    END;
+
+    LOCAL PROCEDURE EnableVATDiffAmount@276() Result : Decimal;
+    BEGIN
+      Result := LibraryRandom.RandDec(2,2);  // Use any Random decimal value between 0.01 and 1.99, value is not important.
+      LibraryERM.SetMaxVATDifferenceAllowed(Result);
+      LibrarySales.SetAllowVATDifference(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreateVATPostingSetupWithBusPostGroup@283(VAR VATPostingSetup@1001 : Record 325;VATCalculationType@1002 : Option;VATBusinessPostingGroup@1003 : Code[10]);
+    VAR
+      VATProductPostingGroup@1004 : Record 324;
+    BEGIN
+      LibraryERM.CreateVATProductPostingGroup(VATProductPostingGroup);
+      LibraryERM.CreateVATPostingSetup(VATPostingSetup,VATBusinessPostingGroup,VATProductPostingGroup.Code);
+      VATPostingSetup."VAT Calculation Type" := VATPostingSetup."VAT Calculation Type"::"Normal VAT";
+      VATPostingSetup."VAT %" := LibraryRandom.RandInt(30);
+      VATPostingSetup.VALIDATE("Sales VAT Account",LibraryERM.CreateGLAccountNo);
+      VATPostingSetup."Reverse Chrg. VAT Acc." := VATPostingSetup."Purchase VAT Account";
+      VATPostingSetup."VAT Calculation Type" := VATCalculationType;
+      VATPostingSetup."VAT Identifier" := LibraryUtility.GenerateGUID;
+      VATPostingSetup.MODIFY;
+    END;
+
+    LOCAL PROCEDURE CreateSalesInvoiceWithItemCharge@279(VAR InvoiceSalesHeader@1000 : Record 36;PostedSalesHeader@1001 : Record 36;PricesIncludingVAT@1003 : Boolean);
+    VAR
+      ItemCharge@1005 : Record 5800;
+      SalesLine@1002 : Record 37;
+      VATPostingSetup@1006 : Record 325;
+      Currency@1004 : Record 4;
+    BEGIN
+      LibrarySales.CreateSalesHeader(
+        InvoiceSalesHeader,InvoiceSalesHeader."Document Type"::Invoice,PostedSalesHeader."Sell-to Customer No.");
+
+      IF InvoiceSalesHeader."Currency Code" = '' THEN
+        Currency.InitRoundingPrecision
+      ELSE
+        Currency.GET(SalesLine."Currency Code");
+
+      InvoiceSalesHeader.VALIDATE("Prices Including VAT",PricesIncludingVAT);
+      InvoiceSalesHeader.MODIFY(TRUE);
+
+      LibraryInventory.CreateItemCharge(ItemCharge);
+      CreateVATPostingSetupWithBusPostGroup(
+        VATPostingSetup,
+        VATPostingSetup."VAT Calculation Type"::"Normal VAT",
+        InvoiceSalesHeader."VAT Bus. Posting Group");
+      ItemCharge.VALIDATE("VAT Prod. Posting Group",VATPostingSetup."VAT Prod. Posting Group");
+      ItemCharge.MODIFY(TRUE);
+
+      LibrarySales.CreateSalesLine(
+        SalesLine,InvoiceSalesHeader,SalesLine.Type::"Charge (Item)",ItemCharge."No.",LibraryRandom.RandInt(10));
+      SalesLine.VALIDATE("Unit Price",LibraryRandom.RandDec(10,2));
+      SalesLine.VALIDATE("Unit Cost",ROUND(SalesLine.Amount / SalesLine.Quantity,Currency."Unit-Amount Rounding Precision"));
+      SalesLine.MODIFY(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreateSalesOrderWithItemsAndAssignedItemCharge@314(VAR SalesHeader@1000 : Record 36;SuggestType@1006 : Integer);
+    VAR
+      ItemCharge@1005 : Record 5800;
+      SalesLine@1002 : Record 37;
+      VATPostingSetup@1008 : Record 325;
+      Currency@1004 : Record 4;
+      i@1001 : Integer;
+    BEGIN
+      LibrarySales.CreateSalesHeader(
+        SalesHeader,SalesHeader."Document Type"::Order,LibrarySales.CreateCustomerNo);
+
+      IF SalesHeader."Currency Code" = '' THEN
+        Currency.InitRoundingPrecision
+      ELSE
+        Currency.GET(SalesHeader."Currency Code");
+
+      FOR i := 1 TO 3 DO BEGIN
+        LibrarySales.CreateSalesLine(
+          SalesLine,SalesHeader,SalesLine.Type::Item,LibraryInventory.CreateItemNo,10);
+        SalesLine.VALIDATE("Unit Price",10);
+        SalesLine.MODIFY(TRUE);
+      END;
+
+      LibraryInventory.CreateItemCharge(ItemCharge);
+      CreateVATPostingSetupWithBusPostGroup(
+        VATPostingSetup,
+        VATPostingSetup."VAT Calculation Type"::"Normal VAT",
+        SalesHeader."VAT Bus. Posting Group");
+      ItemCharge.VALIDATE("VAT Prod. Posting Group",VATPostingSetup."VAT Prod. Posting Group");
+      ItemCharge.MODIFY(TRUE);
+
+      LibrarySales.CreateSalesLine(
+        SalesLine,SalesHeader,SalesLine.Type::"Charge (Item)",ItemCharge."No.",1);
+      SalesLine.VALIDATE("Unit Price",100);
+      SalesLine.VALIDATE("Unit Cost",ROUND(SalesLine.Amount / SalesLine.Quantity,Currency."Unit-Amount Rounding Precision"));
+      SalesLine.MODIFY(TRUE);
+
+      LibraryVariableStorage.Enqueue(SuggestType);
+
+      SalesLine.ShowItemChargeAssgnt;
+    END;
+
+    LOCAL PROCEDURE SalesOrderItemChargeAssignment@138(VAR SalesLine@1006 : Record 37;VAR AmountToAssign@1007 : Decimal;VAR QtyToAssign@1008 : Decimal;SuggestChoice@1000 : Integer);
+    VAR
+      SalesHeader@1005 : Record 36;
+    BEGIN
+      CreateSalesOrderWithItemsAndAssignedItemCharge(SalesHeader,SuggestChoice);
+
+      FindSalesLineWithType(SalesLine,SalesHeader."No.",SalesHeader."Document Type",SalesLine.Type::"Charge (Item)");
+      AmountToAssign := SalesLine."Unit Cost" * SalesLine.Quantity;
+      QtyToAssign := SalesLine.Quantity;
+    END;
+
+    LOCAL PROCEDURE PostSalesInvoiceWithItemCharge@97(VAR SalesInvoiceNo@1002 : Code[20];VAR AssignedAmount@1001 : Decimal;PricesInclVAT@1000 : Boolean);
+    VAR
+      SalesHeader@1007 : Record 36;
+      SalesHeaderCharge@1006 : Record 36;
+      SalesLine@1005 : Record 37;
+      SalesShipmentLine@1004 : Record 111;
+      ItemChargeAssignmentSales@1003 : Record 5809;
+    BEGIN
+      CreateSalesDocument(
+        SalesHeader,SalesLine,SalesHeader."Document Type"::Order,CreateCustomer,LibraryInventory.CreateItemNo);
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+
+      CreateSalesInvoiceWithItemCharge(SalesHeaderCharge,SalesHeader,PricesInclVAT);
+      SalesLine.SETRANGE("Document Type",SalesHeaderCharge."Document Type");
+      SalesLine.SETRANGE("Document No.",SalesHeaderCharge."No.");
+      SalesLine.FINDFIRST;
+      FindShipmentLine(SalesShipmentLine,SalesHeader."No.");
+      LibraryInventory.CreateItemChargeAssignment(
+        ItemChargeAssignmentSales,SalesLine,ItemChargeAssignmentSales."Applies-to Doc. Type"::Shipment,
+        SalesShipmentLine."Document No.",SalesShipmentLine."Line No.",SalesShipmentLine."No.");
+      LibraryVariableStorage.Enqueue(SalesHeaderCharge."No.");
+      AssignedAmount := ItemChargeAssignmentSales."Amount to Assign";
+
+      PAGE.RUNMODAL(PAGE::"Sales Statistics",SalesHeaderCharge);
+
+      SalesInvoiceNo := LibrarySales.PostSalesDocument(SalesHeaderCharge,TRUE,TRUE);
+    END;
+
+    LOCAL PROCEDURE VerifyGLEntry@2(DocumentNo@1000 : Code[20];Amount@1001 : Decimal);
+    VAR
+      GLEntry@1002 : Record 17;
+      GeneralLedgerSetup@1004 : Record 98;
+      TotalGLAmount@1003 : Decimal;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      GLEntry.SETRANGE("Document No.",DocumentNo);
+      GLEntry.SETFILTER(Amount,'>0');
+      GLEntry.FINDSET;
+      REPEAT
+        TotalGLAmount += GLEntry.Amount;
+      UNTIL GLEntry.NEXT = 0;
+      Assert.AreNearlyEqual(
+        Amount,TotalGLAmount,GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(AmountErr,GLEntry.FIELDCAPTION(Amount),Amount,GLEntry.TABLECAPTION));
+    END;
+
+    LOCAL PROCEDURE VerifyCustomerLedgerEntry@11(DocumentNo@1001 : Code[20];Amount@1000 : Decimal);
+    VAR
+      CustLedgerEntry@1002 : Record 21;
+      GeneralLedgerSetup@1003 : Record 98;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      CustLedgerEntry.SETRANGE("Document No.",DocumentNo);
+      CustLedgerEntry.FINDFIRST;
+      CustLedgerEntry.CALCFIELDS("Amount (LCY)");
+      Assert.AreNearlyEqual(
+        Amount,CustLedgerEntry."Amount (LCY)",GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(AmountErr,CustLedgerEntry.FIELDCAPTION("Amount (LCY)"),Amount,CustLedgerEntry.TABLECAPTION));
+    END;
+
+    LOCAL PROCEDURE VerifyInvoiceDiscountAmount@24(SalesLine@1005 : Record 37;DocumentNo@1004 : Code[20];InvoiceDiscountAmount@1003 : Decimal);
+    VAR
+      GeneralLedgerSetup@1002 : Record 98;
+      GeneralPostingSetup@1001 : Record 252;
+      GLEntry@1000 : Record 17;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      GeneralPostingSetup.GET(SalesLine."Gen. Bus. Posting Group",SalesLine."Gen. Prod. Posting Group");
+      GLEntry.SETRANGE("Document No.",DocumentNo);
+      GLEntry.SETRANGE("G/L Account No.",GeneralPostingSetup."Sales Inv. Disc. Account");
+      GLEntry.FINDFIRST;
+      Assert.AreNearlyEqual(
+        InvoiceDiscountAmount,GLEntry.Amount,GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(AmountErr,GLEntry.FIELDCAPTION(Amount),InvoiceDiscountAmount,GLEntry.TABLECAPTION));
+      Assert.AreNearlyEqual(
+        InvoiceDiscountAmount,SalesLine."Inv. Discount Amount",GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(AmountErr,SalesLine.FIELDCAPTION("Inv. Discount Amount"),InvoiceDiscountAmount,SalesLine.TABLECAPTION));
+    END;
+
+    LOCAL PROCEDURE VerifyLineDiscountAmount@23(SalesLine@1000 : Record 37;DocumentNo@1001 : Code[20];LineDiscountAmount@1002 : Decimal);
+    VAR
+      GeneralLedgerSetup@1005 : Record 98;
+      GeneralPostingSetup@1004 : Record 252;
+      GLEntry@1003 : Record 17;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      GeneralPostingSetup.GET(SalesLine."Gen. Bus. Posting Group",SalesLine."Gen. Prod. Posting Group");
+      GLEntry.SETRANGE("Document No.",DocumentNo);
+      GLEntry.SETRANGE("G/L Account No.",GeneralPostingSetup."Sales Line Disc. Account");
+      GLEntry.FINDFIRST;
+      Assert.AreNearlyEqual(
+        LineDiscountAmount,GLEntry.Amount,GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(AmountErr,GLEntry.FIELDCAPTION(Amount),LineDiscountAmount,GLEntry.TABLECAPTION));
+      Assert.AreNearlyEqual(
+        LineDiscountAmount,SalesLine."Line Discount Amount",GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(AmountErr,SalesLine.FIELDCAPTION("Line Discount Amount"),LineDiscountAmount,SalesLine.TABLECAPTION));
+    END;
+
+    LOCAL PROCEDURE VerifyPostedSalesInvoice@87(DocumentNo@1001 : Code[20];LineDiscountAmount@1002 : Decimal);
+    VAR
+      GeneralLedgerSetup@1004 : Record 98;
+      SalesInvoiceLine@1003 : Record 113;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      SalesInvoiceLine.SETRANGE("Document No.",DocumentNo);
+      SalesInvoiceLine.FINDFIRST;
+      Assert.AreNearlyEqual(
+        LineDiscountAmount,SalesInvoiceLine."Inv. Discount Amount",GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(AmountErr,SalesInvoiceLine.FIELDCAPTION("Inv. Discount Amount"),LineDiscountAmount,SalesInvoiceLine.TABLECAPTION));
+    END;
+
+    LOCAL PROCEDURE VerifyRemainingAmountLCY@55(CustomerNo@1000 : Code[20];RemainingAmtLCY@1003 : Decimal);
+    VAR
+      CustLedgerEntry@1001 : Record 21;
+      Currency@1005 : Record 4;
+    BEGIN
+      // Verifing Remaining Amount(LCY).
+      CustLedgerEntry.SETRANGE("Document Type",CustLedgerEntry."Document Type"::Invoice);
+      CustLedgerEntry.SETRANGE("Customer No.",CustomerNo);
+      CustLedgerEntry.FINDFIRST;
+      CustLedgerEntry.CALCFIELDS("Remaining Amt. (LCY)");
+      Currency.GET(CustLedgerEntry."Currency Code");
+      Assert.AreNearlyEqual(
+        RemainingAmtLCY,CustLedgerEntry."Remaining Amt. (LCY)",Currency."Invoice Rounding Precision",
+        STRSUBSTNO(AmountErr,CustLedgerEntry.FIELDCAPTION("Remaining Amt. (LCY)"),
+          RemainingAmtLCY,CustLedgerEntry.TABLECAPTION));
+    END;
+
+    LOCAL PROCEDURE VerifyVATEntry@7(DocumentNo@1001 : Code[20];Amount@1000 : Decimal);
+    VAR
+      GeneralLedgerSetup@1003 : Record 98;
+      VATEntry@1002 : Record 254;
+      TotalVATAmount@1004 : Decimal;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      VATEntry.SETRANGE("Document No.",DocumentNo);
+      VATEntry.FINDSET;
+      REPEAT
+        TotalVATAmount += ABS(VATEntry.Base + VATEntry.Amount);
+      UNTIL VATEntry.NEXT = 0;
+      Assert.AreNearlyEqual(
+        Amount,TotalVATAmount,GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(AmountErr,VATEntry.FIELDCAPTION(Amount),Amount,VATEntry.TABLECAPTION));
+    END;
+
+    LOCAL PROCEDURE VerifyValueEntry@15(DocumentNo@1001 : Code[20];Amount@1000 : Decimal);
+    VAR
+      GeneralLedgerSetup@1003 : Record 98;
+      ValueEntry@1002 : Record 5802;
+      SalesAmount@1004 : Decimal;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      ValueEntry.SETRANGE("Document No.",DocumentNo);
+      ValueEntry.FINDSET;
+      REPEAT
+        SalesAmount += ValueEntry."Sales Amount (Actual)"
+      UNTIL ValueEntry.NEXT = 0;
+      Assert.AreNearlyEqual(
+        Amount,SalesAmount,GeneralLedgerSetup."Amount Rounding Precision",
+        STRSUBSTNO(AmountErr,ValueEntry.FIELDCAPTION("Sales Amount (Actual)"),Amount,ValueEntry.TABLECAPTION));
+    END;
+
+    LOCAL PROCEDURE VerifyNavigateRecords@43(VAR DocumentEntry@1001 : Record 265;TableID@1000 : Integer;NoOfRecords@1002 : Integer);
+    BEGIN
+      DocumentEntry.SETRANGE("Table ID",TableID);
+      DocumentEntry.FINDFIRST;
+      DocumentEntry.TESTFIELD("No. of Records",NoOfRecords);
+    END;
+
+    LOCAL PROCEDURE VerifyPostedEntries@49(DocumentNo@1006 : Code[20]);
+    VAR
+      VATEntry@1001 : Record 254;
+      ValueEntry@1004 : Record 5802;
+    BEGIN
+      VerifyPostedPaymentNavigation(DocumentNo);
+
+      VATEntry.SETRANGE("Document No.",DocumentNo);
+      VerifyNavigateRecords(TempDocumentEntry2,DATABASE::"VAT Entry",VATEntry.COUNT);
+
+      ValueEntry.SETRANGE("Document No.",DocumentNo);
+      VerifyNavigateRecords(TempDocumentEntry2,DATABASE::"Value Entry",ValueEntry.COUNT);
+    END;
+
+    LOCAL PROCEDURE VerifyPostedPaymentNavigation@52(DocumentNo@1006 : Code[20]);
+    VAR
+      GLEntry@1000 : Record 17;
+      CustLedgerEntry@1002 : Record 21;
+      DetailedCustLedgEntry@1003 : Record 379;
+    BEGIN
+      GLEntry.SETRANGE("Document No.",DocumentNo);
+      VerifyNavigateRecords(TempDocumentEntry2,DATABASE::"G/L Entry",GLEntry.COUNT);
+
+      CustLedgerEntry.SETRANGE("Document No.",DocumentNo);
+      VerifyNavigateRecords(TempDocumentEntry2,DATABASE::"Cust. Ledger Entry",CustLedgerEntry.COUNT);
+
+      DetailedCustLedgEntry.SETRANGE("Document No.",DocumentNo);
+      VerifyNavigateRecords(TempDocumentEntry2,DATABASE::"Detailed Cust. Ledg. Entry",DetailedCustLedgEntry.COUNT);
+    END;
+
+    LOCAL PROCEDURE VerifyPostedShipmentLine@56(VAR SalesLine@1000 : Record 37);
+    VAR
+      SalesShipmentHeader@1006 : Record 110;
+      SalesShipmentLine@1005 : Record 111;
+    BEGIN
+      SalesLine.FINDSET;
+      FindSalesShipmentHeader(SalesShipmentHeader,SalesLine."Document No.");
+      REPEAT
+        SalesShipmentLine.GET(SalesShipmentHeader."No.",SalesLine."Line No.");
+        SalesShipmentLine.TESTFIELD(Quantity,SalesLine.Quantity);
+        SalesShipmentLine.TESTFIELD("Unit Price",SalesLine."Unit Price");
+      UNTIL SalesLine.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE VerifyVATOnSalesInvoice@51(SalesLine@1000 : Record 37);
+    VAR
+      GeneralLedgerSetup@1002 : Record 98;
+      VATAmountSalesLine@1001 : Decimal;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      FindSalesLines(SalesLine);
+      REPEAT
+        VATAmountSalesLine := SalesLine."Line Amount" * (1 + SalesLine."VAT %" / 100);
+        Assert.AreNearlyEqual(
+          VATAmountSalesLine,SalesLine."Amount Including VAT",GeneralLedgerSetup."Amount Rounding Precision",
+          STRSUBSTNO(VATAmountErr,VATAmountSalesLine,SalesLine.TABLECAPTION));
+      UNTIL SalesLine.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE VerifyLineDiscountOnInvoice@144(SalesLine@1000 : Record 37);
+    VAR
+      GeneralLedgerSetup@1003 : Record 98;
+      LineDiscountAmount@1001 : Decimal;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      FindSalesLines(SalesLine);
+      REPEAT
+        LineDiscountAmount := ROUND(SalesLine.Quantity * SalesLine."Unit Price" * SalesLine."Line Discount %" / 100);
+        Assert.AreNearlyEqual(
+          LineDiscountAmount,SalesLine."Line Discount Amount",GeneralLedgerSetup."Amount Rounding Precision",
+          STRSUBSTNO(AmountErr,SalesLine.FIELDCAPTION("Line Discount Amount"),LineDiscountAmount,SalesLine.TABLECAPTION));
+      UNTIL SalesLine.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE VerifyInvoiceDiscountOnInvoice@159(SalesLine@1000 : Record 37;CustInvoiceDisc@1001 : Record 19);
+    VAR
+      GeneralLedgerSetup@1003 : Record 98;
+      InvoiceDiscountAmount@1002 : Decimal;
+    BEGIN
+      GeneralLedgerSetup.GET;
+      FindSalesLines(SalesLine);
+      REPEAT
+        InvoiceDiscountAmount := ROUND(SalesLine."Line Amount" * CustInvoiceDisc."Discount %" / 100);
+        Assert.AreNearlyEqual(
+          InvoiceDiscountAmount,SalesLine."Inv. Discount Amount",GeneralLedgerSetup."Amount Rounding Precision",
+          STRSUBSTNO(AmountErr,SalesLine.FIELDCAPTION("Inv. Discount Amount"),InvoiceDiscountAmount,SalesLine.TABLECAPTION));
+      UNTIL SalesLine.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE VerifyUndoShipmentLineOnPostedShipment@119(DocumentNo@1001 : Code[20];QtyToShip@1003 : Decimal);
+    VAR
+      SalesShipmentLine@1000 : Record 111;
+    BEGIN
+      SalesShipmentLine.SETRANGE("Order No.",DocumentNo);
+      SalesShipmentLine.FINDLAST;
+      SalesShipmentLine.TESTFIELD(Quantity,-1 * QtyToShip);
+    END;
+
+    LOCAL PROCEDURE VerifyDimSetIDOnItemLedgEntry@235(ExpectedDimSetID@1001 : Integer);
+    VAR
+      ItemLedgEntry@1002 : Record 32;
+      ValueEntry@1000 : Record 5802;
+    BEGIN
+      ItemLedgEntry.FINDLAST;
+      ValueEntry.SETFILTER("Item Charge No.",'<>%1','');
+      ValueEntry.SETRANGE("Item Ledger Entry No.",ItemLedgEntry."Entry No.");
+      ValueEntry.FINDFIRST;
+      Assert.AreEqual(
+        ExpectedDimSetID,ValueEntry."Dimension Set ID",STRSUBSTNO(IncorrectDimSetIDErr,ItemLedgEntry.TABLECAPTION));
+    END;
+
+    LOCAL PROCEDURE VerifyQuantitytoShipOnSalesLine@118(DocumentNo@1002 : Code[20];DocumentType@1001 : Option);
+    VAR
+      SalesLine@1000 : Record 37;
+    BEGIN
+      SalesLine.SETRANGE("Document Type",DocumentType);
+      SalesLine.SETRANGE("Document No.",DocumentNo);
+      SalesLine.FINDFIRST;
+      SalesLine.TESTFIELD("Qty. to Ship",0);
+    END;
+
+    LOCAL PROCEDURE VerifyQuantityOnSalesInvoiceLine@117(OrderNo@1000 : Code[20];SellToCustomerNo@1004 : Code[20];Quantity@1003 : Decimal);
+    VAR
+      SalesInvoiceHeader@1001 : Record 112;
+      SalesInvoiceLine@1002 : Record 113;
+    BEGIN
+      SalesInvoiceHeader.SETRANGE("Order No.",OrderNo);
+      SalesInvoiceHeader.SETRANGE("Sell-to Customer No.",SellToCustomerNo);
+      SalesInvoiceHeader.FINDFIRST;
+      SalesInvoiceLine.SETRANGE("Document No.",SalesInvoiceHeader."No.");
+      SalesInvoiceLine.FINDFIRST;
+      SalesInvoiceLine.TESTFIELD(Quantity,Quantity);
+    END;
+
+    LOCAL PROCEDURE VerifySalesHeaderDimensions@101(SalesHeader@1000 : Record 36;DimCode@1001 : Code[20]);
+    VAR
+      DimensionSetEntry@1002 : Record 480;
+    BEGIN
+      DimensionSetEntry.SETRANGE("Dimension Code",DimCode);
+      DimensionSetEntry.FINDFIRST;
+      Assert.AreEqual(
+        DimensionSetEntry."Dimension Set ID",SalesHeader."Dimension Set ID",
+        STRSUBSTNO(WrongDimValueErr,SalesHeader."No."));
+    END;
+
+    LOCAL PROCEDURE VerifySalesLineFindRecordByDescription@316(SalesLine@1000 : Record 37;NewDescription@1003 : Text[50];ExpectedNo@1002 : Code[20];ExpectedDescription@1001 : Text);
+    BEGIN
+      WITH SalesLine DO BEGIN
+        VALIDATE("No.",'');
+        VALIDATE(Description,NewDescription);
+        Assert.AreEqual(ExpectedNo,"No.",FIELDCAPTION("No."));
+        Assert.AreEqual(ExpectedDescription,Description,FIELDCAPTION(Description));
+      END;
+    END;
+
+    LOCAL PROCEDURE VerifySalesShptDocExists@191(OrderNo@1001 : Code[20]);
+    VAR
+      SalesShipmentHeader@1000 : Record 110;
+    BEGIN
+      SalesShipmentHeader.SETRANGE("Order No.",OrderNo);
+      Assert.RecordIsNotEmpty(SalesShipmentHeader);
+    END;
+
+    LOCAL PROCEDURE CreateOrderCheckVATSetup@274(VAR SalesHeader@1000 : Record 36;VAR SalesLine@1001 : Record 37);
+    VAR
+      VATPostingSetup@1003 : Record 325;
+      Item@1002 : Record 27;
+    BEGIN
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+      LibraryInventory.CreateItem(Item);
+      IF NOT VATPostingSetup.GET(SalesHeader."VAT Bus. Posting Group",Item."VAT Prod. Posting Group") THEN
+        LibraryERM.CreateVATPostingSetup(VATPostingSetup,SalesHeader."VAT Bus. Posting Group",Item."VAT Prod. Posting Group");
+      LibrarySales.CreateSalesLine(SalesLine,SalesHeader,SalesLine.Type::Item,Item."No.",1);
+    END;
+
+    LOCAL PROCEDURE VerifyUnitPriceSignResLedgerEntry@168(DocNo@1000 : Code[20];ResNo@1001 : Code[20];Quantity@1003 : Decimal);
+    VAR
+      ResLedgerEntry@1002 : Record 203;
+    BEGIN
+      ResLedgerEntry.SETRANGE("Document No.",DocNo);
+      ResLedgerEntry.SETRANGE("Resource No.",ResNo);
+      ResLedgerEntry.SETRANGE(Quantity,Quantity);
+      ResLedgerEntry.FINDFIRST;
+      Assert.IsTrue(ResLedgerEntry."Unit Price" > 0,UnitPriceErr);
+    END;
+
+    [PageHandler]
+    PROCEDURE NavigatePageHandler@13(VAR Navigate@1000 : Page 344);
+    BEGIN
+      Navigate.SetDoc(PostingDate2,DocumentNo2);
+      Navigate.UpdateNavigateForm(FALSE);
+      Navigate.FindRecordsOnOpen;
+
+      TempDocumentEntry2.DELETEALL;
+      Navigate.ReturnDocumentEntry(TempDocumentEntry2);
+    END;
+
+    [MessageHandler]
+    PROCEDURE MessageHandler@18(Message@1000 : Text[1024]);
+    BEGIN
+      // Message Handler.
+    END;
+
+    [ConfirmHandler]
+    PROCEDURE ConfirmHandlerYes@68(Question@1000 : Text[1024];VAR Reply@1001 : Boolean);
+    BEGIN
+      Reply := TRUE;
+    END;
+
+    [ConfirmHandler]
+    PROCEDURE ConfirmHandlerNo@104(Question@1000 : Text[1024];VAR Reply@1001 : Boolean);
+    BEGIN
+      Reply := FALSE;
+    END;
+
+    [StrMenuHandler]
+    PROCEDURE ShipAndInvoiceStrMenuHandler@109(Options@1000 : Text[1024];VAR Choice@1001 : Integer;Instructions@1002 : Text[1024]);
+    BEGIN
+      Choice := 3;
+    END;
+
+    [RequestPageHandler]
+    PROCEDURE CopySalesDocumentHandler@245(VAR CopySalesDocument@1000 : TestRequestPage 292);
+    VAR
+      DocumentType@1001 : Variant;
+      No@1002 : Variant;
+    BEGIN
+      LibraryVariableStorage.Dequeue(DocumentType);
+      LibraryVariableStorage.Dequeue(No);
+      DocType := DocumentType;
+      CopySalesDocument.DocumentType.SETVALUE(DocType);
+      CopySalesDocument.DocumentNo.SETVALUE(No);  // Invokes SalesListArchiveHandler.
+      CopySalesDocument.IncludeHeader_Options.SETVALUE(TRUE);
+      CopySalesDocument.OK.INVOKE;
+    END;
+
+    LOCAL PROCEDURE CreatePostSalesOrder@241() : Code[20];
+    VAR
+      Customer@1002 : Record 18;
+      SalesHeader@1001 : Record 36;
+      Qty@1000 : Integer;
+    BEGIN
+      LibrarySales.CreateCustomer(Customer);
+      LibrarySales.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,Customer."No.");
+      Qty := LibraryRandom.RandInt(10);
+      CreateSalesLineWithItem(SalesHeader,Qty,Qty);
+      CreateSalesLineWithItem(SalesHeader,Qty,0);
+      LibrarySales.ReleaseSalesDocument(SalesHeader);
+      LibrarySales.PostSalesDocument(SalesHeader,TRUE,FALSE);
+      LibrarySales.PostSalesDocument(SalesHeader,FALSE,TRUE);
+      EXIT(SalesHeader."No.");
+    END;
+
+    LOCAL PROCEDURE CreateSalesLineWithItem@242(SalesHeader@1001 : Record 36;Qty@1000 : Integer;QtyToShip@1002 : Integer);
+    VAR
+      Item@1003 : Record 27;
+      SalesLine@1004 : Record 37;
+    BEGIN
+      LibraryInventory.CreateItemWithUnitPriceAndUnitCost(Item,
+        LibraryRandom.RandDec(1000,2),
+        LibraryRandom.RandDec(1000,2));
+      WITH SalesLine DO BEGIN
+        LibrarySales.CreateSalesLine(SalesLine,SalesHeader,Type::Item,Item."No.",Qty);
+        VALIDATE("Qty. to Ship",QtyToShip);
+        MODIFY(TRUE);
+      END;
+    END;
+
+    LOCAL PROCEDURE CreateCopySalesOrder@243(VAR SalesHeader@1000 : Record 36;FromSalesOrderNo@1001 : Code[20]);
+    BEGIN
+      WITH SalesHeader DO BEGIN
+        LibrarySales.CreateSalesHeader(SalesHeader,"Document Type"::Order,'');
+        LibraryVariableStorage.Clear;
+        LibraryVariableStorage.Enqueue(DocType::Order);
+        LibraryVariableStorage.Enqueue(FromSalesOrderNo);
+        CopySalesDocument(SalesHeader);
+        GET("Document Type"::Order,"No.");
+      END
+    END;
+
+    LOCAL PROCEDURE CopySalesDocument@244(SalesHeader@1000 : Record 36);
+    VAR
+      CopySalesDocument@1001 : Report 292;
+    BEGIN
+      COMMIT;
+      CopySalesDocument.SetSalesHeader(SalesHeader);
+      CopySalesDocument.RUNMODAL;
+    END;
+
+    [ModalPageHandler]
+    PROCEDURE SalesStatisticsHandler@275(VAR SalesStatistics@1000 : TestPage 160);
+    VAR
+      SalesHeader@1001 : Record 36;
+    BEGIN
+      SalesStatistics.SubForm."VAT Amount".SETVALUE(
+        SalesStatistics.SubForm."VAT Amount".ASDECIMAL + LibraryVariableStorage.DequeueDecimal);
+      SalesHeader.GET(SalesHeader."Document Type"::Invoice,LibraryVariableStorage.DequeueText);
+      SalesStatistics.GOTORECORD(SalesHeader); // Refresh
+    END;
+
+    [MessageHandler]
+    PROCEDURE ExactMessageHandler@302(Message@1000 : Text);
+    BEGIN
+      Assert.ExpectedMessage(LibraryVariableStorage.DequeueText,Message);
+    END;
+
+    [ModalPageHandler]
+    PROCEDURE ItemChargeAssignmentHandler@315(VAR ItemChargeAssignmentSales@1000 : TestPage 5814);
+    BEGIN
+      ItemChargeAssignmentSales.SuggestItemChargeAssignment.INVOKE;
+      ItemChargeAssignmentSales.OK.INVOKE;
+    END;
+
+    [StrMenuHandler]
+    PROCEDURE ItemChargeAssignMenuHandler@352(Option@1000 : Text[1024];VAR Choice@1001 : Integer;Instruction@1002 : Text[1024]);
+    BEGIN
+      Choice := LibraryVariableStorage.DequeueInteger;
+    END;
+
+    [SendNotificationHandler]
+    PROCEDURE SendNotificationHandler@142(VAR Notification@1000 : Notification) : Boolean;
+    BEGIN
+    END;
+
+    [ModalPageHandler]
+    PROCEDURE AutoReservePageHandler@147(VAR Reservation@1000 : TestPage 498);
+    BEGIN
+      Reservation."Auto Reserve".INVOKE;
+    END;
+
+    BEGIN
+    {
+      // [FEATURE] [Sales] [Order]
+    }
+    END.
+  }
+}
+

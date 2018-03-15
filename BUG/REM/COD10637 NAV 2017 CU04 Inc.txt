@@ -1,0 +1,229 @@
+OBJECT Codeunit 10637 Import CAMT054
+{
+  OBJECT-PROPERTIES
+  {
+    Date=23.05.17;
+    Time=15:18:31;
+    Modified=Yes;
+    Version List=NAVNO10.00.00.15140,INCBF1.0;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      UnexpectedStatusErr@1080023 : TextConst '@@@=%1 is the status.;ENU=Unexpected status %1.;NOR=Uventet status %1.';
+      UnknownStatusErr@1080000 : TextConst '@@@=%1 is the status.;ENU=Unknown status %1.;NOR=Ukjent status %1.';
+      RemittancePaymentOrder@1080019 : Record 15000001;
+      CurrentGenJournalLine@1080018 : Record 81;
+      LatestRemittanceAccount@1080017 : Record 15000003;
+      LatestRemittanceAgreement@1080016 : Record 15000000;
+      XMLDOMManagement@1080015 : Codeunit 6224;
+      ImportSEPACommon@1080014 : Codeunit 10635;
+      XmlDocumentCAMT054@1080013 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlDocument";
+      XmlNamespaceManagerCAMT054@1080012 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNamespaceManager";
+      NumberApproved@1080011 : Integer;
+      NumberRejected@1080010 : Integer;
+      NumberSettled@1080009 : Integer;
+      MoreReturnJournals@1080008 : Boolean;
+      First@1080007 : Boolean;
+      LatestVend@1080006 : Code[20];
+      BalanceEntryAmountLCY@1080005 : Decimal;
+      TransDocumentNo@1080004 : Code[10];
+      CreateNewDocumentNo@1080003 : Boolean;
+      LatestDate@1080002 : Date;
+      CAMT054NamespaceTxt@1080020 : TextConst 'ENU=urn:iso:std:iso:20022:tech:xsd:camt.054.001.02;NOR=urn:iso:std:iso:20022:tech:xsd:camt.054.001.02';
+      AccountCurrency@1080022 : Code[3];
+      LatestCurrencyCode@1080021 : Code[3];
+
+    PROCEDURE ImportAndHandleCAMT054File@1080001(GenJournalLine@1080009 : Record 81;FileName@1080008 : Text[250];Note@1080007 : Text[50]);
+    VAR
+      RemittanceAccount@1080011 : Record 15000003;
+      RemittanceAgreement@1080004 : Record 15000000;
+      XmlNodeListTransactionEntries@1080012 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNodeList";
+      NodeListEnumTransactionEntries@1080003 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Collections.IEnumerator";
+      XmlNodeTransactionEntry@1080005 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+    BEGIN
+      NumberApproved := 0;
+      NumberRejected := 0;
+      NumberSettled := 0;
+      CurrentGenJournalLine := GenJournalLine;
+      MoreReturnJournals := FALSE;
+      First := TRUE;
+      CreateNewDocumentNo := TRUE;
+      LatestDate := 010203D; // dummy init for precal
+      LatestVend := '';
+
+      OpenCAMT054Document(FileName);
+      // used as a reference in waiting
+      ImportSEPACommon.CreatePaymOrder(Note,RemittancePaymentOrder);
+
+      // prepare to loop on entries (transactions)
+      IF XMLDOMManagement.FindNodesWithNamespaceManager(
+           XmlDocumentCAMT054,'//n:BkToCstmrDbtCdtNtfctn/n:Ntfctn/n:Ntry',XmlNamespaceManagerCAMT054,XmlNodeListTransactionEntries)
+      THEN BEGIN
+        NodeListEnumTransactionEntries := XmlNodeListTransactionEntries.GetEnumerator;
+        NodeListEnumTransactionEntries.MoveNext;
+        REPEAT
+          XmlNodeTransactionEntry := NodeListEnumTransactionEntries.Current;
+          HandleTransaction(XmlNodeTransactionEntry);
+        UNTIL NOT NodeListEnumTransactionEntries.MoveNext;
+      END;
+
+      // Closing transaction.
+      IF NumberSettled > 0 THEN  // Check whether payments are created
+        // Create balance entry for the last vendor transaction.
+        // All the parameters are dummies. This is only to make sure that the balance entry is created:
+        ImportSEPACommon.CreateBalanceEntry(
+          010101D,AccountCurrency,'',RemittanceAccount,RemittanceAgreement,LatestDate,LatestVend,LatestRemittanceAccount,
+          LatestRemittanceAgreement,
+          LatestCurrencyCode,CurrentGenJournalLine,
+          TransDocumentNo,MoreReturnJournals,First,BalanceEntryAmountLCY,CreateNewDocumentNo);
+
+      ImportSEPACommon.ConfirmImportDialog(FileName,NumberApproved,NumberRejected,NumberSettled);
+    END;
+
+    PROCEDURE HandleTransaction@1080065(XmlNodeTransactionEntry@1080008 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode");
+    VAR
+      WaitingJournal@1080004 : Record 15000004;
+      OriginalMsgId@1080003 : Text;
+      OriginalPmtInfId@1080005 : Text;
+      OriginalInstrId@1080011 : Text;
+      OriginalEndToEndId@1080000 : Text;
+      TransactionStatus@1080001 : Text;
+    BEGIN
+      GetTransactionInfo(
+        XmlNodeTransactionEntry,OriginalMsgId,OriginalPmtInfId,OriginalInstrId,OriginalEndToEndId,TransactionStatus);
+      WaitingJournal.RESET;
+      WaitingJournal.SETFILTER("SEPA Msg. ID",OriginalMsgId);
+      WaitingJournal.SETFILTER("SEPA Payment Inf ID",OriginalPmtInfId);
+      WaitingJournal.SETFILTER("SEPA Instr. ID",OriginalInstrId);
+      WaitingJournal.SETFILTER("SEPA End To End ID",OriginalEndToEndId);
+      IF NOT WaitingJournal.FINDFIRST THEN
+        ERROR(WaitingJournal.GetWaitingJournalNotFoundForRemittanceImport);
+      ImportSEPACommon.UpdateWaitingJournal(
+        WaitingJournal,MapReceivedStatusToFinalStatus(TransactionStatus),'','',
+        RemittancePaymentOrder,GetMsgCreationDate(XmlNodeTransactionEntry),CurrentGenJournalLine,AccountCurrency,NumberApproved,
+        NumberSettled,NumberRejected,
+        TransDocumentNo,BalanceEntryAmountLCY,MoreReturnJournals,First,LatestDate,LatestVend,LatestRemittanceAccount,
+        LatestRemittanceAgreement,
+        LatestCurrencyCode,
+        CreateNewDocumentNo,FALSE);
+    END;
+
+    LOCAL PROCEDURE OpenCAMT054Document@1080002(FilePath@1080010 : Text);
+    VAR
+      XMLDOMManagement@1080000 : Codeunit 6224;
+      FileManagement@1080006 : Codeunit 419;
+      ServerFile@1080007 : Text;
+    BEGIN
+      ServerFile := FilePath;
+      IF NOT FileManagement.IsWebClient THEN
+        ServerFile := FileManagement.UploadFileSilent(FilePath);
+
+      XMLDOMManagement.LoadXMLDocumentFromFile(ServerFile,XmlDocumentCAMT054);
+      XMLDOMManagement.AddNamespaces(XmlNamespaceManagerCAMT054,XmlDocumentCAMT054);
+      XmlNamespaceManagerCAMT054.AddNamespace('n',CAMT054NamespaceTxt);
+    END;
+
+    LOCAL PROCEDURE GetTransactionInfo@1080015(TransactionEntryXmlNode@1080002 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";VAR OriginalMsgId@1080007 : Text;VAR OriginalPmtInfId@1080003 : Text;VAR OriginalInstrId@1080004 : Text;VAR OriginalEndToEndId@1080006 : Text;VAR TransactionStatus@1080005 : Text);
+    VAR
+      RefsNode@1080000 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+    BEGIN
+      ImportSEPACommon.FindFirstNode(TransactionEntryXmlNode,XmlNamespaceManagerCAMT054,RefsNode,'./n:NtryDtls/n:TxDtls/n:Refs',TRUE);
+      OriginalMsgId := ImportSEPACommon.FindFirstNodeTxt(RefsNode,XmlNamespaceManagerCAMT054,'./n:MsgId',TRUE);
+      OriginalPmtInfId := ImportSEPACommon.FindFirstNodeTxt(RefsNode,XmlNamespaceManagerCAMT054,'./n:PmtInfId',TRUE);
+      //INCBF1.0 --> Not included node in file from Nordea
+      //OriginalInstrId := ImportSEPACommon.FindFirstNodeTxt(RefsNode,XmlNamespaceManagerCAMT054,'./n:InstrId',TRUE);
+      //INCBF1.0 <--
+      OriginalEndToEndId := ImportSEPACommon.FindFirstNodeTxt(RefsNode,XmlNamespaceManagerCAMT054,'./n:EndToEndId',TRUE);
+      TransactionStatus := ImportSEPACommon.FindFirstNodeTxt(TransactionEntryXmlNode,XmlNamespaceManagerCAMT054,'./n:Sts',TRUE);
+    END;
+
+    LOCAL PROCEDURE MapReceivedStatusToFinalStatus@1080006(ReceivedStatus@1080000 : Text) : Integer;
+    VAR
+      ResultStatus@1080001 : 'Approved,Settled,Rejected,Pending';
+    BEGIN
+      CASE ReceivedStatus OF
+        'BOOK':
+          EXIT(ResultStatus::Settled);
+        'PDNG':
+          ERROR(STRSUBSTNO(UnexpectedStatusErr,ReceivedStatus));
+        'INFO':
+          ERROR(STRSUBSTNO(UnexpectedStatusErr,ReceivedStatus));
+        ELSE
+          ERROR(STRSUBSTNO(UnknownStatusErr,ReceivedStatus));
+      END;
+    END;
+
+    PROCEDURE ReadStatus@1080025(VAR Approved@1080000 : Integer;VAR Rejected@1080001 : Integer;VAR Settled@1080002 : Integer;VAR ReturnMoreReturnJournals@1080003 : Boolean;VAR ReturnRemittancePaymentOrder@1080004 : Record 15000001);
+    BEGIN
+      // Returns info on the current (terminated) import.
+      // Counts parameters with new values.
+      Approved := Approved + NumberApproved;
+      Rejected := Rejected + NumberRejected;
+      Settled := Settled + NumberSettled;
+      ReturnMoreReturnJournals := MoreReturnJournals;
+      ReturnRemittancePaymentOrder := RemittancePaymentOrder;
+    END;
+
+    LOCAL PROCEDURE GetMsgCreationDate@1080095(XmlNodeTransactionEntry@1080004 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode") : Date;
+    VAR
+      Day@1080003 : Integer;
+      Month@1080002 : Integer;
+      Year@1080001 : Integer;
+      ISODate@1080000 : Text;
+    BEGIN
+      ISODate :=
+        ImportSEPACommon.FindFirstNodeTxt(XmlNodeTransactionEntry,XmlNamespaceManagerCAMT054,'./n:BookgDt/n:Dt',TRUE);
+      EVALUATE(Day,COPYSTR(ISODate,9,2));
+      EVALUATE(Month,COPYSTR(ISODate,6,2));
+      EVALUATE(Year,COPYSTR(ISODate,1,4));
+      EXIT(DMY2DATE(Day,Month,Year));
+    END;
+
+    PROCEDURE GetNamespace@1080011() : Text[250];
+    BEGIN
+      EXIT(CAMT054NamespaceTxt);
+    END;
+
+    EVENT XmlDocumentCAMT054@1080013::NodeInserting@94(sender@1080001 : Variant;e@1080000 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNodeChangedEventArgs");
+    BEGIN
+    END;
+
+    EVENT XmlDocumentCAMT054@1080013::NodeInserted@95(sender@1080001 : Variant;e@1080000 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNodeChangedEventArgs");
+    BEGIN
+    END;
+
+    EVENT XmlDocumentCAMT054@1080013::NodeRemoving@96(sender@1080001 : Variant;e@1080000 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNodeChangedEventArgs");
+    BEGIN
+    END;
+
+    EVENT XmlDocumentCAMT054@1080013::NodeRemoved@97(sender@1080001 : Variant;e@1080000 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNodeChangedEventArgs");
+    BEGIN
+    END;
+
+    EVENT XmlDocumentCAMT054@1080013::NodeChanging@98(sender@1080001 : Variant;e@1080000 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNodeChangedEventArgs");
+    BEGIN
+    END;
+
+    EVENT XmlDocumentCAMT054@1080013::NodeChanged@99(sender@1080001 : Variant;e@1080000 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNodeChangedEventArgs");
+    BEGIN
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 23.05.17 GST SEPA Nordea - Not included node in file from Nordea
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,94 @@
+OBJECT Table 88001 Translation Line Inc.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=14:01:10;
+    Modified=Yes;
+    Version List=TRL1.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Translation Line Inc.;
+               NOR=Oversettelse Linje Inc.];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Entry No.           ;Text30        ;CaptionML=[ENU=Entry No.;
+                                                              NOR=L›penr.] }
+    { 2   ;   ;Base Text           ;Text250       ;CaptionML=[ENU=Base Text;
+                                                              NOR=Grunntekst] }
+    { 3   ;   ;Translation         ;Text250       ;CaptionML=[ENU=Translation;
+                                                              NOR=Oversettelse] }
+    { 4   ;   ;Auto Increment      ;Integer       ;CaptionML=[ENU=Auto Increment;
+                                                              NOR=Auto›kning] }
+    { 5   ;   ;Translated          ;Boolean       ;CaptionML=[ENU=Translated;
+                                                              NOR=Oversatt] }
+    { 6   ;   ;Length              ;Integer       ;CaptionML=[ENU=Length;
+                                                              NOR=Lengde] }
+    { 7   ;   ;Type                ;Option        ;CaptionML=[ENU=Type;
+                                                              ESP=Type;
+                                                              FRA=Type;
+                                                              NLD=Soort;
+                                                              DEA=Type];
+                                                   OptionCaptionML=[ENU=" ,Object,Field,Variable,Option,Text Constante,Tab Names,Function,Label,Tool Tip,,Text,Control,MenuItem,Request Form,Data Item,Source Expr.,Request Page,ReqFilterHeading,Event,Instructional Text,Field Group,Key Group,Promoted Action Categories";
+                                                                    ESP=" ,Object,Field,Variable,Option,Text Constante,Tab Names,Function,Label,Tool Tip,,Text,Control,MenuItem,Request Form,Data Item,Source Expr.,Request Page,ReqFilterHeading,Event,Instructional Text,Field Group,Key Group,Promoted Action Categories";
+                                                                    FRA=" ,Object,Field,Variable,Option,Text Constante,Tab Names,Function,Label,Tool Tip,,Text,Control,MenuItem,Request Form,Data Item,Source Expr.,Request Page,ReqFilterHeading,Event,Instructional Text,Field Group,Key Group,Promoted Action Categories";
+                                                                    NLD=" ,Object,Veld,Variabele,Optie,Textconstante,Tabnamen,Functie,Label,Tooltip,,Tekst,Control,MenuItem,Request Form,Data Item,Source Expr.,Request Page,ReqFilterHeading,Event,Instructietekst,Field Group,Key Group,Promoted Action Categories";
+                                                                    DEA=" ,Object,Field,Variable,Option,Text Constante,Tab Names,Function,Label,Tool Tip,,Text,Control,MenuItem,Request Form,Data Item,Source Expr.,Request Page,ReqFilterHeading,Event,Instructional Text,Field Group,Key Group,Promoted Action Categories"];
+                                                   OptionString=[ ,Object,Field,Variable,Option,Text Constante,Tab Names,Function,Label,Tool Tip,,Text,Control,MenuItem,Request Form,Data Item,Source Expr.,Request Page,ReqFilterHeading,Event,Instructional Text,Field Group,Key Group,Promoted Action Categories];
+                                                   Editable=No }
+    { 8   ;   ;Object Type         ;Option        ;CaptionML=[DEU=Object Type;
+                                                              ENU=Object Type;
+                                                              ESP=Object Type;
+                                                              FRA=Object Type;
+                                                              NLD=Objecttype;
+                                                              DEA=Object Type];
+                                                   OptionCaptionML=[DEU=,Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query;
+                                                                    ENU=,Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query;
+                                                                    ESP=,Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query;
+                                                                    FRA=,Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query;
+                                                                    NLD=,Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query;
+                                                                    DEA=,Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query];
+                                                   OptionString=,Table,,Report,,Codeunit,XMLport,MenuSuite,Page,Query;
+                                                   BlankZero=Yes;
+                                                   Editable=No }
+    { 9   ;   ;Object No.          ;Integer       ;TableRelation=Object.ID WHERE (Type=FIELD(Object Type),
+                                                                                  Company Name=FILTER(''));
+                                                   CaptionML=[DEU=Object No.;
+                                                              ENU=Object No.;
+                                                              ESP=Object No.;
+                                                              FRA=Object No.;
+                                                              NLD=Objectnr.;
+                                                              DEA=Object No.];
+                                                   Editable=No }
+    { 10  ;   ;Translate File Line ;Text100        }
+    { 14  ;   ;QuantityNottranslated;Integer      ;CaptionML=[ENU=Quantity not Translated;
+                                                              NOR=Antall ikke oversatt] }
+    { 20  ;   ;Ikke Oversatt runde 1;Boolean       }
+    { 30  ;   ;Ikke Oversatt runde 2;Boolean       }
+    { 40  ;   ;Ikke Oversatt runde 3;Boolean       }
+  }
+  KEYS
+  {
+    {    ;Entry No.                               ;Clustered=Yes }
+    {    ;Length,Base Text                         }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Incadea Translation Tool
+    }
+    END.
+  }
+}
+

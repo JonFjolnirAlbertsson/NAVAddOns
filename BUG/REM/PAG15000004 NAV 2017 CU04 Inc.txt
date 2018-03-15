@@ -1,0 +1,210 @@
+OBJECT Page 15000004 Remittance Account Card
+{
+  OBJECT-PROPERTIES
+  {
+    Date=12.05.17;
+    Time=17.58.30;
+    Modified=Yes;
+    Version List=NAVNO10.00,INCBF1.4;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Remittance Account Card;
+               NOR=Remitteringskontokort];
+    SourceTable=Table15000003;
+    PageType=Card;
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=[ENU=General;
+                           NOR=Generelt] }
+
+    { 47  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the remittance account.;
+                           NOR=Angir koden for remitteringskontoen.];
+                ApplicationArea=#All;
+                SourceExpr=Code }
+
+    { 9   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the remittance agreement.;
+                           NOR=Angir remitteringsavtalen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Remittance Agreement Code" }
+
+    { 2   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the payment type.;
+                           NOR=Angir betalingstypen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Type }
+
+    { 49  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a description of the remittance account.;
+                           NOR=Angir en beskrivelse av remitteringskontoen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Description }
+
+    { 59  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the bank account.;
+                           NOR=Angir bankkontoen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Bank Account No." }
+
+    { 21  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the agreement with BBS.;
+                           NOR=Angir avtalen med BBS.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="BBS Agreement ID" }
+
+    { 1101103000;2;Field  ;
+                SourceExpr="Signer Id" }
+
+    { 1101103001;2;Field  ;
+                SourceExpr="Aggreement No." }
+
+    { 1905401101;1;Group  ;
+                CaptionML=[ENU=Finance;
+                           NOR=Finans] }
+
+    { 39  ;2   ;Field     ;
+                ToolTipML=[ENU=Indicates that if Account Type is set to Finance, then the Account No. field specifies the general ledger account for the transaction.;
+                           NOR=Angir at dersom kontotypen er satt til Finans, angir feltet Kontonr. finanskontoen for transaksjonen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Account Type" }
+
+    { 23  ;2   ;Field     ;
+                ToolTipML=[ENU=Indicates that if Account Type is set to Finance, then the Account No. field specifies the general ledger account for the transaction.;
+                           NOR=Angir at dersom kontotypen er satt til Finans, angir feltet Kontonr. finanskontoen for transaksjonen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Account No." }
+
+    { 63  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the charge account.;
+                           NOR=Angir gebyrkontoen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Charge Account No." }
+
+    { 65  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the account for rounding differences between currencies.;
+                           NOR=Angir kontoen for avrundingsdifferanser mellom valutaer.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Round off/Divergence Acc. No." }
+
+    { 11  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the maximum rounding difference for this remittance account.;
+                           NOR=Angir den maksimale avrundingsdifferansen for denne remitteringskontoen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Max. Round off/Diverg. (LCY)" }
+
+    { 25  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number series for the payment documents.;
+                           NOR=Angir nummerserien for betalingsdokumentene.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Document No. Series" }
+
+    { 15  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies how documents are numbered when payments are posted.;
+                           NOR=Angir hvordan dokumenter nummereres n†r betalinger bokf›res.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="New Document Per." }
+
+    { 17  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the general journal template that settled payments are transferred to.;
+                           NOR=Angir finanskladdemalen som avregnede betalinger overf›res til.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Return Journal Template Name" }
+
+    { 19  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the general journal batch that settled payments are transferred to.;
+                           NOR=Angir finanskladden som avregnede betalinger overf›res til.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Return Journal Name" }
+
+    { 1900325501;1;Group  ;
+                CaptionML=[ENU=Domestic;
+                           NOR=Innenlands] }
+
+    { 27  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 1 - Invoice" }
+
+    { 29  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 2 - Invoice" }
+
+    { 31  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 3 - Invoice" }
+
+    { 33  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 1 - Cr. Memo" }
+
+    { 35  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 2 - Cr. Memo" }
+
+    { 37  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient ref. 3 - Cr. Memo" }
+
+    { 1906114301;1;Group  ;
+                CaptionML=[ENU=Foreign;
+                           NOR=Utenlands] }
+
+    { 55  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the currency code of the payment.;
+                           NOR=Angir valutakoden for betalingen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Currency Code" }
+
+    { 51  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies template text that displays on the vendor card.;
+                           NOR=Angir maltekst som vises p† leverand›rkortet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Recipient Ref. Abroad" }
+
+    { 4   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of the futures contract if this transaction is linked to a futures contract.;
+                           NOR=Angir nummeret for terminskontrakten hvis denne transaksjonen er knyttet til en terminskontrakt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Futures Contract No." }
+
+    { 7   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the exchange rate of the futures contract if this transaction is linked to a futures contract.;
+                           NOR=Angir valutakursen for terminskontrakten hvis denne transaksjonen er knyttet til en terminskontrakt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Futures Contract Exch. Rate" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 12.05.17 JAL Nordea has another XML format and NAV is missing fields for bank references.
+                       Show field : "Signer ID" and "Aggreement No."
+    }
+    END.
+  }
+}
+

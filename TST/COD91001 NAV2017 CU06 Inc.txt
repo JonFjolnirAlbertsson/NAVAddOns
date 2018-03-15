@@ -1,0 +1,86 @@
+OBJECT Codeunit 91001 Library - Utility Inc.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=05.09.17;
+    Time=12:40:14;
+    Modified=Yes;
+    Version List=TST1.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      LibraryUtilityG@1101103000 : Codeunit 131000;
+      AssertG@1101103002 : Codeunit 130000;
+
+    PROCEDURE TimeAreNearlyEqual@3(ExpectedP@1000 : Time;ActualP@1001 : Time;DeltaP@1002 : Decimal;MsgP@1003 : Text);
+    BEGIN
+      //The DeltaP is a decimal but the duration.
+      //It is stored as a 64-bit integer. The integer value is the number of milliseconds during the duration.
+      AssertG.AreNearlyEqual(0, GetTimeDifference(ExpectedP, ActualP), DeltaP, MsgP);
+    END;
+
+    PROCEDURE GetTimeDifference@1101103001(TimeP@1101103000 : Time;TimeToCompareP@1101103001 : Time) : Decimal;
+    VAR
+      DurationL@1101103002 : Duration;
+    BEGIN
+      DurationL := TimeP - TimeToCompareP;
+      EXIT(DurationL);
+    END;
+
+    PROCEDURE GetNoSeriesCode@44(CodeP@1101103000 : Code[10]) : Code[10];
+    VAR
+      NoSeries@1001 : Record 308;
+      NoSeriesLine@1000 : Record 309;
+    BEGIN
+      //Uses the Code to get the serie or create it
+      IF NOT NoSeries.GET(CodeP) THEN BEGIN
+        NoSeries.INIT;
+        NoSeries.VALIDATE(Code, CodeP);
+        NoSeries.VALIDATE("Default Nos.",TRUE);
+        NoSeries.VALIDATE("Manual Nos.",TRUE);
+        NoSeries.INSERT(TRUE);
+        LibraryUtilityG.CreateNoSeriesLine(NoSeriesLine,NoSeries.Code,'','');
+      END;
+
+      EXIT(NoSeries.Code)
+    END;
+
+    PROCEDURE NoSeriesSalesReceivablesSetup@74();
+    VAR
+      SalesReceivablesSetup@1002 : Record 311;
+    BEGIN
+      SalesReceivablesSetup.GET;
+      SalesReceivablesSetup.VALIDATE("Order Nos.", LibraryUtilityG.GetGlobalNoSeriesCode);
+      SalesReceivablesSetup.MODIFY(TRUE);
+    END;
+
+    PROCEDURE NoSeriesPurchasesPayablesSetup@1101103000();
+    VAR
+      PurchasesPayablesSetup@1003 : Record 312;
+    BEGIN
+      PurchasesPayablesSetup.GET;
+      PurchasesPayablesSetup.VALIDATE("Order Nos.", LibraryUtilityG.GetGlobalNoSeriesCode);
+      PurchasesPayablesSetup.VALIDATE("Posted Receipt Nos.", LibraryUtilityG.GetGlobalNoSeriesCode);
+      PurchasesPayablesSetup.VALIDATE("Posted Invoice Nos.", LibraryUtilityG.GetGlobalNoSeriesCode);
+      PurchasesPayablesSetup.MODIFY(TRUE);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 18.08.17 JAL Common Incadea functions for testing
+    }
+    END.
+  }
+}
+

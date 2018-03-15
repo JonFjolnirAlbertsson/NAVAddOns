@@ -1,0 +1,338 @@
+OBJECT Page 133 Posted Sales Invoice Subform
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08.09.17;
+    Time=13:03:04;
+    Modified=Yes;
+    Version List=NAVW110.00,NAVNO10.00,ICA2.01;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=[ENU=Lines;
+               NOR=Linjer];
+    LinksAllowed=No;
+    SourceTable=Table113;
+    PageType=ListPart;
+    AutoSplitKey=Yes;
+    OnAfterGetCurrRecord=BEGIN
+                           DocumentTotals.CalculatePostedSalesInvoiceTotals(TotalSalesInvoiceHeader,VATAmount,Rec);
+                         END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1907935204;1 ;ActionGroup;
+                      CaptionML=[ENU=&Line;
+                                 NOR=&Linje];
+                      Image=Line }
+      { 1901314304;2 ;Action    ;
+                      Name=Dimensions;
+                      AccessByPermission=TableData 348=R;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=[ENU=Dimensions;
+                                 NOR=Dimensjoner];
+                      ToolTipML=[ENU=View or edit dimensions, such as area, project, or department, that you can assign to sales and purchase documents to distribute costs and analyze transaction history.;
+                                 NOR=Vis eller rediger dimensjoner, for eksempel omr†de, prosjekt eller avdeling, som du kan tilordne til salgs- og kj›psdokumenter for † distribuere kostnader og analysere transaksjonshistorikk.];
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 ShowDimensions;
+                               END;
+                                }
+      { 1900639404;2 ;Action    ;
+                      Name=Comments;
+                      CaptionML=[ENU=Co&mments;
+                                 NOR=&Merknader];
+                      Image=ViewComments;
+                      OnAction=BEGIN
+                                 ShowLineComments;
+                               END;
+                                }
+      { 1905987604;2 ;Action    ;
+                      Name=ItemTrackingEntries;
+                      CaptionML=[ENU=Item &Tracking Entries;
+                                 NOR=Varesporingspos&ter];
+                      Image=ItemTrackingLedger;
+                      OnAction=BEGIN
+                                 ShowItemTrackingLines;
+                               END;
+                                }
+      { 1905427604;2 ;Action    ;
+                      Name=ItemShipmentLines;
+                      CaptionML=[ENU=Item Shipment &Lines;
+                                 NOR=V&areleveringslinjer];
+                      Image=ShipmentLines;
+                      OnAction=BEGIN
+                                 IF NOT (Type IN [Type::Item,Type::"Charge (Item)"]) THEN
+                                   TESTFIELD(Type);
+                                 ShowItemShipmentLines;
+                               END;
+                                }
+      { 13      ;2   ;Action    ;
+                      Name=DeferralSchedule;
+                      CaptionML=[ENU=Deferral Schedule;
+                                 NOR=Tidsplan for periodisering];
+                      ToolTipML=[ENU=View the deferral schedule that governs how revenue made with this sales document was deferred to different accounting periods when the document was posted.;
+                                 NOR=Vis tidsplanen for periodisering som styrer hvordan inntekter fra dette salgsdokumentet ble periodisert til ulike regnskapsperioder da dokumentet ble bokf›rt.];
+                      ApplicationArea=#Suite;
+                      Enabled="Deferral Code" <> '';
+                      Image=PaymentPeriod;
+                      OnAction=BEGIN
+                                 ShowDeferrals;
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 2   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the line type.;
+                           NOR=Angir linjetypen.];
+                SourceExpr=Type }
+
+    { 4   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of a general ledger account, item, resource, additional cost, or fixed asset, depending on the contents of the Type field.;
+                           NOR=Angir nummeret til en finanskonto, en vare, en ressurs, en tilleggskostnad eller aktiva, avhengig av innholdet i feltet Type.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="No." }
+
+    { 1101103000;2;Field  ;
+                SourceExpr="Calculation No." }
+
+    { 26  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the cross-referenced item number. If you enter a cross reference between yours and your vendor's or customer's item number, then this number will override the standard item number when you enter the cross-reference number on a sales or purchase document.;
+                           NOR=Angir varens kryssreferansenummer. Hvis du oppgir en kryssreferanse mellom ditt og leverand›rens eller kundens varenummer, vil dette nummeret overstyre standardvarenummeret n†r du oppgir kryssreferansenummeret i et salgs- eller kj›psdokument.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Cross-Reference No.";
+                Visible=FALSE }
+
+    { 20  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code of the IC partner that the line has been distributed to.;
+                           NOR=Angir koden for KI-partneren som linjen er distribuert til.];
+                SourceExpr="IC Partner Code";
+                Visible=FALSE }
+
+    { 18  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the variant number of the items sold.;
+                           NOR=Angir variantnummeret til de solgte varene.];
+                SourceExpr="Variant Code";
+                Visible=FALSE }
+
+    { 6   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the name of the item or general ledger account, or some descriptive text.;
+                           NOR=Angir navnet p† varen eller finanskontoen, eller en beskrivende tekst.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Description }
+
+    { 14  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a code that explains why the item is returned.;
+                           NOR=Angir en kode som forklarer hvorfor varen ble returnert.];
+                SourceExpr="Return Reason Code";
+                Visible=FALSE }
+
+    { 8   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of units of the item specified on the line.;
+                           NOR=Angir antall enheter av varen som er angitt p† linjen.];
+                ApplicationArea=#Basic,#Suite;
+                BlankZero=Yes;
+                SourceExpr=Quantity }
+
+    { 24  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the unit of measure code for the items sold.;
+                           NOR=Angir enhetskoden til de solgte varene.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Unit of Measure Code" }
+
+    { 10  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the unit of measure for the item (bottle or piece, for example).;
+                           NOR=Angir enheten for varen (for eksempel en flaske eller et stykk).];
+                SourceExpr="Unit of Measure";
+                Visible=FALSE }
+
+    { 66  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the unit cost of the item on the invoice line.;
+                           NOR=Angir enhetskosten for varen p† fakturalinjen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Unit Cost (LCY)";
+                Visible=FALSE }
+
+    { 12  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the price of one unit of the item on the invoice line.;
+                           NOR=Angir prisen p† ‚n enhet av varen p† fakturalinjen.];
+                ApplicationArea=#Basic,#Suite;
+                BlankZero=Yes;
+                SourceExpr="Unit Price" }
+
+    { 30  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the net amount (before subtracting the invoice discount amount) that must be paid for the items on the line.;
+                           NOR=Angir nettobel›pet (f›r fakturarabattbel›pet trekkes fra) som skal betales for varene p† linjen.];
+                ApplicationArea=#Basic,#Suite;
+                BlankZero=Yes;
+                SourceExpr="Line Amount" }
+
+    { 16  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the line discount % that was given on the line.;
+                           NOR=Angir linjerabattprosenten som ble gitt p† linjen.];
+                ApplicationArea=#Basic,#Suite;
+                BlankZero=Yes;
+                SourceExpr="Line Discount %" }
+
+    { 52  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the amount of the discount given on the line.;
+                           NOR=Angir rabattbel›pet som ble gitt p† linjen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Line Discount Amount";
+                Visible=FALSE }
+
+    { 50  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies whether the invoice line could have been included in a possible invoice discount calculation.;
+                           NOR=Angir om fakturalinjen kan ha v‘rt med i en eventuell beregning av fakturarabatt.];
+                SourceExpr="Allow Invoice Disc.";
+                Visible=FALSE }
+
+    { 40  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the job number that the sales invoice line is linked to.;
+                           NOR=Angir jobbnummeret som salgsfakturalinjen er koblet til.];
+                ApplicationArea=#Jobs;
+                SourceExpr="Job No.";
+                Visible=FALSE }
+
+    { 15  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of the job task that the sales line is linked to.;
+                           NOR=Angir nummeret for prosjektoppgaven som salgslinjen er koblet til.];
+                ApplicationArea=#Jobs;
+                SourceExpr="Job Task No.";
+                Visible=FALSE }
+
+    { 17  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the entry number of the job planning line that the sales line is linked to.;
+                           NOR=Angir postnummeret for planleggingslinjen for prosjekt som salgslinjen er koblet til.];
+                SourceExpr="Job Contract Entry No.";
+                Visible=FALSE }
+
+    { 44  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of the item ledger entry this invoice line was applied to.;
+                           NOR=Angir l›penummeret p† en bestemt varepost som er utlignet av fakturalinjen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Appl.-to Item Entry";
+                Visible=FALSE }
+
+    { 11  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the deferral template that governs how revenue earned with this sales document is deferred to the different accounting periods when the good or service was delivered.;
+                           NOR=Angir periodiseringsmalen som styrer hvordan inntekter fra dette salgsdokumentet periodiseres til de ulike regnskapsperiodene n†r varen eller servicen ble levert.];
+                ApplicationArea=#Suite;
+                SourceExpr="Deferral Code" }
+
+    { 72  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for Shortcut Dimension 1.;
+                           NOR=Angir koden for Snarveisdimensjon 1.];
+                ApplicationArea=#Suite;
+                SourceExpr="Shortcut Dimension 1 Code";
+                Visible=FALSE }
+
+    { 70  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for Shortcut Dimension 2.;
+                           NOR=Angir koden for Snarveisdimensjon 2.];
+                ApplicationArea=#Suite;
+                SourceExpr="Shortcut Dimension 2 Code";
+                Visible=FALSE }
+
+    { 1080000;2;Field     ;
+                ToolTipML=[ENU=Specifies the account code of the customer who will receive the invoice.;
+                           NOR=Angir kontokoden for kunden som mottar fakturaen.];
+                SourceExpr="Account Code";
+                Visible=FALSE }
+
+    { 28  ;1   ;Group     ;
+                GroupType=Group }
+
+    { 23  ;2   ;Group     ;
+                GroupType=Group }
+
+    { 22  ;3   ;Field     ;
+                Name=Invoice Discount Amount;
+                CaptionML=[ENU=Invoice Discount Amount;
+                           NOR=Fakturarabattbel›p];
+                ToolTipML=[ENU=Specifies a discount amount that is deducted from the value in the Total Incl. VAT field. You can enter or change the amount manually.;
+                           NOR=Angir et rabattbel›p som blir trukket fra verdien i feltet Totalt inkl. mva. Du kan oppgi eller endre bel›pet manuelt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=TotalSalesInvoiceHeader."Invoice Discount Amount";
+                AutoFormatType=1;
+                AutoFormatExpr=TotalSalesInvoiceHeader."Currency Code";
+                CaptionClass=DocumentTotals.GetInvoiceDiscAmountWithVATCaption(TotalSalesInvoiceHeader."Prices Including VAT");
+                Editable=FALSE }
+
+    { 9   ;2   ;Group     ;
+                GroupType=Group }
+
+    { 7   ;3   ;Field     ;
+                Name=Total Amount Excl. VAT;
+                DrillDown=No;
+                CaptionML=[ENU=Total Amount Excl. VAT;
+                           NOR=Totalbel›p ekskl. mva];
+                ToolTipML=[ENU=Specifies the sum of the value in the Line Amount Excl. VAT field on all lines in the document minus any discount amount in the Invoice Discount Amount field.;
+                           NOR=Angir summen av verdien i feltet Linjebel›p ekskl. MVA p† alle linjer i dokumentet, minus eventuelle rabattbel›p i feltet Fakturarabattbel›p.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=TotalSalesInvoiceHeader.Amount;
+                AutoFormatType=1;
+                AutoFormatExpr=TotalSalesInvoiceHeader."Currency Code";
+                CaptionClass=DocumentTotals.GetTotalExclVATCaption(TotalSalesInvoiceHeader."Currency Code");
+                Editable=FALSE }
+
+    { 5   ;3   ;Field     ;
+                Name=Total VAT Amount;
+                CaptionML=[ENU=Total VAT;
+                           NOR=Total mva];
+                ToolTipML=[ENU=Specifies the sum of VAT amounts on all lines in the document.;
+                           NOR=Angir summen av mva-bel›pene p† alle linjene i dokumentet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=VATAmount;
+                AutoFormatType=1;
+                AutoFormatExpr=TotalSalesInvoiceHeader."Currency Code";
+                CaptionClass=DocumentTotals.GetTotalVATCaption(TotalSalesInvoiceHeader."Currency Code");
+                Editable=FALSE }
+
+    { 3   ;3   ;Field     ;
+                Name=Total Amount Incl. VAT;
+                CaptionML=[ENU=Total Amount Incl. VAT;
+                           NOR=Totalbel›p inkl. mva];
+                ToolTipML=[ENU=Specifies the sum of the value in the Line Amount Incl. VAT field on all lines in the document minus any discount amount in the Invoice Discount Amount field.;
+                           NOR=Angir summen av verdien i feltet Linjebel›p inkl. MVA p† alle linjer i dokumentet, minus eventuelle rabattbel›p i feltet Fakturarabattbel›p.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=TotalSalesInvoiceHeader."Amount Including VAT";
+                AutoFormatType=1;
+                AutoFormatExpr=TotalSalesInvoiceHeader."Currency Code";
+                CaptionClass=DocumentTotals.GetTotalInclVATCaption(TotalSalesInvoiceHeader."Currency Code");
+                Editable=FALSE;
+                Style=Strong;
+                StyleExpr=TRUE }
+
+  }
+  CODE
+  {
+    VAR
+      TotalSalesInvoiceHeader@1002 : Record 112;
+      DocumentTotals@1001 : Codeunit 57;
+      VATAmount@1000 : Decimal;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 08.09.17 JAL Item Calculation (Kalkyle)
+                       New field "Calulation No."
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,43 @@
+OBJECT Table 73055 Route Group
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=16:11:16;
+    Modified=Yes;
+    Version List=ICA2.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Route Group;
+               NOR=Rutegruppe];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Routing group code  ;Code20        ;CaptionML=[ENU=Routing group code;
+                                                              NOR=Rutegruppekode] }
+    { 2   ;   ;Description         ;Text50        ;CaptionML=[ENU=Description;
+                                                              NOR=Beskrivelse] }
+  }
+  KEYS
+  {
+    {    ;Routing group code                      ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Item Calculation (Kalkyle)
+    }
+    END.
+  }
+}
+

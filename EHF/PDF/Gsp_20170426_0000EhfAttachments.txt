@@ -1,0 +1,3223 @@
+OBJECT Report 10640 Create Electronic Invoices
+{
+  OBJECT-PROPERTIES
+  {
+    Date=19.06.16;
+    Time=10:18:03;
+    Modified=Yes;
+    Version List=NAVNO7.10.00.37563,SID.03,#GS#;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Create Electronic Invoices;
+               NOR=Opprett elektroniske fakturaer;
+               SVE=Skapa elektroniska fakturor];
+    ProcessingOnly=Yes;
+    OnInitReport=BEGIN
+                   //SID.01 START GSP
+                   //SID.03 START
+                   //UploadEInvoice := TRUE;
+                   //SID.03 STOP
+                   SalesReceivSetupG.GET;
+                   //SID.01 STOP GSP
+                 END;
+
+    OnPreReport=BEGIN
+                  //SID.01 START GSP
+                  //IF NOT CurrReport.USEREQUESTPAGE THEN
+                  //  InitLogInteraction;
+                  //SID.01 STOP GSP
+                END;
+
+  }
+  DATASET
+  {
+    { 5581;    ;DataItem;                    ;
+               DataItemTable=Table112;
+               DataItemTableView=SORTING(No.);
+               OnPreDataItem=VAR
+                               SalesInvHeader@1101100000 : Record 112;
+                             BEGIN
+                               Counter := 0;
+
+                               // Any electronic invoices?
+                               SalesInvHeader.COPY("Sales Invoice Header");
+                               SalesInvHeader.FILTERGROUP(6);
+                               SalesInvHeader.SETRANGE("E-Invoice",TRUE);
+                               IF NOT SalesInvHeader.FINDFIRST THEN
+                                 ERROR(Text003);
+
+                               // All electronic invoices?
+                               SalesInvHeader.SETRANGE("E-Invoice",FALSE);
+                               IF SalesInvHeader.FINDFIRST THEN
+                                 IF NOT CONFIRM(Text000,TRUE) THEN
+                                   CurrReport.QUIT;
+                               SalesInvHeader.SETRANGE("E-Invoice");
+
+                               // Some already sent?
+                               SalesInvHeader.SETRANGE("E-Invoice Created",TRUE);
+                               IF SalesInvHeader.FINDFIRST THEN
+                                 IF NOT CONFIRM(Text001,TRUE) THEN
+                                   CurrReport.QUIT;
+
+                               SETRANGE("E-Invoice",TRUE);
+                             END;
+
+               OnAfterGetRecord=VAR
+                                  EInvoicePdfExportL@1101103000 : Record 5231118;
+                                  SalesInvHeaderL@1101103002 : Record 112;
+                                  EInvoiceExportSalesInvoice@1080000 : Codeunit 10619;
+                                  FtpLibaryL@1101103001 : Codeunit 5206805;
+                                BEGIN
+                                  //SID.01 START GSP
+                                  SalesInvHeaderL.COPY("Sales Invoice Header");
+                                  EInvoiceManagement.PrintInvoiceRecordMgt(SalesInvHeaderL);
+                                  //SID.01 STOP GSP
+
+                                  EInvoiceExportSalesInvoice.RUN(SalesInvHeaderL);
+                                  EInvoiceExportSalesInvoice.GetExportedFileInfo(TempEInvoiceTransferFile);
+                                  TempEInvoiceTransferFile."Line No." := Counter + 1;
+                                  TempEInvoiceTransferFile.INSERT;
+
+                                  //SID.01 START GSP
+                                  IF UploadEInvoice THEN BEGIN
+                                    SalesReceivSetupG.TESTFIELD("E-Invoice Server Name");
+                                    SalesReceivSetupG.TESTFIELD("E-Invoice User Name");
+                                    SalesReceivSetupG.TESTFIELD("E-Invoice Password");
+                                    FtpLibaryL.UploadFile(TempEInvoiceTransferFile."Server Temp File Name"
+                                    //SID.02 DNO START
+                                    ,''
+                                    //SID.02 DNO STOP
+                                                          //'ftp://mail.si-data.no/gsp/BOS/Invoice/PO00001.xml'
+                                                          ,STRSUBSTNO('ftp://%1/%2/%3'
+                                                                      ,SalesReceivSetupG."E-Invoice Server Name"
+                                                                      ,DELCHR(SalesReceivSetupG."E-Invoice Ftp Invoice Path", '<>', '/')
+                                                                      ,TempEInvoiceTransferFile."Local File Name")
+                                                          ,SalesReceivSetupG."E-Invoice User Name"
+                                                          ,SalesReceivSetupG."E-Invoice Password");
+
+                                  END;
+
+                                  SalesInvHeaderL.GET("No.");
+                                  SalesInvHeaderL."E-Invoice Created" := TRUE;
+                                  SalesInvHeaderL."E-Invoice Date Sent" := TODAY;
+                                  SalesInvHeaderL.MODIFY;
+
+                                  //IF LogInteraction THEN
+                                  //  IF "Bill-to Contact No." <> '' THEN
+                                  //SegManagement.LogDocument(
+                                  //      4,"No.",0,0,DATABASE::Contact,"Bill-to Contact No.","Salesperson Code",
+                                  //      "Campaign No.","Posting Description",'')
+                                  //  ELSE
+                                  //    SegManagement.LogDocument(
+                                  //      4,"No.",0,0,DATABASE::Customer,"Bill-to Customer No.","Salesperson Code",
+                                  //
+                                  //      "Campaign No.","Posting Description",'');
+                                  //SID.01 STOP GSP
+
+                                  COMMIT;
+                                  Counter := Counter + 1;
+                                END;
+
+               OnPostDataItem=VAR
+                                EInvoiceExportCommon@1080000 : Codeunit 10628;
+                              BEGIN
+                                EInvoiceExportCommon.DownloadEInvoiceFile(TempEInvoiceTransferFile);
+
+
+                                MESSAGE(Text002,Counter);
+                              END;
+
+               ReqFilterFields=No.,Sell-to Customer No.,Bill-to Customer No.,Field10605,Field10612 }
+
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+      OnInit=BEGIN
+               //SID.01 START GSP
+               //LogInteractionEnable := TRUE;
+               //SID.01 STOP GSP
+             END;
+
+      OnOpenPage=BEGIN
+                   //SID.01 START GSP
+                   //InitLogInteraction;
+                   //LogInteractionEnable := LogInteraction;
+                   //SID.01 STOP GSP
+                 END;
+
+    }
+    CONTROLS
+    {
+      { 1900000001;0;Container;
+                  ContainerType=ContentArea }
+
+      { 1900000002;1;Group  ;
+                  CaptionML=[ENU=Options;
+                             NOR=Alternativer;
+                             SVE=Tillbehîr] }
+
+      { 1101100000;2;Field  ;
+                  Name=LogInteraction;
+                  CaptionML=[ENU=Log Interaction;
+                             NOR=Loggfõr samhandling;
+                             SVE=Logga interaktion];
+                  SourceExpr=LogInteraction;
+                  Visible=FALSE;
+                  Enabled=LogInteractionEnable }
+
+      { 1101103001;2;Field  ;
+                  CaptionML=[ENU=Upload E-Invoice;
+                             NOR=Laste opp E-faktura];
+                  SourceExpr=UploadEInvoice }
+
+    }
+  }
+  LABELS
+  {
+  }
+  CODE
+  {
+    VAR
+      Text000@1080005 : TextConst 'ENU=One or more invoice documents that match your filter criteria are not electronic invoices and will be skipped.\\Do you want to continue?;NOR=Ett eller flere fakturadokumenter som samsvarer med filterkriteriene, er ikke elektroniske fakturaer og hoppes over.\\Vil du fortsette?';
+      Text001@1080006 : TextConst 'ENU=One or more invoice documents that match your filter critera have been created before.\\Do you want to continue?;NOR=Ett eller flere fakturadokumenter som samsvarer med filterkriteriene, er allerede opprettet.\\Vil du fortsette?';
+      Text002@1080007 : TextConst 'ENU=Successfully created %1 electronic invoice documents.;NOR=Opprettet %1 elektroniske fakturadokumenter.';
+      TempEInvoiceTransferFile@1080000 : TEMPORARY Record 10606;
+      SalesReceivSetupG@1101103002 : Record 311;
+      SegManagement@1080002 : Codeunit 5051;
+      EInvoiceManagement@1101103001 : Codeunit 5231118;
+      Counter@1080003 : Integer;
+      Text003@1080008 : TextConst 'ENU=Nothing to create.;NOR=Ingenting Ü opprette.;SVE=Ingenting att skapa';
+      LogInteraction@1080004 : Boolean;
+      LogInteractionEnable@19003940 : Boolean INDATASET;
+      UploadEInvoice@1101103000 : Boolean INDATASET;
+
+    PROCEDURE InitLogInteraction@1080009();
+    BEGIN
+      LogInteraction := SegManagement.FindInteractTmplCode(4) <> '';
+    END;
+
+    BEGIN
+    {
+      +----------------------------------------------+
+      | Copyright ∏ 2015 SI-DATA SID                 |
+      +----------------------------------------------+
+      | MYENGINE@INCADEA                             |
+      +----------------------------------------------+
+      No.  Version  Date      ID  Remark
+      -------------------------------------- ----------
+      01.           29.06.15  GSP TFS101644 : NO EHF Electronic Invoice
+                                  - Remove LogInteraction function and set Visible=False. Add "Request Page" control "Update E-Invoice"
+                                  - Add functionality to create pdf document
+
+      02 .          25.01.16  DNO Temporary fix to support the change in the upload function
+      03 .          25.01.16  DNO BOS, set the send to FTP = false. We should not send the files at BOS
+    }
+    END.
+  }
+  RDLDATA
+  {
+  }
+}
+
+OBJECT Report 10641 Create Electronic Credit Memos
+{
+  OBJECT-PROPERTIES
+  {
+    Date=19.06.16;
+    Time=10:18:03;
+    Modified=Yes;
+    Version List=NAVNO7.10.00.37563,SID.03,#GS#;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Create Electronic Credit Memos;
+               NOR=Opprett elektroniske kreditnotaer;
+               SVE=Skapa elektroniska kreditnotor];
+    ProcessingOnly=Yes;
+    OnInitReport=BEGIN
+                   //SID.01 START GSP
+                   //SID.03 START
+                   //UploadEInvoiceG := TRUE;
+                   //SID.03 STOP
+                   SalesReceivSetupG.GET;
+                   //SID.01 STOP GSP
+                 END;
+
+    OnPreReport=BEGIN
+                  //SID.01 START GSP
+                  //IF NOT CurrReport.USEREQUESTPAGE THEN
+                  //  InitLogInteraction;
+                  //SID.01 STOP GSP
+                END;
+
+  }
+  DATASET
+  {
+    { 8098;    ;DataItem;                    ;
+               DataItemTable=Table114;
+               DataItemTableView=SORTING(No.);
+               OnPreDataItem=VAR
+                               SalesCrMemoHeader@1101100000 : Record 114;
+                             BEGIN
+                               Counter := 0;
+
+                               // Any electronic credit memos?
+                               SalesCrMemoHeader.COPY("Sales Credit Memo Header");
+                               SalesCrMemoHeader.FILTERGROUP(6);
+                               SalesCrMemoHeader.SETRANGE("E-Invoice",TRUE);
+                               IF NOT SalesCrMemoHeader.FINDFIRST THEN
+                                 ERROR(Text003);
+
+                               // All electronic credit memos?
+                               SalesCrMemoHeader.SETRANGE("E-Invoice",FALSE);
+                               IF SalesCrMemoHeader.FINDFIRST THEN
+                                 IF NOT CONFIRM(Text000,TRUE) THEN
+                                   CurrReport.QUIT;
+                               SalesCrMemoHeader.SETRANGE("E-Invoice");
+
+                               // Some already sent?
+                               SalesCrMemoHeader.SETRANGE("E-Invoice Created",TRUE);
+                               IF SalesCrMemoHeader.FINDFIRST THEN
+                                 IF NOT CONFIRM(Text001,TRUE) THEN
+                                   CurrReport.QUIT;
+
+                               SETRANGE("E-Invoice",TRUE);
+                             END;
+
+               OnAfterGetRecord=VAR
+                                  SalesCrMemoHeaderL@1101103000 : Record 114;
+                                  EInvoiceExpSalesCrMemo@1080000 : Codeunit 10620;
+                                  FtpLibaryL@1101103001 : Codeunit 5206805;
+                                BEGIN
+                                  //SID.01 START TFS101644 GSP
+                                  SalesCrMemoHeaderL.COPY("Sales Credit Memo Header");
+                                  EInvoiceManagement.PrintCrMemoRecordMgt(SalesCrMemoHeaderL);
+                                  //SID.01 STOP TFS101644 GSP
+
+                                  EInvoiceExpSalesCrMemo.RUN(SalesCrMemoHeaderL);
+                                  EInvoiceExpSalesCrMemo.GetExportedFileInfo(TempEInvoiceTransferFile);
+                                  TempEInvoiceTransferFile."Line No." := Counter + 1;
+                                  TempEInvoiceTransferFile.INSERT;
+
+                                  //SID.01 START TFS101644 GSP
+                                  IF UploadEInvoiceG THEN BEGIN
+                                    SalesReceivSetupG.TESTFIELD("E-Invoice Server Name");
+                                    SalesReceivSetupG.TESTFIELD("E-Invoice User Name");
+                                    SalesReceivSetupG.TESTFIELD("E-Invoice Password");
+                                    FtpLibaryL.UploadFile(TempEInvoiceTransferFile."Server Temp File Name"
+                                    //SID.02 DNO START
+                                    ,''
+                                    //SID.02 DNO STOP
+                                                          //'ftp://mail.si-data.no/gsp/BOS/Cr.Note/PO00001.xml'
+                                                          ,STRSUBSTNO('ftp://%1/%2/%3'
+                                                                      ,SalesReceivSetupG."E-Invoice Server Name"
+                                                                      ,DELCHR(SalesReceivSetupG."E-Invoice Ftp Credit Memo Path", '<>', '/')
+                                                                      ,TempEInvoiceTransferFile."Local File Name")
+                                                          ,SalesReceivSetupG."E-Invoice User Name"
+                                                          ,SalesReceivSetupG."E-Invoice Password");
+
+                                  END;
+                                  SalesCrMemoHeaderL.GET("No.");
+                                  SalesCrMemoHeaderL."E-Invoice Created" := TRUE;
+                                  SalesCrMemoHeaderL."E-Invoice Date Sent" := TODAY;
+                                  SalesCrMemoHeaderL.MODIFY;
+
+                                  //SID.01 START GSP
+                                  //IF LogInteraction THEN
+                                  //  SegManagement.LogDocument(
+                                  //    6,"No.",0,0,DATABASE::Customer,"Sell-to Customer No.","Salesperson Code",
+                                  //    "Campaign No.","Posting Description",'');
+
+                                  COMMIT;
+                                  Counter := Counter + 1;
+                                END;
+
+               OnPostDataItem=VAR
+                                EInvoiceExportCommon@1080000 : Codeunit 10628;
+                              BEGIN
+                                EInvoiceExportCommon.DownloadEInvoiceFile(TempEInvoiceTransferFile);
+                                MESSAGE(Text002,Counter);
+                              END;
+
+               ReqFilterFields=No.,Sell-to Customer No.,Bill-to Customer No.,Field10605,Field10612 }
+
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+      OnInit=BEGIN
+               LogInteractionEnable := TRUE;
+             END;
+
+      OnOpenPage=BEGIN
+                   InitLogInteraction;
+                   LogInteractionEnable := LogInteraction;
+                 END;
+
+    }
+    CONTROLS
+    {
+      { 1900000001;0;Container;
+                  ContainerType=ContentArea }
+
+      { 1900000002;1;Group  ;
+                  CaptionML=[ENU=Options;
+                             NOR=Alternativer;
+                             SVE=Tillbehîr] }
+
+      { 1101100000;2;Field  ;
+                  Name=LogInteraction;
+                  CaptionML=[ENU=Log Interaction;
+                             NOR=Loggfõr samhandling;
+                             SVE=Logga interaktion];
+                  SourceExpr=LogInteraction;
+                  Visible=FALSE;
+                  Enabled=LogInteractionEnable }
+
+      { 1101103000;2;Field  ;
+                  CaptionML=[ENU=Upload E-Invoice;
+                             NOR=Laste opp E-faktura];
+                  SourceExpr=UploadEInvoiceG }
+
+    }
+  }
+  LABELS
+  {
+  }
+  CODE
+  {
+    VAR
+      TempEInvoiceTransferFile@1080001 : TEMPORARY Record 10606;
+      SalesReceivSetupG@1101103002 : Record 311;
+      SegManagement@1080000 : Codeunit 5051;
+      EInvoiceManagement@1101103001 : Codeunit 5231118;
+      Counter@1080002 : Integer;
+      Text000@1080004 : TextConst 'ENU=One or more credit memo documents that match your filter criteria are not electronic credit memos and will be skipped.\\Do you want to continue?;NOR=Ett eller flere kreditnotadokumenter som samsvarer med filterkriteriene, er ikke elektroniske kreditnotaer og hoppes over.\\Vil du fortsette?';
+      Text001@1080005 : TextConst 'ENU=One or more credit memo documents that match your filter criteria have been created before.\\Do you want to continue?;NOR=Ett eller flere kreditnotadokumenter som samsvarer med filterkriteriene, er allerede opprettet.\\Vil du fortsette?';
+      Text002@1080006 : TextConst 'ENU=Successfully created %1 electronic credit memo documents.;NOR=Opprettet %1 elektroniske kreditnotadokumenter.';
+      Text003@1080007 : TextConst 'ENU=Nothing to create.;NOR=Ingenting Ü opprette.;SVE=Ingenting att skapa';
+      LogInteraction@1080003 : Boolean;
+      LogInteractionEnable@19003940 : Boolean INDATASET;
+      UploadEInvoiceG@1101103000 : Boolean INDATASET;
+
+    PROCEDURE InitLogInteraction@1080008();
+    BEGIN
+      LogInteraction := SegManagement.FindInteractTmplCode(4) <> '';
+    END;
+
+    BEGIN
+    {
+      +----------------------------------------------+
+      | Copyright ∏ 2015 SI-DATA SID                 |
+      +----------------------------------------------+
+      | MYENGINE@INCADEA                             |
+      +----------------------------------------------+
+      No.  Version  Date      ID  Remark
+      -------------------------------------- ----------
+      01.           31.08.15  GSP TFS101644 : NO EHF Electronic Invoice
+                                  - Remove LogInteraction function and set Visible=False. Add "Request Page" control "Update E-Invoice"
+                                  - Add functionality to create pdf document
+      02 .          25.01.16  DNO Temporary fix to support the change in the upload function
+      03 .          25.01.16  DNO BOS, set the send to FTP = false. We should not send the files at BOS
+    }
+    END.
+  }
+  RDLDATA
+  {
+  }
+}
+
+OBJECT Codeunit 10619 E-Invoice Export Sales Invoice
+{
+  OBJECT-PROPERTIES
+  {
+    Date=31.08.15;
+    Time=13:25:51;
+    Modified=Yes;
+    Version List=NAVNO7.10.00.37563,SID.01,#GS#;
+  }
+  PROPERTIES
+  {
+    TableNo=112;
+    Permissions=TableData 112=rm;
+    OnRun=VAR
+            SalesSetup@1080000 : Record 311;
+            SalesInvoiceLine@1080030 : Record 113;
+            TempEInvoiceExportHeader@1080002 : TEMPORARY Record 10604;
+            TempEInvoiceExportLine@1080018 : TEMPORARY Record 10605;
+            EInvoiceExportCommon@1080021 : Codeunit 10628;
+            EInvoiceDocumentEncode@1101103000 : Codeunit 10610;
+            EInvoiceExportPath@1101103001 : Text[1024];
+          BEGIN
+            // If there are no invoice lines, there's nothing to export
+
+            SalesInvoiceLine.SETRANGE("Document No.","No.");
+            SalesInvoiceLine.SETFILTER(Type,'>%1',0);
+            SalesInvoiceLine.SETFILTER("No.",'<>%1',' ');
+
+            IF NOT SalesInvoiceLine.FINDSET THEN
+              EXIT;
+
+            // Pre-processing data verifications
+            CODEUNIT.RUN(CODEUNIT::"E-Invoice Check Sales Invoice",Rec);
+
+            // Move data from the sales invoice tables to the common tables
+            FillHeaderTableData(TempEInvoiceExportHeader,Rec);
+            REPEAT
+              IF NOT IsRoundingLine(SalesInvoiceLine) THEN
+                FillLineTableData(TempEInvoiceExportLine,SalesInvoiceLine);
+            UNTIL SalesInvoiceLine.NEXT = 0;
+            EInvoiceExportCommon.SetEInvoiceCommonTables(TempEInvoiceExportHeader,TempEInvoiceExportLine);
+
+            // Create invoice root node and XML content
+            EInvoiceExportCommon.CreateDocAndRootNode;
+            EInvoiceExportCommon.AddHeaderCommonContent;
+            EInvoiceExportCommon.AddHeaderInvoiceTypeCode;
+            EInvoiceExportCommon.AddHeaderNote;
+            EInvoiceExportCommon.AddHeaderDocumentCurrencyCode;
+            EInvoiceExportCommon.AddHeaderTaxCurrencyCode;
+            EInvoiceExportCommon.AddHeaderOrderReference;
+            EInvoiceExportCommon.AddHeaderContractDocumentReference;
+
+            //SID.01 START GSP
+            EInvoiceExportCommon.AddAdditionalDocumentReference;
+            //SID.01 STOP GSP
+
+            EInvoiceExportCommon.AddHeaderAccountingSupplierParty;
+            EInvoiceExportCommon.AddHeaderAccountingCustomerParty;
+            EInvoiceExportCommon.AddDelivery;
+            EInvoiceExportCommon.AddHeaderPaymentMeans;
+            EInvoiceExportCommon.AddHeaderAllowanceCharge;
+            EInvoiceExportCommon.AddHeaderTaxExchangeRate;
+            EInvoiceExportCommon.AddHeaderTaxTotal;
+            EInvoiceExportCommon.AddHeaderLegalMonetaryTotal;
+
+            // Add XML content for the invoice lines
+            TempEInvoiceExportLine.FINDSET;
+
+            REPEAT
+              EInvoiceExportCommon.CreateLineNode(TempEInvoiceExportLine);
+              EInvoiceExportCommon.AddLineNote;
+              EInvoiceExportCommon.AddLineInvCrMemoCommonContent;
+              EInvoiceExportCommon.AddLineAccountingCost;
+              EInvoiceExportCommon.AddLineOrderLineReference;
+              EInvoiceExportCommon.AddDelivery;
+              EInvoiceExportCommon.AddLineAllowanceCharge;
+              EInvoiceExportCommon.AddLineTaxTotal;
+              EInvoiceExportCommon.AddLineItem;
+              EInvoiceExportCommon.AddLinePrice;
+            UNTIL TempEInvoiceExportLine.NEXT = 0;
+
+            // Save file
+            SalesSetup.GET;
+
+            EInvoiceExportCommon.SaveToXML(TempEInvoiceTransferFile,SalesSetup."E-Invoice Sales Invoice Path","No.");
+
+            //SID.01 START GSP
+            // Now Set when successful uploaded to ftp Service
+            //SetEInvoiceStatusCreated("No.");
+            //SID.01 STOP GSP
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      TempEInvoiceTransferFile@1080000 : TEMPORARY Record 10606;
+
+    PROCEDURE GetExportedFileInfo@1080000(VAR EInvoiceTransferFile@1080000 : Record 10606);
+    BEGIN
+      EInvoiceTransferFile := TempEInvoiceTransferFile;
+    END;
+
+    LOCAL PROCEDURE FillHeaderTableData@1080008(VAR TempEInvoiceExportHeader@1080000 : TEMPORARY Record 10604;VAR SalesInvoiceHeader@1080001 : Record 112);
+    VAR
+      GeneralLedgerSetup@1080002 : Record 98;
+      SalesCommentLine@1080003 : Record 44;
+      DocumentTools@1080011 : Codeunit 10601;
+      EInvoiceDocumentEncode@1080004 : Codeunit 10610;
+      EInvoiceExportCommon@1101103000 : Codeunit 10628;
+      GiroAmount@1080010 : Decimal;
+      GiroAmountKr@1080009 : Text[20];
+      GiroAmountOre@1080008 : Text[2];
+      CheckDigit@1080007 : Text[1];
+      GiroKID@1080006 : Text[25];
+      KIDError@1080005 : Boolean;
+    BEGIN
+      // Convert the currency code to the standard code list used by E-Invoices
+      SalesInvoiceHeader."Currency Code" := EInvoiceDocumentEncode.GetEInvoiceCurrencyCode(SalesInvoiceHeader."Currency Code");
+
+      // Fill-in the fields which have the same field ID and type
+      TempEInvoiceExportHeader.INIT;
+      TempEInvoiceExportHeader.TRANSFERFIELDS(SalesInvoiceHeader,TRUE);
+
+      //SID.01 START GSP
+      TempEInvoiceExportHeader."Sell-to Country/Region Code" := EInvoiceDocumentEncode.GetEInvoiceCountryRegionCode(SalesInvoiceHeader."Sell-to County");
+      TempEInvoiceExportHeader."Bill-to Country/Region Code" := EInvoiceDocumentEncode.GetEInvoiceCountryRegionCode(SalesInvoiceHeader."Bill-to Country Code");
+      TempEInvoiceExportHeader."Ship-to Country/Region Code" := EInvoiceDocumentEncode.GetEInvoiceCountryRegionCode(SalesInvoiceHeader."Ship-to Country Code");
+      //SID.01 STOP GSP
+
+      IF TempEInvoiceExportHeader."Currency Code" = '' THEN BEGIN
+        GeneralLedgerSetup.GET;
+        TempEInvoiceExportHeader."Currency Code" := GeneralLedgerSetup."LCY Code";
+      END;
+
+      // Fill-in the XML schema information
+      TempEInvoiceExportHeader."Schema Name" := 'Invoice';
+      TempEInvoiceExportHeader."Schema Location" := 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2 UBL-Invoice-2.0.xsd';
+      TempEInvoiceExportHeader.xmlns := 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2';
+      TempEInvoiceExportHeader."Customization ID" := GetCustomizationID(SalesInvoiceHeader);
+      TempEInvoiceExportHeader."Profile ID" := 'urn:www.cenbii.eu:profile:bii04:ver2.0';
+      TempEInvoiceExportHeader."Uses Common Aggregate Comp." := TRUE;
+      TempEInvoiceExportHeader."Uses Common Basic Comp." := TRUE;
+      TempEInvoiceExportHeader."Uses Common Extension Comp." := TRUE;
+
+      // Fill-in header fields related to tax amounts
+      FillHeaderTaxAmounts(TempEInvoiceExportHeader);
+
+      TempEInvoiceExportHeader."Quantity Name" := 'InvoicedQuantity';
+
+      // Update (if empty) and validate the Bill-to Country/Region Code
+      TempEInvoiceExportHeader."Bill-to Country/Region Code" :=
+        EInvoiceDocumentEncode.GetEInvoiceCountryRegionCode(TempEInvoiceExportHeader."Bill-to Country/Region Code");
+      TempEInvoiceExportHeader."GLN No." := SalesInvoiceHeader."GLN No.";
+
+
+      // Get Giro KID
+      GiroAmount := 0; // to make preCAL happy...
+      DocumentTools.SetupGiro(
+        TRUE,1,TempEInvoiceExportHeader."No.",TempEInvoiceExportHeader."Bill-to Customer No.",GiroAmount,
+        TempEInvoiceExportHeader."Currency Code",GiroAmountKr,GiroAmountOre,CheckDigit,GiroKID,KIDError);
+      TempEInvoiceExportHeader."Payment ID" := GiroKID;
+
+      // If there is any header-related comment, copy it over
+      IF SalesCommentLine.GET(SalesCommentLine."Document Type"::"Posted Invoice",SalesInvoiceHeader."No.",0,10000) THEN
+        TempEInvoiceExportHeader.Note := SalesCommentLine.Comment;
+
+
+      //SID.01 START GSP
+      // NO 123 4556 789 MVA --> 123456789
+      TempEInvoiceExportHeader."VAT Registration No." :=
+          EInvoiceDocumentEncode.GetVATRegNo(TempEInvoiceExportHeader."VAT Registration No.", FALSE, '');
+      //SID.01 STOP GSP
+    END;
+
+    LOCAL PROCEDURE FillHeaderTaxAmounts@1080032(VAR TempEInvoiceExportHeader@1080000 : TEMPORARY Record 10604);
+    VAR
+      SalesInvoiceLine@1080001 : Record 113;
+    BEGIN
+      SalesInvoiceLine.SETRANGE("Document No.",TempEInvoiceExportHeader."No.");
+      IF SalesInvoiceLine.FINDSET THEN BEGIN
+        TempEInvoiceExportHeader."Sales Line Found" := TRUE;
+        REPEAT
+          IF IsRoundingLine(SalesInvoiceLine) THEN
+            TempEInvoiceExportHeader."Total Rounding Amount" += SalesInvoiceLine."Amount Including VAT"
+          ELSE BEGIN
+            TempEInvoiceExportHeader."Total Invoice Discount Amount" +=
+              SalesInvoiceLine."Inv. Discount Amount" + SalesInvoiceLine."Line Discount Amount";
+            TempEInvoiceExportHeader."Legal Taxable Amount" += SalesInvoiceLine.Amount;
+            TempEInvoiceExportHeader."Total Amount" += SalesInvoiceLine."Amount Including VAT";
+            TempEInvoiceExportHeader."Tax Amount" += SalesInvoiceLine."Amount Including VAT" - SalesInvoiceLine.Amount;
+          END;
+        UNTIL SalesInvoiceLine.NEXT = 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE FillLineTableData@1080016(VAR TempEInvoiceExportLine@1080000 : TEMPORARY Record 10605;SalesInvoiceLine@1080001 : Record 113);
+    VAR
+      SalesCommentLine@1080002 : Record 44;
+      Id@1080003 : Integer;
+    BEGIN
+      Id := 0;
+      IF TempEInvoiceExportLine.FINDLAST THEN
+        Id := TempEInvoiceExportLine.ID + 1;
+
+      TempEInvoiceExportLine.INIT;
+      TempEInvoiceExportLine.ID := Id;
+      TempEInvoiceExportLine.TRANSFERFIELDS(SalesInvoiceLine,TRUE);
+      IF SalesCommentLine.GET(
+           SalesCommentLine."Document Type"::"Posted Invoice",SalesInvoiceLine."Document No.",SalesInvoiceLine."Line No.",10000)
+      THEN
+        TempEInvoiceExportLine.Comment := SalesCommentLine.Comment;
+
+      //SID.01 START GSP
+      IF TempEInvoiceExportLine."Unit of Measure Code" = '' THEN
+        TempEInvoiceExportLine."Unit of Measure Code" := 'BLANK';
+      //SID.01 STOP GSP
+
+      TempEInvoiceExportLine.INSERT;
+    END;
+
+    LOCAL PROCEDURE GetCustomizationID@1080004(SalesInvoiceHeader@1080002 : Record 112) : Text[250];
+    VAR
+      ResponsibilityCenter@1080004 : Record 5714;
+      CompanyInformation@1080005 : Record 79;
+      Customer@1080001 : Record 18;
+      CountryCode@1080003 : Code[10];
+      CustomizationID@1080000 : Text[250];
+    BEGIN
+      CustomizationID :=
+        'urn:www.cenbii.eu:transaction:biitrns010:ver2.0:extended:' +
+        'urn:www.peppol.eu:bis:peppol4a:ver2.0';
+
+      IF Customer.GET(SalesInvoiceHeader."Bill-to Customer No.") THEN BEGIN
+        IF ResponsibilityCenter.GET(SalesInvoiceHeader."Responsibility Center") THEN
+          CountryCode := ResponsibilityCenter."Country/Region Code"
+        ELSE BEGIN
+          CompanyInformation.GET;
+          CountryCode := CompanyInformation."Country/Region Code";
+        END;
+
+        IF Customer."Country/Region Code" = CountryCode THEN
+          CustomizationID += ':extended:urn:www.difi.no:ehf:faktura:ver2.0';
+      END;
+
+      EXIT(CustomizationID);
+    END;
+
+    LOCAL PROCEDURE IsRoundingLine@1080006(SalesInvoiceLine@1080000 : Record 113) : Boolean;
+    VAR
+      Customer@1080001 : Record 18;
+      CustomerPostingGroup@1080002 : Record 92;
+    BEGIN
+      IF SalesInvoiceLine.Type = SalesInvoiceLine.Type::"Account (G/L)" THEN BEGIN
+
+        //SID.01 START GSP
+        //Customer.GET(SalesInvoiceLine."Bill-to Customer No.");
+        Customer.GET(SalesInvoiceLine."Sell-to Customer No.");
+        //SID.01 STOP
+
+        CustomerPostingGroup.SETFILTER(Code,Customer."Customer Posting Group");
+        IF CustomerPostingGroup.FINDFIRST THEN
+          IF SalesInvoiceLine."No." = CustomerPostingGroup."Invoice Rounding Account" THEN
+            EXIT(TRUE);
+      END;
+      EXIT(FALSE);
+    END;
+
+    LOCAL PROCEDURE SetEInvoiceStatusCreated@1080005(DocumentNo@1080001 : Code[20]);
+    VAR
+      SalesInvoiceHeader@1080000 : Record 112;
+    BEGIN
+      SalesInvoiceHeader.GET(DocumentNo);
+      SalesInvoiceHeader."E-Invoice Created" := TRUE;
+      SalesInvoiceHeader.MODIFY;
+    END;
+
+    BEGIN
+    {
+      +----------------------------------------------+
+      | Copyright ∏ 2015 SI-DATA SID                 |
+      +----------------------------------------------+
+      | MYENGINE@INCADEA                             |
+      +----------------------------------------------+
+      No.  Version  Date      ID  Remark
+      -------------------------------------- ----------
+      01.           31.08.15  GSP TFS101644 : NO EHF Electronic Invoice
+                                  - Change Field "Bill-to Customer No."" --> "Sell-to Customer No."
+                                  - "E-Invoice Created" = TRUE Now Set when successful transfer to ftp
+                                  EHF 2.0.4 Issue : [NOGOV-T10-R031]- An organisational number for seller, buyer and payee MUST be nine numbers.
+                                   - Due to missing "Sell-to Country/Region Code" VatGetNr is formated incorrect04
+                                  EHF 2.0.4 Issue : [NOGOV-T10-R030]- A VAT number MUST be nine numbers followed by the letters MVA.
+                                  - Bill-to VatRegNo : Remove NO and MVA from Vat Organisation number
+                                  - Add AddAdditionalDocumentReference
+                                  - Re-format file name to include Company Name, addition "Unit of Measure Code" validation
+    }
+    END.
+  }
+}
+
+OBJECT Codeunit 10620 E-Invoice Exp. Sales Cr. Memo
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.15;
+    Time=10:58:07;
+    Modified=Yes;
+    Version List=NAVNO7.10.00.37563,SID.01,#GS#;
+  }
+  PROPERTIES
+  {
+    TableNo=114;
+    Permissions=TableData 114=rm;
+    OnRun=VAR
+            SalesCrMemoLine@1080030 : Record 115;
+            TempEInvoiceExportHeader@1080004 : TEMPORARY Record 10604;
+            TempEInvoiceExportLine@1080009 : TEMPORARY Record 10605;
+          BEGIN
+            // Check section
+            SalesCrMemoLine.SETRANGE("Document No.","No.");
+            SalesCrMemoLine.SETFILTER(Type,'>%1',0);
+            SalesCrMemoLine.SETFILTER("No.",'<>%1',' ');
+            IF NOT SalesCrMemoLine.FINDSET THEN
+              EXIT;
+
+            CODEUNIT.RUN(CODEUNIT::"E-Invoice Check Sales Cr. Memo",Rec);
+
+            // Transfer data section
+            FillHeaderTableData(TempEInvoiceExportHeader,Rec);
+            REPEAT
+              IF NOT IsRoundingLine(SalesCrMemoLine) THEN
+                FillLineTableData(TempEInvoiceExportLine,SalesCrMemoLine);
+            UNTIL SalesCrMemoLine.NEXT = 0;
+
+            // Export section
+            ExportToXML(TempEInvoiceExportHeader,TempEInvoiceExportLine);
+
+            //SID.01 START GSP
+            //ModifySalesCrMemoHeader("No.");
+            //SID.01 STOP GSP
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      GLSetup@1080021 : Record 98;
+      SalesReceivablesSetup@1080000 : Record 311;
+      TempEInvoiceTransferFile@1080001 : TEMPORARY Record 10606;
+
+    LOCAL PROCEDURE ExportToXML@1080012(VAR TempEInvoiceExportHeader@1080004 : TEMPORARY Record 10604;VAR TempEInvoiceExportLine@1080003 : TEMPORARY Record 10605);
+    VAR
+      EInvoiceExportCommon@1080000 : Codeunit 10628;
+    BEGIN
+      // Initialize
+      WITH EInvoiceExportCommon DO BEGIN
+        SetEInvoiceCommonTables(TempEInvoiceExportHeader,TempEInvoiceExportLine);
+
+        // Common
+        CreateDocAndRootNode;
+        AddHeaderCommonContent;
+        AddHeaderNote;
+        AddHeaderDocumentCurrencyCode;
+        AddHeaderTaxCurrencyCode;
+        AddHeaderBillingReference;
+
+        //SID.01 START GSP
+        AddAdditionalDocumentReference;
+        //SID.01 STOP GSP
+
+        AddHeaderAccountingSupplierParty;
+        AddHeaderAccountingCustomerParty;
+        AddDelivery;
+        AddHeaderTaxExchangeRate;
+        AddHeaderAllowanceCharge;
+        AddHeaderTaxTotal;
+        AddHeaderLegalMonetaryTotal;
+
+        // Common for invoice and credit memo header
+        TempEInvoiceExportLine.FINDSET;
+
+        REPEAT
+          CreateLineNode(TempEInvoiceExportLine);
+          AddLineInvCrMemoCommonContent;
+          AddDelivery;
+          AddLineTaxTotal;
+          AddLineItem;
+          AddLinePrice;
+        UNTIL TempEInvoiceExportLine.NEXT = 0;
+
+        SetEInvoiceCommonTables(TempEInvoiceExportHeader,TempEInvoiceExportLine);
+
+        // Save file
+        SalesReceivablesSetup.GET;
+        SaveToXML(TempEInvoiceTransferFile,SalesReceivablesSetup."E-Invoice Sales Cr. Memo Path",TempEInvoiceExportHeader."No.");
+      END;
+    END;
+
+    LOCAL PROCEDURE FillHeaderTableData@1080008(VAR TempEInvoiceExportHeader@1080000 : TEMPORARY Record 10604;SalesCrMemoHeader@1080001 : Record 114);
+    VAR
+      SalesCommentLine@1080003 : Record 44;
+      EInvoiceDocumentEncode@1080002 : Codeunit 10610;
+    BEGIN
+      WITH TempEInvoiceExportHeader DO BEGIN
+        INIT;
+
+        // header fields related to the source table
+        TRANSFERFIELDS(SalesCrMemoHeader);
+
+        //SID.01 START GSP
+        "Sell-to Country/Region Code" := EInvoiceDocumentEncode.GetEInvoiceCountryRegionCode(SalesCrMemoHeader."Sell-to County");
+        "Bill-to Country/Region Code" := EInvoiceDocumentEncode.GetEInvoiceCountryRegionCode(SalesCrMemoHeader."Bill-to Country Code");
+        "Ship-to Country/Region Code" := EInvoiceDocumentEncode.GetEInvoiceCountryRegionCode(SalesCrMemoHeader."Ship-to Country Code");
+        //SID.01 STOP GSP
+
+
+        // calculated fields
+        IF "Currency Code" = '' THEN BEGIN
+          GLSetup.GET;
+          "Currency Code" := GLSetup."LCY Code";
+        END;
+
+        IF SalesCrMemoHeader."Applies-to Doc. Type" = SalesCrMemoHeader."Applies-to Doc. Type"::Invoice THEN
+          "Document No." := SalesCrMemoHeader."Applies-to Doc. No.";
+
+        // header fields not related to the source table
+        "Schema Name" := 'CreditNote';
+        "Schema Location" := 'urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2 UBL-CreditNote-2.0.xsd';
+        xmlns := 'urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2';
+        "Customization ID" :=
+          'urn:www.cenbii.eu:transaction:biitrns014:ver2.0:extended:' +
+          'urn:www.cenbii.eu:profile:biixx:ver2.0:extended:' + 'urn:www.difi.no:ehf:kreditnota:ver2.0';
+        "Profile ID" := 'urn:www.cenbii.eu:profile:biixx:ver2.0';
+        "Uses Common Aggregate Comp." := TRUE;
+        "Uses Common Basic Comp." := TRUE;
+        "Uses Common Extension Comp." := FALSE;
+        "Quantity Name" := 'CreditedQuantity';
+
+        // header fields related to tax amounts
+        FillHeaderTaxAmounts(TempEInvoiceExportHeader);
+
+        // custom
+        "Bill-to Country/Region Code" := EInvoiceDocumentEncode.GetEInvoiceCountryRegionCode("Bill-to Country/Region Code");
+
+        //SID.01 START GSP
+          // NO 123 4556 789 MVA --> 123456789
+        "VAT Registration No." :=
+            EInvoiceDocumentEncode.GetVATRegNo("VAT Registration No.", FALSE, '');
+        //SID.01 STOP GSP
+
+        IF SalesCommentLine.GET(SalesCommentLine."Document Type"::"Posted Credit Memo",SalesCrMemoHeader."No.",0,10000) THEN
+          Note := SalesCommentLine.Comment;
+        INSERT;
+      END;
+    END;
+
+    LOCAL PROCEDURE FillHeaderTaxAmounts@1080022(VAR EInvoiceExportHeader@1080000 : Record 10604);
+    VAR
+      SalesCrMemoLine@1080001 : Record 115;
+    BEGIN
+      SalesCrMemoLine.SETRANGE("Document No.",EInvoiceExportHeader."No.");
+      IF SalesCrMemoLine.FINDSET THEN BEGIN
+        EInvoiceExportHeader."Sales Line Found" := TRUE;
+        REPEAT
+          IF IsRoundingLine(SalesCrMemoLine) THEN
+            EInvoiceExportHeader."Total Rounding Amount" += SalesCrMemoLine."Amount Including VAT"
+          ELSE BEGIN
+            EInvoiceExportHeader."Total Invoice Discount Amount" +=
+              SalesCrMemoLine."Inv. Discount Amount" + SalesCrMemoLine."Line Discount Amount";
+            EInvoiceExportHeader."Legal Taxable Amount" += SalesCrMemoLine.Amount;
+            EInvoiceExportHeader."Total Amount" += SalesCrMemoLine."Amount Including VAT";
+            EInvoiceExportHeader."Tax Amount" += SalesCrMemoLine."Amount Including VAT" - SalesCrMemoLine.Amount;
+          END;
+        UNTIL SalesCrMemoLine.NEXT = 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE FillLineTableData@1080019(VAR TempEInvoiceExportLine@1080000 : TEMPORARY Record 10605;SalesCrMemoLine@1080002 : Record 115);
+    VAR
+      SalesCommentLine@1080001 : Record 44;
+      Id@1080003 : Integer;
+    BEGIN
+      IF TempEInvoiceExportLine.FINDLAST THEN
+        Id := TempEInvoiceExportLine.ID + 1;
+
+      TempEInvoiceExportLine.INIT;
+      TempEInvoiceExportLine.ID := Id;
+
+      TempEInvoiceExportLine.TRANSFERFIELDS(SalesCrMemoLine,TRUE);
+      IF SalesCommentLine.GET(
+           SalesCommentLine."Document Type"::"Posted Credit Memo",SalesCrMemoLine."Document No.",SalesCrMemoLine."Line No.",10000)
+      THEN
+        TempEInvoiceExportLine.Comment := SalesCommentLine.Comment;
+
+      //SID.01 START GSP
+      IF TempEInvoiceExportLine."Unit of Measure Code" = '' THEN
+        TempEInvoiceExportLine."Unit of Measure Code" := 'BLANK';
+      //SID.01 STOP GSP
+
+      TempEInvoiceExportLine.INSERT;
+    END;
+
+    LOCAL PROCEDURE IsRoundingLine@1080006(SalesCrMemoLine@1080000 : Record 115) : Boolean;
+    VAR
+      Customer@1080001 : Record 18;
+      CustomerPostingGroup@1080002 : Record 92;
+    BEGIN
+      IF SalesCrMemoLine.Type = SalesCrMemoLine.Type::"Account (G/L)" THEN BEGIN
+
+        //SID.01 START GSP
+        //Customer.GET(SalesCrMemoLine."Bill-to Customer No.");
+        Customer.GET(SalesCrMemoLine."Sell-to Customer No.");
+        //SID.01 START GSP
+        CustomerPostingGroup.SETFILTER(Code,Customer."Customer Posting Group");
+        IF CustomerPostingGroup.FINDFIRST THEN
+          IF SalesCrMemoLine."No." = CustomerPostingGroup."Invoice Rounding Account" THEN
+            EXIT(TRUE);
+      END;
+      EXIT(FALSE);
+    END;
+
+    PROCEDURE ModifySalesCrMemoHeader@1080005(DocumentNo@1080001 : Code[20]);
+    VAR
+      SalesCrMemoHeader@1080000 : Record 114;
+    BEGIN
+      SalesCrMemoHeader.GET(DocumentNo);
+      SalesCrMemoHeader."E-Invoice Created" := TRUE;
+      SalesCrMemoHeader.MODIFY;
+    END;
+
+    PROCEDURE GetExportedFileInfo@1080001(VAR EInvoiceTransferFile@1080000 : Record 10606);
+    BEGIN
+      EInvoiceTransferFile := TempEInvoiceTransferFile;
+    END;
+
+    BEGIN
+    {
+      +----------------------------------------------+
+      | Copyright ∏ 2015 SI-DATA SID                 |
+      +----------------------------------------------+
+      | MYENGINE@INCADEA                             |
+      +----------------------------------------------+
+      No.  Version  Date      ID  Remark
+      -------------------------------------- ----------
+      01   01.09.15 GSP           EHF 2.0 : Incadea Requirements
+                                  - Change Field "Bill-to Customer No."" --> "Sell-to Customer No."
+                                  - "E-Invoice Created" = TRUE Now Set when successful transfer to compelo
+                                  EHF 2.0.4 Issue : [NOGOV-T10-R031]- An organisational number for seller, buyer and payee MUST be nine numbers.
+                                  - Due to missing "Sell-to Country/Region Code" VatGetNr is formated incorrectly
+                                  EHF 2.0.4 Issue : [NOGOV-T10-R030]- A VAT number MUST be nine numbers followed by the letters MVA.
+                                  - Bill-to VatRegNo : Remove NO and MVA from Vat Organisation number
+                                  - Add AddAdditionalDocumentReference
+    }
+    END.
+  }
+}
+
+OBJECT Codeunit 10628 E-Invoice Export Common
+{
+  OBJECT-PROPERTIES
+  {
+    Date=29.01.16;
+    Time=13:53:56;
+    Modified=Yes;
+    Version List=NAVNO7.10.00.38455,SID.03,BOS, #GS#;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      TempEInvoiceExportHeader@1080001 : TEMPORARY Record 10604;
+      TempEInvoiceExportLine@1080000 : TEMPORARY Record 10605;
+      CBCTxt@1080002 : TextConst '@@@={Locked};ENU=cbc;NOR=cbc';
+      CACTxt@1080003 : TextConst '@@@={Locked};ENU=cac;NOR=cac';
+      BasicCompSpaceNameTxt@1080004 : TextConst '@@@={Locked};ENU=urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2;NOR=urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2';
+      AggregateCompSpaceNameTxt@1080005 : TextConst '@@@={Locked};ENU=urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2;NOR=urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2';
+      XMLDOMMgt@1080006 : Codeunit 6224;
+      EInvoiceDocumentEncode@1080007 : Codeunit 10610;
+      XMLCurrNode@1080009 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+      XMLdocOut@1080010 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlDocument";
+      XMLRootNode@1080011 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+      UBLVersionID@1080008 : Code[3];
+      EInvoiceDocumentsTxt@1080012 : TextConst 'ENU=Documents;NOR=Bilag';
+
+    PROCEDURE CreateDocAndRootNode@1080001();
+    VAR
+      Header@1080002 : Text[1000];
+    BEGIN
+      Header := '<?xml version="1.0" encoding="UTF-8"?> ' +
+
+      //SID.01 START GSP
+      '<?xml-stylesheet type="text/xsl" href="cs_ehf.xslt"?>' +
+      //SID.01 STOP GSP
+
+        '<' + TempEInvoiceExportHeader."Schema Name" + ' xsi:schemaLocation="' + TempEInvoiceExportHeader."Schema Location" + '" ' +
+        'xmlns="' + TempEInvoiceExportHeader.xmlns + '" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ';
+      IF TempEInvoiceExportHeader."Uses Common Aggregate Comp." THEN
+        Header += 'xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" ';
+      IF TempEInvoiceExportHeader."Uses Common Basic Comp." THEN
+        Header += 'xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2" ';
+      IF TempEInvoiceExportHeader."Uses Common Extension Comp." THEN
+        Header += 'xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2" ';
+      Header += '/>';
+
+      XMLdocOut := XMLdocOut.XmlDocument;
+      XMLdocOut.LoadXml := Header;
+      XMLCurrNode := XMLdocOut.DocumentElement;
+      XMLRootNode := XMLCurrNode;
+      UBLVersionID := GetUBLVersionID;
+    END;
+
+    PROCEDURE CreateLineNode@1080005(TempEInvExportLine@1080000 : TEMPORARY Record 10605);
+    BEGIN
+      TempEInvoiceExportLine := TempEInvExportLine;
+      XMLCurrNode := XMLRootNode; // Ensure that line nodes are always added to the root.
+
+      // Header->Line
+      AddGroupNode(XMLCurrNode,TempEInvoiceExportHeader."Schema Name" + 'Line',AggregateCompSpaceNameTxt,CACTxt);
+      AddNotEmptyNode(XMLCurrNode,'ID',FORMAT(TempEInvoiceExportLine."Line No."),BasicCompSpaceNameTxt,CBCTxt);
+    END;
+
+    PROCEDURE SaveToXML@1080052(VAR TempEInvoiceTransferFile@1080002 : TEMPORARY Record 10606;Path@1080001 : Text[250];FileName@1080000 : Text[250]);
+    VAR
+      FileMgt@1080003 : Codeunit 419;
+    BEGIN
+      TempEInvoiceTransferFile."Server Temp File Name" := COPYSTR(FileMgt.ServerTempFileName('xml'),1,250);
+      //SID.03 START
+      FileName := DefineFileName(FileName);
+      //SID.03 STOP
+      TempEInvoiceTransferFile."Local File Name" := STRSUBSTNO('%1.xml',FileName);
+      TempEInvoiceTransferFile."Local Path" := DELCHR(Path,'>','\');
+      XMLdocOut.Save(TempEInvoiceTransferFile."Server Temp File Name");
+    END;
+
+    PROCEDURE DownloadEInvoiceFile@1080033(VAR TempEInvoiceTransferFile@1080000 : TEMPORARY Record 10606);
+    VAR
+      FileManagement@1080001 : Codeunit 419;
+      ZipFileName@1080002 : Text;
+    BEGIN
+      TempEInvoiceTransferFile.FINDSET;
+      IF NOT FileManagement.CanRunDotNetOnClient THEN BEGIN
+        ZipFileName := FileManagement.CreateZipArchiveObject;
+        REPEAT
+          FileManagement.AddFileToZipArchive(TempEInvoiceTransferFile."Server Temp File Name",
+            TempEInvoiceTransferFile."Local File Name");
+        UNTIL TempEInvoiceTransferFile.NEXT = 0;
+        FileManagement.CloseZipArchive;
+        FileManagement.DownloadHandler(ZipFileName,'','','',STRSUBSTNO('%1.zip',EInvoiceDocumentsTxt));
+      END ELSE
+        REPEAT
+          FileManagement.DownloadToFile(
+            TempEInvoiceTransferFile."Server Temp File Name",
+            STRSUBSTNO('%1\%2',TempEInvoiceTransferFile."Local Path",TempEInvoiceTransferFile."Local File Name"));
+        UNTIL TempEInvoiceTransferFile.NEXT = 0;
+    END;
+
+    PROCEDURE SetEInvoiceCommonTables@1080004(TempEInvoiceExportHeaderValue@1080001 : TEMPORARY Record 10604;VAR TempEInvoiceExportLineValue@1080000 : TEMPORARY Record 10605);
+    BEGIN
+      TempEInvoiceExportHeader := TempEInvoiceExportHeaderValue;
+      TempEInvoiceExportLine.COPY(TempEInvoiceExportLineValue,TRUE);
+    END;
+
+    PROCEDURE AddHeaderAccountingCustomerParty@1080016();
+    VAR
+      Customer@1080001 : Record 18;
+    BEGIN
+      AddGroupNode(XMLCurrNode,'AccountingCustomerParty',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNode(XMLCurrNode,'Party',AggregateCompSpaceNameTxt,CACTxt);
+
+      IF UBLVersionID <> '2.1' THEN BEGIN
+        AddGroupNodeWithData(XMLCurrNode,'EndpointID','9908:' + TempEInvoiceExportHeader."GLN No.",BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'schemeID','GLN');
+        AddAttribute(XMLCurrNode,'schemeAgencyID','9');
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END ELSE
+        IF Customer.GET(TempEInvoiceExportHeader."Bill-to Customer No.") THEN BEGIN
+          AddGroupNodeWithData(
+            XMLCurrNode,'EndpointID',EInvoiceDocumentEncode.GetVATRegNo(Customer."VAT Registration No.",FALSE,''),
+            BasicCompSpaceNameTxt,CBCTxt);
+          AddAttribute(XMLCurrNode,'schemeID','NO:ORGNR');
+          XMLCurrNode := XMLCurrNode.ParentNode;
+        END;
+
+      // Header->AccountingCustomerParty->Party->PartyIdentification
+      IF (UBLVersionID = '2.1') AND (TempEInvoiceExportHeader."GLN No." <> '') THEN BEGIN
+        AddGroupNode(XMLCurrNode,'PartyIdentification',AggregateCompSpaceNameTxt,CACTxt);
+        AddGroupNodeWithData(XMLCurrNode,'ID',TempEInvoiceExportHeader."GLN No.",BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'schemeID','GLN');
+        XMLCurrNode := XMLCurrNode.ParentNode;
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+      IF UBLVersionID = '2.0' THEN BEGIN
+        AddGroupNode(XMLCurrNode,'PartyIdentification',AggregateCompSpaceNameTxt,CACTxt);
+        AddLastNode(XMLCurrNode,'ID',TempEInvoiceExportHeader."Bill-to Customer No.",BasicCompSpaceNameTxt,CBCTxt);
+      END;
+
+      // Header->AccountingCustomerParty->Party->PartyName
+      AddGroupNode(XMLCurrNode,'PartyName',AggregateCompSpaceNameTxt,CACTxt);
+      AddLastNode(XMLCurrNode,'Name',TempEInvoiceExportHeader."Bill-to Name",BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->AccountingCustomerParty->Party->PostalAddress
+      AddGroupNode(XMLCurrNode,'PostalAddress',AggregateCompSpaceNameTxt,CACTxt);
+      AddNotEmptyNode(XMLCurrNode,'StreetName',TempEInvoiceExportHeader."Bill-to Address",BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'AdditionalStreetName',TempEInvoiceExportHeader."Bill-to Address 2",BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'CityName',TempEInvoiceExportHeader."Bill-to City",BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'PostalZone',TempEInvoiceExportHeader."Bill-to Post Code",BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'CountrySubentity',TempEInvoiceExportHeader."Bill-to County",BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->AccountingCustomerParty->Party->PostalAddress->Country
+      AddCountry(EInvoiceDocumentEncode.GetEInvoiceCountryRegionCode(TempEInvoiceExportHeader."Bill-to Country/Region Code"));
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      // Header->AccountingCustomerParty->Party->PartyTextScheme
+      AddGroupNode(XMLCurrNode,'PartyTaxScheme',AggregateCompSpaceNameTxt,CACTxt);
+      AddNotEmptyNode(
+        XMLCurrNode,'CompanyID',
+        EInvoiceDocumentEncode.GetVATRegNo(
+          TempEInvoiceExportHeader."VAT Registration No.",TRUE,TempEInvoiceExportHeader."Sell-to Country/Region Code"),
+        BasicCompSpaceNameTxt,CBCTxt);
+
+      AddGroupNode(XMLCurrNode,'TaxScheme',AggregateCompSpaceNameTxt,CACTxt);
+      AddGroupNodeWithData(XMLCurrNode,'ID','VAT',BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'schemeID','UN/ECE 5153');
+      AddAttribute(XMLCurrNode,'schemeAgencyID','6');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      // Header->AccountingCustomerParty->Party->PartyLegalEntity
+      AddGroupNode(XMLCurrNode,'PartyLegalEntity',AggregateCompSpaceNameTxt,CACTxt);
+
+      // Header->AccountingCustomerParty->Party->PartyLegalEntity->RegistrationName
+      AddNotEmptyNode(XMLCurrNode,'RegistrationName',TempEInvoiceExportHeader."Bill-to Name",BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->AccountingCustomerParty->Party->PartyLegalEntity->CompanyID
+      AddGroupNodeWithData(
+        XMLCurrNode,'CompanyID',
+        WriteCompanyID(TempEInvoiceExportHeader."VAT Registration No.",TempEInvoiceExportHeader."Sell-to Country/Region Code"),
+        BasicCompSpaceNameTxt,CBCTxt);
+
+      // UBL 2.1
+      IF UBLVersionID = '2.1' THEN BEGIN
+        AddAttribute(XMLCurrNode,'schemeID','NO:ORGNR');
+        AddAttribute(XMLCurrNode,'schemeAgencyID','82');
+      END;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      // Header->AccountingCustomerParty->Party->Contact
+      IF TempEInvoiceExportHeader."Your Reference" <> '' THEN BEGIN
+        AddGroupNode(XMLCurrNode,'Contact',AggregateCompSpaceNameTxt,CACTxt);
+        AddNodeNA(XMLCurrNode,'ID',TempEInvoiceExportHeader."Your Reference",BasicCompSpaceNameTxt,CBCTxt);
+        AddNotEmptyNode(XMLCurrNode,'Name',TempEInvoiceExportHeader."Bill-to Name",BasicCompSpaceNameTxt,CBCTxt);
+        IF Customer.GET(TempEInvoiceExportHeader."Bill-to Customer No.") THEN BEGIN
+          AddNotEmptyNode(XMLCurrNode,'Telephone',Customer."Phone No.",BasicCompSpaceNameTxt,CBCTxt);
+          AddNotEmptyNode(XMLCurrNode,'Telefax',Customer."Fax No.",BasicCompSpaceNameTxt,CBCTxt);
+          AddNotEmptyNode(XMLCurrNode,'ElectronicMail',Customer."E-Mail",BasicCompSpaceNameTxt,CBCTxt);
+        END;
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddHeaderAccountingSupplierParty@1080037();
+    VAR
+      CompanyInfo@1080010 : Record 79;
+      ResponsibilityCenter@1080007 : Record 5714;
+      SalespersonPurchaser@1080009 : Record 13;
+      Name@1080001 : Text[250];
+      Address@1080002 : Text[250];
+      Address2@1080003 : Text[250];
+      City@1080004 : Text[250];
+      PostCode@1080005 : Text[250];
+      County@1080006 : Text[250];
+      CountryRegionCode@1080008 : Text[10];
+      CompanyInfoExtL@1101103000 : Record 1058070;
+    BEGIN
+      CompanyInfo.GET;
+
+
+      //SID.02 START DNO
+      CompanyInfoExtL.GET;
+      //SID.02 STOP DNO
+
+      //SID.01 START GSP
+      // NO 123 4556 789 MVA --> 123456789
+      CompanyInfo."VAT Registration No." := EInvoiceDocumentEncode.GetVATRegNo(CompanyInfo."VAT Registration No.",FALSE,'');
+      //SID.01 STOP GSP
+
+
+      IF TempEInvoiceExportHeader."Responsibility Center" <> '' THEN BEGIN
+        ResponsibilityCenter.GET(TempEInvoiceExportHeader."Responsibility Center");
+        Name := ResponsibilityCenter.Name;
+        Address := ResponsibilityCenter.Address;
+        Address2 := ResponsibilityCenter."Address 2";
+        City := ResponsibilityCenter.City;
+        PostCode := ResponsibilityCenter."Post Code";
+        County := ResponsibilityCenter.County;
+        CountryRegionCode := ResponsibilityCenter."Country/Region Code";
+      END ELSE BEGIN
+        Name := CompanyInfo.Name;
+        Address := CompanyInfo.Address;
+        Address2 := CompanyInfo."Address 2";
+        City := CompanyInfo.City;
+        PostCode := CompanyInfo."Post Code";
+        County := CompanyInfo.County;
+        CountryRegionCode := CompanyInfo."Country/Region Code";
+      END;
+
+      AddGroupNode(XMLCurrNode,'AccountingSupplierParty',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNode(XMLCurrNode,'Party',AggregateCompSpaceNameTxt,CACTxt);
+
+      IF UBLVersionID = '2.1' THEN BEGIN
+        AddGroupNodeWithData(
+          XMLCurrNode,'EndpointID',EInvoiceDocumentEncode.GetVATRegNo(CompanyInfo."VAT Registration No.",FALSE,''),
+          BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'schemeID','NO:ORGNR');
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END ELSE BEGIN
+
+      //SID.02 START
+        //AddGroupNodeWithData(XMLCurrNode,'EndpointID','9908:' + CompanyInfo."GLN No.",BasicCompSpaceNameTxt,CBCTxt);
+        AddGroupNodeWithData(XMLCurrNode,'EndpointID','9908:' + CompanyInfoExtL."GLN No.",BasicCompSpaceNameTxt,CBCTxt);
+      //SID.02 STOP
+
+          AddAttribute(XMLCurrNode,'schemeID','GLN');
+        AddAttribute(XMLCurrNode,'schemeAgencyID','9');
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+
+      // Header->AccountingSupplierParty->Party->PartyName
+      AddGroupNode(XMLCurrNode,'PartyName',AggregateCompSpaceNameTxt,CACTxt);
+      AddLastNode(XMLCurrNode,'Name',Name,BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->AccountingSupplierParty->Party->PostalAddress
+      AddGroupNode(XMLCurrNode,'PostalAddress',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddNotEmptyNode(XMLCurrNode,'StreetName',Address,BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'AdditionalStreetName',Address2,BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'CityName',City,BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'PostalZone',PostCode,BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'CountrySubentity',County,BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->AccountingSupplierParty->Party->PostalAddress->Country
+      AddCountry(CountryRegionCode);
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      // Header->AccountingSupplierParty->Party->PartyTextScheme
+      AddGroupNode(XMLCurrNode,'PartyTaxScheme',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddNotEmptyNode(XMLCurrNode,'CompanyID',EInvoiceDocumentEncode.GetVATRegNo(CompanyInfo."VAT Registration No.",TRUE,
+          CompanyInfo."Country/Region Code"),BasicCompSpaceNameTxt,CBCTxt);
+
+      AddGroupNode(XMLCurrNode,'TaxScheme',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNodeWithData(XMLCurrNode,'ID','VAT',BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'schemeID','UN/ECE 5153');
+      AddAttribute(XMLCurrNode,'schemeAgencyID','6');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddPartyLegalEntity;
+
+      IF SalespersonPurchaser.GET(TempEInvoiceExportHeader."Salesperson Code") THEN
+        IF SalespersonPurchaser.Name <> '' THEN BEGIN
+          AddGroupNode(XMLCurrNode,'Contact',AggregateCompSpaceNameTxt,CACTxt);
+          AddNotEmptyNode(XMLCurrNode,'ID',SalespersonPurchaser.Code,BasicCompSpaceNameTxt,CBCTxt);
+          AddNotEmptyNode(XMLCurrNode,'Name',SalespersonPurchaser.Name,BasicCompSpaceNameTxt,CBCTxt);
+          AddNotEmptyNode(XMLCurrNode,'Telephone',SalespersonPurchaser."Phone No.",BasicCompSpaceNameTxt,CBCTxt);
+          AddLastNode(XMLCurrNode,'ElectronicMail',SalespersonPurchaser."E-Mail",BasicCompSpaceNameTxt,CBCTxt);
+        END;
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddHeaderAllowanceCharge@1080044();
+    VAR
+      VATPercentage@1080001 : Integer;
+      VATCalculationType@1080002 : 'Normal VAT,Reverse Charge VAT,Full VAT,Sales Tax';
+      VATProdPostingGroup@1080003 : Code[10];
+    BEGIN
+      VATPercentage := 0;
+      IF TempEInvoiceExportLine.FINDFIRST THEN BEGIN
+        VATPercentage := TempEInvoiceExportLine."VAT %";
+        VATCalculationType := TempEInvoiceExportLine."VAT Calculation Type";
+        VATProdPostingGroup := TempEInvoiceExportLine."VAT Prod. Posting Group";
+      END;
+
+      // Header->AllowanceCharge
+      IF TempEInvoiceExportHeader."Total Invoice Discount Amount" > 0 THEN BEGIN
+        AddGroupNode(XMLCurrNode,'AllowanceCharge',AggregateCompSpaceNameTxt,CACTxt);
+
+        AddNotEmptyNode(XMLCurrNode,'ChargeIndicator','false',BasicCompSpaceNameTxt,CBCTxt);
+        AddNotEmptyNode(XMLCurrNode,'AllowanceChargeReason','Rabat',BasicCompSpaceNameTxt,CBCTxt);
+
+        AddGroupNodeWithData(
+          XMLCurrNode,'Amount',EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportHeader."Total Invoice Discount Amount"),
+          BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+        XMLCurrNode := XMLCurrNode.ParentNode;
+
+        // Header->AllowanceCharge->TaxCategory
+        AddGroupNode(XMLCurrNode,'TaxCategory',AggregateCompSpaceNameTxt,CACTxt);
+
+        AddGroupNodeWithData(XMLCurrNode,'ID',GetTaxCategoryID(VATPercentage,VATCalculationType,VATProdPostingGroup),
+          BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'schemeID','UNCL5305');
+        XMLCurrNode := XMLCurrNode.ParentNode;
+
+        AddNotEmptyNode(XMLCurrNode,'Percent',EInvoiceDocumentEncode.DecimalToText(VATPercentage),
+          BasicCompSpaceNameTxt,CBCTxt);
+
+        // Header->AllowanceCharge->TaxCategory->TaxScheme
+        AddGroupNode(XMLCurrNode,'TaxScheme',AggregateCompSpaceNameTxt,CACTxt);
+        AddLastNode(XMLCurrNode,'ID','VAT',BasicCompSpaceNameTxt,CBCTxt);
+        XMLCurrNode := XMLCurrNode.ParentNode;
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+    END;
+
+    PROCEDURE AddHeaderBillingReference@1080029();
+    BEGIN
+      // Header->BillingReference
+      AddGroupNode(XMLCurrNode,'BillingReference',AggregateCompSpaceNameTxt,CACTxt);
+      AddGroupNode(XMLCurrNode,'InvoiceDocumentReference',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddLastNode(XMLCurrNode,'ID',TempEInvoiceExportHeader."Document No.",BasicCompSpaceNameTxt,CBCTxt);
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddHeaderCommonContent@1080002();
+    BEGIN
+      AddNotEmptyNode(XMLCurrNode,'UBLVersionID',UBLVersionID,BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'CustomizationID',TempEInvoiceExportHeader."Customization ID",BasicCompSpaceNameTxt,CBCTxt);
+
+      AddNotEmptyNode(XMLCurrNode,'ProfileID',TempEInvoiceExportHeader."Profile ID",BasicCompSpaceNameTxt,CBCTxt);
+
+      AddNotEmptyNode(XMLCurrNode,'ID',TempEInvoiceExportHeader."No.",BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(
+        XMLCurrNode,'IssueDate',EInvoiceDocumentEncode.DateToText(TempEInvoiceExportHeader."Posting Date"),BasicCompSpaceNameTxt,
+        CBCTxt);
+    END;
+
+    PROCEDURE AddHeaderContractDocumentReference@1080043();
+    BEGIN
+      // Header->ContractDocumentReference
+      AddGroupNode(XMLCurrNode,'ContractDocumentReference',AggregateCompSpaceNameTxt,CACTxt);
+
+      IF TempEInvoiceExportHeader."Order No." <> '' THEN BEGIN
+        AddNotEmptyNode(XMLCurrNode,'ID',TempEInvoiceExportHeader."Order No.",BasicCompSpaceNameTxt,CBCTxt);
+        AddLastNode(XMLCurrNode,'DocumentType','Order',BasicCompSpaceNameTxt,CBCTxt);
+      END ELSE
+        AddLastNode(XMLCurrNode,'ID',TempEInvoiceExportHeader."Pre-Assigned No.",BasicCompSpaceNameTxt,CBCTxt);
+    END;
+
+    PROCEDURE AddHeaderDocumentCurrencyCode@1080027();
+    BEGIN
+      AddGroupNodeWithData(XMLCurrNode,'DocumentCurrencyCode',TempEInvoiceExportHeader."Currency Code",BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'listID','ISO4217');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddHeaderInvoiceTypeCode@1080035();
+    BEGIN
+      AddGroupNodeWithData(XMLCurrNode,'InvoiceTypeCode','380',BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'listID','UNCL1001');
+      AddAttribute(XMLCurrNode,'listAgencyID','6');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddHeaderLegalMonetaryTotal@1080020();
+    BEGIN
+      // Header->LegalMonetaryTotal
+      AddGroupNode(XMLCurrNode,'LegalMonetaryTotal',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNodeWithData(XMLCurrNode,'LineExtensionAmount',
+        EInvoiceDocumentEncode.DecimalToText(
+          TempEInvoiceExportHeader."Legal Taxable Amount" + TempEInvoiceExportHeader."Total Invoice Discount Amount"),
+        BasicCompSpaceNameTxt,CBCTxt);
+
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddGroupNodeWithData(
+        XMLCurrNode,'TaxExclusiveAmount',EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportHeader."Legal Taxable Amount"),
+        BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddGroupNodeWithData(
+        XMLCurrNode,'TaxInclusiveAmount',EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportHeader."Total Amount"),
+        BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      IF TempEInvoiceExportHeader."Total Invoice Discount Amount" > 0 THEN BEGIN
+        AddGroupNodeWithData(
+          XMLCurrNode,'AllowanceTotalAmount',
+          EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportHeader."Total Invoice Discount Amount"),
+          BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+
+      AddGroupNodeWithData(
+        XMLCurrNode,'PayableRoundingAmount',EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportHeader."Total Rounding Amount"),
+        BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddGroupNodeWithData(XMLCurrNode,'PayableAmount',
+        EInvoiceDocumentEncode.DecimalToText(
+          TempEInvoiceExportHeader."Total Amount" + TempEInvoiceExportHeader."Total Rounding Amount"),
+        BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddHeaderNote@1080003();
+    BEGIN
+      IF TempEInvoiceExportHeader.Note <> '' THEN
+        AddNotEmptyNode(XMLCurrNode,'Note',TempEInvoiceExportHeader.Note,BasicCompSpaceNameTxt,CBCTxt);
+    END;
+
+    PROCEDURE AddHeaderOrderReference@1080030();
+    BEGIN
+      // Header->OrderReference
+      IF TempEInvoiceExportHeader."Document No." <> '' THEN BEGIN
+        AddGroupNode(XMLCurrNode,'OrderReference',AggregateCompSpaceNameTxt,CACTxt);
+        AddLastNode(XMLCurrNode,'ID',TempEInvoiceExportHeader."Document No.",BasicCompSpaceNameTxt,CBCTxt);
+      END;
+    END;
+
+    PROCEDURE AddHeaderPaymentMeans@1080031();
+    VAR
+      CompanyInfo@1080009 : Record 79;
+      PaymentTerms@1080008 : Record 3;
+    BEGIN
+      CompanyInfo.GET;
+
+      IF (UBLVersionID = '2.1') AND (CompanyInfo."Bank Account No." <> '') THEN
+        AddPaymentMeans(CompanyInfo."Bank Account No.",'BBAN');
+
+      IF (UBLVersionID = '2.0') AND (CompanyInfo.IBAN = '') THEN
+        AddPaymentMeans(CompanyInfo."Bank Account No.",'BANK');
+
+      IF CompanyInfo.IBAN <> '' THEN
+        AddPaymentMeans(CompanyInfo.IBAN,'IBAN');
+
+      // Header->PaymentTerms
+      IF PaymentTerms.GET(TempEInvoiceExportHeader."Payment Terms Code") THEN BEGIN
+        AddGroupNode(XMLCurrNode,'PaymentTerms',AggregateCompSpaceNameTxt,CACTxt);
+        AddLastNode(XMLCurrNode,'Note',PaymentTerms.Description,BasicCompSpaceNameTxt,CBCTxt);
+      END;
+    END;
+
+    PROCEDURE AddHeaderTaxCurrencyCode@1080045();
+    BEGIN
+      IF DocumentHasForeignCurrency THEN BEGIN
+        AddGroupNodeWithData(XMLCurrNode,'TaxCurrencyCode',TempEInvoiceExportHeader."Currency Code",BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'listID','ISO4217');
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+    END;
+
+    PROCEDURE AddHeaderTaxExchangeRate@1080028();
+    VAR
+      GeneralLedgerSetup@1080001 : Record 98;
+    BEGIN
+      IF NOT DocumentHasForeignCurrency THEN
+        EXIT;
+
+      AddGroupNode(XMLCurrNode,'TaxExchangeRate',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNodeWithData(XMLCurrNode,'SourceCurrencyCode',TempEInvoiceExportHeader."Currency Code",BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'listID','ISO4217');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      GeneralLedgerSetup.GET;
+      AddGroupNodeWithData(XMLCurrNode,'TargetCurrencyCode',GeneralLedgerSetup."LCY Code",BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'listID','ISO4217');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddNotEmptyNode(XMLCurrNode,'CalculationRate',FORMAT(GetCurrMultiplicationFactor,0,9),BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'MathematicOperatorCode','Multiply',BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(
+        XMLCurrNode,'Date',FORMAT(TempEInvoiceExportHeader."Posting Date",0,'<Year4>-<Month,2>-<Day,2>'),BasicCompSpaceNameTxt,CBCTxt);
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddHeaderTaxTotal@1080013();
+    BEGIN
+      IF TempEInvoiceExportHeader."Sales Line Found" THEN BEGIN
+        AddGroupNode(XMLCurrNode,'TaxTotal',AggregateCompSpaceNameTxt,CACTxt);
+        AddGroupNodeWithData(XMLCurrNode,'TaxAmount',
+          EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportHeader."Tax Amount"),BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+        XMLCurrNode := XMLCurrNode.ParentNode;
+        AddTaxSubTotal;
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+    END;
+
+    PROCEDURE AddLineAccountingCost@1080019();
+    BEGIN
+      AddNotEmptyNode(XMLCurrNode,'AccountingCost',TempEInvoiceExportLine."Account Code",BasicCompSpaceNameTxt,CBCTxt);
+    END;
+
+    PROCEDURE AddLineAllowanceCharge@1080024();
+    BEGIN
+      // Header->Line->AllowanceCharge
+      IF TempEInvoiceExportLine.Type = TempEInvoiceExportLine.Type::"Charge (Item)" THEN BEGIN
+        AddGroupNode(XMLCurrNode,'AllowanceCharge',AggregateCompSpaceNameTxt,CACTxt);
+
+        IF TempEInvoiceExportLine."Amount Including VAT" < 0 THEN BEGIN
+          AddNotEmptyNode(XMLCurrNode,'ChargeIndicator','false',BasicCompSpaceNameTxt,CBCTxt);
+          AddNotEmptyNode(XMLCurrNode,'AllowanceChargeReason','Rabat',BasicCompSpaceNameTxt,CBCTxt);
+        END ELSE BEGIN
+          AddNotEmptyNode(XMLCurrNode,'ChargeIndicator','true',BasicCompSpaceNameTxt,CBCTxt);
+          AddNotEmptyNode(XMLCurrNode,'AllowanceChargeReason','Gebyr',BasicCompSpaceNameTxt,CBCTxt);
+        END;
+
+        AddGroupNodeWithData(XMLCurrNode,'Amount',EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine."Amount Including VAT"),
+          BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+        XMLCurrNode := XMLCurrNode.ParentNode;
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+    END;
+
+    PROCEDURE AddLineInvCrMemoCommonContent@1080006();
+    VAR
+      UnitOfMeasure@1080000 : Record 204;
+    BEGIN
+      UnitOfMeasure.GET(TempEInvoiceExportLine."Unit of Measure Code");
+
+      AddGroupNodeWithData(
+        XMLCurrNode,TempEInvoiceExportHeader."Quantity Name",EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine.Quantity),
+        BasicCompSpaceNameTxt,CBCTxt);
+      IF UnitOfMeasure."UN/ECE Rec20 Code" <> '' THEN BEGIN
+        AddAttribute(XMLCurrNode,'unitCode',UnitOfMeasure."UN/ECE Rec20 Code");
+        AddAttribute(XMLCurrNode,'unitCodeListID','UNECERec20');
+      END;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddGroupNodeWithData(XMLCurrNode,'LineExtensionAmount',
+        EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine.Amount + TempEInvoiceExportLine."Inv. Discount Amount" +
+          TempEInvoiceExportLine."Line Discount Amount"),BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddLineItem@1080017();
+    BEGIN
+      // Header->Line->Item
+      AddGroupNode(XMLCurrNode,'Item',AggregateCompSpaceNameTxt,CACTxt);
+      AddNotEmptyNode(XMLCurrNode,'Description',TempEInvoiceExportLine."Description 2",BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'Name',COPYSTR(TempEInvoiceExportLine.Description,1,15),BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->Line->Item->SellersItemIdentification
+      AddGroupNode(XMLCurrNode,'SellersItemIdentification',AggregateCompSpaceNameTxt,CACTxt);
+      AddLastNode(XMLCurrNode,'ID',TempEInvoiceExportLine."No.",BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->Line->Item->ClassifiedTaxCategory
+      AddGroupNode(XMLCurrNode,'ClassifiedTaxCategory',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNodeWithData(
+        XMLCurrNode,'ID',
+        GetTaxCategoryID(
+          TempEInvoiceExportLine."VAT %",TempEInvoiceExportLine."VAT Calculation Type",
+          TempEInvoiceExportLine."VAT Prod. Posting Group"),
+        BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'schemeID','UNCL5305');
+      AddAttribute(XMLCurrNode,'schemeAgencyID','6');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddNotEmptyNode(XMLCurrNode,'Percent',EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine."VAT %"),BasicCompSpaceNameTxt,CBCTxt);
+
+      AddGroupNode(XMLCurrNode,'TaxScheme',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNodeWithData(XMLCurrNode,'ID','VAT',BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'schemeID','UN/ECE 5153');
+      AddAttribute(XMLCurrNode,'schemeAgencyID','6');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddLineNote@1080046();
+    BEGIN
+      // Header->Line->Note
+      IF TempEInvoiceExportLine.Comment <> '' THEN
+        AddNotEmptyNode(XMLCurrNode,'Note',TempEInvoiceExportLine.Comment,BasicCompSpaceNameTxt,CBCTxt);
+    END;
+
+    PROCEDURE AddLineOrderLineReference@1080022();
+    BEGIN
+      AddGroupNode(XMLCurrNode,'OrderLineReference',AggregateCompSpaceNameTxt,CACTxt);
+      AddLastNode(XMLCurrNode,'LineID',FORMAT(TempEInvoiceExportLine."Line No."),BasicCompSpaceNameTxt,CBCTxt);
+    END;
+
+    PROCEDURE AddLinePrice@1080025();
+    VAR
+      UnitOfMeasure@1080001 : Record 204;
+    BEGIN
+      UnitOfMeasure.GET(TempEInvoiceExportLine."Unit of Measure Code");
+
+      // Header->Line->Price
+      AddGroupNode(XMLCurrNode,'Price',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNodeWithData(XMLCurrNode,'PriceAmount',FORMAT(TempEInvoiceExportLine."Unit Price",0,9),BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      IF UnitOfMeasure."UN/ECE Rec20 Code" <> '' THEN BEGIN
+        AddGroupNodeWithData(
+          XMLCurrNode,'BaseQuantity',EInvoiceDocumentEncode.DecimalToText(1.0),BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'unitCode',UnitOfMeasure."UN/ECE Rec20 Code");
+        AddAttribute(XMLCurrNode,'unitCodeListID','UNECERec20');
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+
+      // Header->Line->Price->AllowanceCharge
+      AddGroupNode(XMLCurrNode,'AllowanceCharge',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddNotEmptyNode(XMLCurrNode,'ChargeIndicator','false',BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'AllowanceChargeReason','Rabat',BasicCompSpaceNameTxt,CBCTxt);
+
+      AddNotEmptyNode(XMLCurrNode,'MultiplierFactorNumeric',EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine."Line Discount %"),
+        BasicCompSpaceNameTxt,CBCTxt);
+
+      AddGroupNodeWithData(XMLCurrNode,'Amount',EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine."Line Discount Amount"),
+        BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddGroupNodeWithData(XMLCurrNode,'BaseAmount',EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine.Amount),
+        BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddLineReminderContent@1080007();
+    VAR
+      ElementName@1080001 : Text[30];
+    BEGIN
+      AddNotEmptyNode(XMLCurrNode,'Note',TempEInvoiceExportLine.Description +
+        EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine."Remaining Amount"),
+        BasicCompSpaceNameTxt,CBCTxt);
+
+      IF TempEInvoiceExportLine.Amount > 0 THEN
+        AddGroupNodeWithData(XMLCurrNode,'DebitLineAmount',
+          EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine.Amount),BasicCompSpaceNameTxt,CBCTxt)
+      ELSE
+        AddGroupNodeWithData(XMLCurrNode,'DebitLineAmount','0',BasicCompSpaceNameTxt,CBCTxt);
+
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      IF TempEInvoiceExportLine.Amount < 0 THEN
+        AddGroupNodeWithData(XMLCurrNode,'CreditLineAmount',
+          EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine.Amount),BasicCompSpaceNameTxt,CBCTxt)
+      ELSE
+        AddGroupNodeWithData(XMLCurrNode,'CreditLineAmount','0',BasicCompSpaceNameTxt,CBCTxt);
+
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      // Header->Line->BillingReference
+      AddGroupNode(XMLCurrNode,'BillingReference',AggregateCompSpaceNameTxt,CACTxt);
+      IF TempEInvoiceExportLine."Document No." <> '' THEN BEGIN
+        CASE TempEInvoiceExportLine."Document Type" OF
+          TempEInvoiceExportLine."Document Type"::Invoice,
+          TempEInvoiceExportLine."Document Type"::Refund:
+            ElementName := 'InvoiceDocumentReference';
+          TempEInvoiceExportLine."Document Type"::"Credit Memo",
+          TempEInvoiceExportLine."Document Type"::Payment:
+            ElementName := 'CreditNoteDocumentReference';
+          TempEInvoiceExportLine."Document Type"::Reminder,
+          TempEInvoiceExportLine."Document Type"::"Finance Charge Memo":
+            ElementName := 'ReminderDocumentReference';
+        END;
+        AddGroupNode(XMLCurrNode,ElementName,AggregateCompSpaceNameTxt,CACTxt);
+        AddLastNode(XMLCurrNode,'ID',FORMAT(TempEInvoiceExportLine."Document No."),BasicCompSpaceNameTxt,CBCTxt);
+      END;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE AddLineTaxTotal@1080048();
+    BEGIN
+      // Header->Line->TaxTotal
+      AddGroupNode(XMLCurrNode,'TaxTotal',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNodeWithData(XMLCurrNode,'TaxAmount',
+        EInvoiceDocumentEncode.DecimalToText(TempEInvoiceExportLine."Amount Including VAT" - TempEInvoiceExportLine.Amount),
+        BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    LOCAL PROCEDURE AddCountry@1080008(IdentificationCode@1080000 : Code[10]);
+    BEGIN
+      AddGroupNode(XMLCurrNode,'Country',AggregateCompSpaceNameTxt,CACTxt);
+      IF UBLVersionID = '2.1' THEN BEGIN
+        AddGroupNodeWithData(XMLCurrNode,'IdentificationCode',IdentificationCode,BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'listID','ISO3166-1:Alpha2');
+        XMLCurrNode := XMLCurrNode.ParentNode;
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END ELSE
+        AddLastNode(XMLCurrNode,'IdentificationCode',IdentificationCode,BasicCompSpaceNameTxt,CBCTxt);
+    END;
+
+    PROCEDURE AddDelivery@1080023();
+    BEGIN
+      // Header->Delivery and
+      // Header->Line->Delivery
+      AddGroupNode(XMLCurrNode,'Delivery',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddNotEmptyNode(XMLCurrNode,'ActualDeliveryDate',
+        EInvoiceDocumentEncode.DateToText(TempEInvoiceExportHeader."Shipment Date"),BasicCompSpaceNameTxt,CBCTxt);
+
+      AddGroupNode(XMLCurrNode,'DeliveryLocation',AggregateCompSpaceNameTxt,CACTxt);
+
+      // Delivery->DeliveryLocation->Address
+      AddGroupNode(XMLCurrNode,'Address',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddNotEmptyNode(XMLCurrNode,'StreetName',TempEInvoiceExportHeader."Ship-to Address",BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'AdditionalStreetName',TempEInvoiceExportHeader."Ship-to Address 2",BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'CityName',TempEInvoiceExportHeader."Ship-to City",BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'PostalZone',TempEInvoiceExportHeader."Ship-to Post Code",BasicCompSpaceNameTxt,CBCTxt);
+
+      // Delivery->DeliveryLocation->Address->Country
+      AddCountry(TempEInvoiceExportHeader."Ship-to Country/Region Code");
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    LOCAL PROCEDURE AddPartyLegalEntity@1080038();
+    VAR
+      CompanyInfo@1080001 : Record 79;
+      CompanyInfoExtL@1101103000 : Record 1058070;
+    BEGIN
+      CompanyInfo.GET;
+
+      //SID.02 START
+      CompanyInfoExtL.GET;
+      //SID.02 STOP
+
+      AddGroupNode(XMLCurrNode,'PartyLegalEntity',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddNotEmptyNode(XMLCurrNode,'RegistrationName',CompanyInfo.Name,BasicCompSpaceNameTxt,CBCTxt);
+
+      AddGroupNodeWithData(XMLCurrNode,'CompanyID',
+        WriteCompanyID(CompanyInfo."VAT Registration No.",CompanyInfo."Country/Region Code"),
+        BasicCompSpaceNameTxt,CBCTxt);
+
+      AddAttribute(XMLCurrNode,'schemeID','NO:ORGNR');
+
+      //SID.02 START
+      IF CompanyInfoExtL.Enterpriseregister THEN
+      //IF CompanyInfo.Enterpriseregister THEN
+      //SID.02 STOP
+        AddAttribute(XMLCurrNode,'schemeName','Foretaksregisteret');
+      AddAttribute(XMLCurrNode,'schemeAgencyID','82');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddGroupNode(XMLCurrNode,'RegistrationAddress',AggregateCompSpaceNameTxt,CACTxt);
+      AddNotEmptyNode(XMLCurrNode,'CityName',CompanyInfo.City,BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'CountrySubentity',CompanyInfo.County,BasicCompSpaceNameTxt,CBCTxt);
+
+      IF CompanyInfo."Country/Region Code" <> '' THEN
+        AddCountry(CompanyInfo."Country/Region Code");
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    LOCAL PROCEDURE AddPaymentMeans@1080026(AccountId@1080001 : Code[50];AccountAttributeName@1080000 : Code[4]);
+    VAR
+      CompanyInfo@1080003 : Record 79;
+    BEGIN
+      CompanyInfo.GET;
+
+      // Header->PaymentMeans
+      AddGroupNode(XMLCurrNode,'PaymentMeans',AggregateCompSpaceNameTxt,CACTxt);
+
+      AddGroupNodeWithData(XMLCurrNode,'PaymentMeansCode','31',BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'listID','UNCL4461');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddNotEmptyNode(XMLCurrNode,'PaymentDueDate',
+        EInvoiceDocumentEncode.DateToText(TempEInvoiceExportHeader."Due Date"),BasicCompSpaceNameTxt,CBCTxt);
+      AddNotEmptyNode(XMLCurrNode,'PaymentID',TempEInvoiceExportHeader."Payment ID",BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->PaymentMeans->PayeeFinancialAccount
+      AddGroupNode(XMLCurrNode,'PayeeFinancialAccount',AggregateCompSpaceNameTxt,CACTxt);
+
+      SetSchemeID(AccountId,AccountAttributeName);
+
+      // Header->PaymentMeans->PayeeFinancialAccount->FinancialInstitutionBranch
+      AddGroupNode(XMLCurrNode,'FinancialInstitutionBranch',AggregateCompSpaceNameTxt,CACTxt);
+
+      IF AccountId <> 'IBAN' THEN
+        AddNotEmptyNode(XMLCurrNode,'ID',CompanyInfo."Bank Branch No.",BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->PaymentMeans->PayeeFinancialAccount->FinancialInstitutionBranch->FinancialInstitution
+      AddGroupNode(XMLCurrNode,'FinancialInstitution',AggregateCompSpaceNameTxt,CACTxt);
+
+      SetSchemeID(CompanyInfo."SWIFT-BIC",'BIC');
+
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    LOCAL PROCEDURE AddTaxSubTotal@1080010();
+    VAR
+      TempVATAmountLine@1080001 : TEMPORARY Record 290;
+    BEGIN
+      FillVATAmountLines(TempVATAmountLine);
+      IF TempVATAmountLine.FINDSET THEN
+        REPEAT
+          WriteTaxSubTotal(TempVATAmountLine);
+        UNTIL TempVATAmountLine.NEXT = 0;
+      TempVATAmountLine.DELETEALL;
+    END;
+
+    LOCAL PROCEDURE DocumentHasForeignCurrency@1080047() : Boolean;
+    VAR
+      GeneralLedgerSetup@1080000 : Record 98;
+    BEGIN
+      IF TempEInvoiceExportHeader."Currency Code" = '' THEN
+        EXIT(FALSE);
+
+      GeneralLedgerSetup.GET;
+      IF TempEInvoiceExportHeader."Currency Code" = GeneralLedgerSetup."LCY Code" THEN
+        EXIT(FALSE);
+
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE FillVATAmountLines@1080012(VAR TempVATAmountLine@1080000 : TEMPORARY Record 290);
+    BEGIN
+      WITH TempEInvoiceExportLine DO
+        IF FINDSET THEN
+          REPEAT
+            IF NOT TempVATAmountLine.GET("VAT Identifier","VAT Calculation Type",'',FALSE,FALSE) THEN BEGIN
+              TempVATAmountLine.INIT;
+              TempVATAmountLine."VAT Identifier" := "VAT Identifier";
+              TempVATAmountLine."VAT Calculation Type" := "VAT Calculation Type";
+              TempVATAmountLine."VAT %" := "VAT %";
+              TempVATAmountLine.INSERT;
+            END;
+            TempVATAmountLine."VAT Base" += Amount;
+            TempVATAmountLine."VAT Amount" += "Amount Including VAT" - Amount;
+            TempVATAmountLine.MODIFY;
+          UNTIL NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE GetCurrMultiplicationFactor@1080042() : Decimal;
+    VAR
+      CurrencyExchangeRate@1080001 : Record 330;
+    BEGIN
+      EXIT(1 / CurrencyExchangeRate.ExchangeRate(TempEInvoiceExportHeader."Posting Date",TempEInvoiceExportHeader."Currency Code"));
+    END;
+
+    LOCAL PROCEDURE GetTaxCategoryID@1080018(VATPercent@1080000 : Decimal;Type@1080001 : 'Normal VAT,Reverse Charge VAT,Full VAT,Sales Tax';VATProdPostingGroup@1080003 : Code[20]) : Text[2];
+    VAR
+      VATProductPostingGroup@1080002 : Record 324;
+    BEGIN
+      CASE VATPercent OF
+        0:
+          BEGIN
+            IF Type = Type::"Reverse Charge VAT" THEN
+              EXIT('K');
+            VATProductPostingGroup.SETRANGE(Code,VATProdPostingGroup);
+            IF VATProductPostingGroup.FINDFIRST AND VATProductPostingGroup."Utenfor avgiftsomrÜdet" THEN
+              EXIT('Z');
+            EXIT('E');
+          END;
+        8:
+          EXIT('AA');
+        11.11:
+          EXIT('R');
+        15:
+          EXIT('H');
+        25:
+          EXIT('S');
+      END;
+    END;
+
+    LOCAL PROCEDURE GetUBLVersionID@1080049() : Code[3];
+    BEGIN
+      // based on the current UBL version per Doc. Type
+      IF (TempEInvoiceExportHeader."Schema Name" = 'CreditNote') OR (TempEInvoiceExportHeader."Schema Name" = 'Invoice') THEN
+        EXIT('2.1');
+      EXIT('2.0');
+    END;
+
+    LOCAL PROCEDURE SetSchemeID@1080036(Id@1080000 : Code[50];AttributeName@1080001 : Code[4]);
+    BEGIN
+      AddGroupNodeWithData(XMLCurrNode,'ID',Id,BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'schemeID',AttributeName);
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    PROCEDURE WriteCompanyID@1080039(VATRegistrationNo@1080000 : Code[20];CountryRegionCode@1080003 : Code[10]) : Text[30];
+    VAR
+      EInvoiceDocumentEncode@1080002 : Codeunit 10610;
+    BEGIN
+      IF CountryRegionCode <> 'NO' THEN
+        EXIT(EInvoiceDocumentEncode.GetVATRegNo(VATRegistrationNo,TRUE,CountryRegionCode));
+      EXIT(EInvoiceDocumentEncode.GetVATRegNo(VATRegistrationNo,FALSE,CountryRegionCode));
+    END;
+
+    LOCAL PROCEDURE WriteTaxSubTotal@1080015(TempVATAmountLine@1080000 : TEMPORARY Record 290);
+    VAR
+      GeneralLedgerSetup@1080003 : Record 98;
+      VATProductPostingGroup@1080005 : Record 324;
+      TaxCategoryID@1080004 : Text[2];
+      TransactionCurrTaxAmount@1080009 : Text[30];
+    BEGIN
+      TempEInvoiceExportLine.RESET;
+      TempEInvoiceExportLine.SETRANGE("VAT Identifier",TempVATAmountLine."VAT Identifier");
+      TempEInvoiceExportLine.SETRANGE("VAT Calculation Type",TempVATAmountLine."VAT Calculation Type");
+      TempEInvoiceExportLine.FINDFIRST;
+
+      // Header->TaxTotal->TaxSubtotal
+      AddGroupNode(XMLCurrNode,'TaxSubtotal',AggregateCompSpaceNameTxt,CACTxt);
+      AddGroupNodeWithData(XMLCurrNode,'TaxableAmount',
+        EInvoiceDocumentEncode.DecimalToText(TempVATAmountLine."VAT Base"),BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      // Header->TaxTotal->TaxSubTotal->TaxAmount
+      AddGroupNodeWithData(XMLCurrNode,'TaxAmount',
+        EInvoiceDocumentEncode.DecimalToText(TempVATAmountLine."VAT Amount"),BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'currencyID',TempEInvoiceExportHeader."Currency Code");
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      // Header->TaxTotal->TaxSubTotal->TransactionCurrencyTaxAmount
+      IF DocumentHasForeignCurrency THEN BEGIN
+        GeneralLedgerSetup.GET;
+        TransactionCurrTaxAmount :=
+          EInvoiceDocumentEncode.DecimalToText(TempVATAmountLine."VAT Amount" * GetCurrMultiplicationFactor);
+        AddGroupNodeWithData(
+          XMLCurrNode,'TransactionCurrencyTaxAmount',TransactionCurrTaxAmount,BasicCompSpaceNameTxt,CBCTxt);
+        AddAttribute(XMLCurrNode,'currencyID',GeneralLedgerSetup."LCY Code");
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+
+      // Header->TaxTotal->TaxSubtotal->TaxCategory
+      AddGroupNode(XMLCurrNode,'TaxCategory',AggregateCompSpaceNameTxt,CACTxt);
+
+      TaxCategoryID :=
+        GetTaxCategoryID(
+          TempVATAmountLine."VAT %",TempVATAmountLine."VAT Calculation Type",TempEInvoiceExportLine."VAT Prod. Posting Group");
+      AddGroupNodeWithData(XMLCurrNode,'ID',TaxCategoryID,BasicCompSpaceNameTxt,CBCTxt);
+      AddAttribute(XMLCurrNode,'schemeID','UNCL5305');
+      XMLCurrNode := XMLCurrNode.ParentNode;
+
+      AddNotEmptyNode(XMLCurrNode,'Percent',EInvoiceDocumentEncode.DecimalToText(TempVATAmountLine."VAT %"),
+        BasicCompSpaceNameTxt,CBCTxt);
+
+      // Header->TaxTotal->TaxSubtotal->TaxCategory->TaxExemptionReason
+      IF TaxCategoryID IN ['K','Z','E'] THEN BEGIN
+        VATProductPostingGroup.SETRANGE(Code,TempEInvoiceExportLine."VAT Prod. Posting Group");
+        IF VATProductPostingGroup.FINDFIRST THEN
+          AddNotEmptyNode(XMLCurrNode,'TaxExemptionReason',VATProductPostingGroup.Description,BasicCompSpaceNameTxt,CBCTxt);
+      END;
+
+      // Header->TaxTotal->TaxSubtotal->TaxCategory->TaxScheme
+      AddGroupNode(XMLCurrNode,'TaxScheme',AggregateCompSpaceNameTxt,CACTxt);
+      AddLastNode(XMLCurrNode,'ID','VAT',BasicCompSpaceNameTxt,CBCTxt);
+      XMLCurrNode := XMLCurrNode.ParentNode;
+      XMLCurrNode := XMLCurrNode.ParentNode;
+    END;
+
+    LOCAL PROCEDURE AddAttribute@1080021(VAR XMLNode@1080004 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";Name@1080003 : Text[250];Value@1080002 : Text[250]);
+    BEGIN
+      XMLDOMMgt.AddAttribute(XMLNode,Name,Value);
+    END;
+
+    LOCAL PROCEDURE AddGroupNode@1080000(VAR XMLNode@1080005 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";NodeName@1080004 : Text[250];NameSpace@1080002 : Text[250];Prefix@1080000 : Text[30]);
+    VAR
+      XMLNewChild@1080001 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+    BEGIN
+      XMLDOMMgt.AddElement(XMLNode,Prefix + ':' + NodeName,'',NameSpace,XMLNewChild);
+      XMLNode := XMLNewChild;
+    END;
+
+    LOCAL PROCEDURE AddGroupNodeWithData@1080032(VAR XMLNode@1080005 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";NodeName@1080004 : Text[250];NodeText@1080003 : Text[250];NameSpace@1080002 : Text[250];Prefix@1080000 : Text[30]);
+    VAR
+      XMLNewChild@1080001 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+    BEGIN
+      XMLDOMMgt.AddElement(XMLNode,Prefix + ':' + NodeName,FORMAT(NodeText,0,9),NameSpace,XMLNewChild);
+      XMLNode := XMLNewChild;
+    END;
+
+    LOCAL PROCEDURE AddLastNode@1080014(VAR XMLNode@1080005 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";NodeName@1080004 : Text[250];NodeText@1080003 : Text[250];NameSpace@1080002 : Text[250];Prefix@1080000 : Text[30]);
+    BEGIN
+      AddNotEmptyNode(XMLNode,NodeName,NodeText,NameSpace,Prefix);
+      XMLNode := XMLNode.ParentNode;
+    END;
+
+    LOCAL PROCEDURE AddNotEmptyNode@1080009(VAR XMLNode@1080000 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";NodeName@1080001 : Text[250];NodeText@1080002 : Text[250];NameSpace@1080003 : Text[250];Prefix@1080005 : Text[30]);
+    BEGIN
+      IF NodeText <> '' THEN
+        AddNodeNA(XMLNode,NodeName,NodeText,NameSpace,Prefix);
+    END;
+
+    LOCAL PROCEDURE AddNodeNA@1080011(VAR XMLNode@1080005 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";NodeName@1080004 : Text[250];NodeText@1080003 : Text[250];NameSpace@1080002 : Text[250];Prefix@1080000 : Text[30]);
+    VAR
+      CreatedXMLNode@1080001 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+    BEGIN
+      IF NodeText = '' THEN
+        NodeText := 'NA';
+      XMLDOMMgt.AddElement(XMLNode,Prefix + ':' + NodeName,FORMAT(NodeText,0,9),NameSpace,CreatedXMLNode);
+    END;
+
+    PROCEDURE AddVehicleDetalis@1109400000(cServiceOrderNoP@1109400000 : Code[10]) sNoteP : Text[1024];
+    VAR
+      rServiceHeaderL@1109400001 : Record 5025624;
+      rArcServiceHeaderL@1109400002 : Record 5025636;
+    BEGIN
+      //SID.01 START GSP
+      IF cServiceOrderNoP <> '' THEN BEGIN
+        IF rServiceHeaderL.GET(rServiceHeaderL."Document Type"::Order, cServiceOrderNoP) THEN BEGIN
+          sNoteP := STRSUBSTNO('%1:%2', rServiceHeaderL.FIELDCAPTION(rServiceHeaderL."Make Code"), rServiceHeaderL."Make Code");
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2"', rServiceHeaderL.FIELDCAPTION(rServiceHeaderL."Model No."),
+                                                  rServiceHeaderL."Model No.");
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rServiceHeaderL.FIELDCAPTION(rServiceHeaderL.VIN),
+                                                 rServiceHeaderL.VIN);
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rServiceHeaderL.FIELDCAPTION(rServiceHeaderL."License No."),
+                                                 rServiceHeaderL."License No.");
+
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rServiceHeaderL.FIELDCAPTION(rServiceHeaderL."Initial Registration"),
+                                                 rServiceHeaderL."Initial Registration");
+
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rServiceHeaderL.FIELDCAPTION(rServiceHeaderL.Mileage),
+                                                 rServiceHeaderL.Mileage);
+
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rServiceHeaderL.FIELDCAPTION(rServiceHeaderL.Model),
+                                                 rServiceHeaderL.Model);
+        END ELSE IF rArcServiceHeaderL.GET(rArcServiceHeaderL."Document Type"::Order, cServiceOrderNoP) THEN BEGIN
+
+          sNoteP := STRSUBSTNO('"%1:=%2" ', rArcServiceHeaderL.FIELDCAPTION(rArcServiceHeaderL."Make Code"),
+                                          rArcServiceHeaderL."Make Code");
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rServiceHeaderL.FIELDCAPTION(rServiceHeaderL."Model No."),
+                                                 rArcServiceHeaderL."Model No.");
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rArcServiceHeaderL.FIELDCAPTION(rArcServiceHeaderL.VIN), rArcServiceHeaderL.VIN);
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rArcServiceHeaderL.FIELDCAPTION(rArcServiceHeaderL."License No."),
+                                                 rArcServiceHeaderL."License No.");
+
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rArcServiceHeaderL.FIELDCAPTION(rArcServiceHeaderL."Initial Registration"),
+                                                 rArcServiceHeaderL."Initial Registration");
+
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rArcServiceHeaderL.FIELDCAPTION(rArcServiceHeaderL.Mileage),
+                                                 rArcServiceHeaderL.Mileage);
+
+          sNoteP := sNoteP + STRSUBSTNO('"%1:=%2" ', rArcServiceHeaderL.FIELDCAPTION(rArcServiceHeaderL.Model),
+                                                 rArcServiceHeaderL.Model);
+
+        END;
+      END;
+      EXIT(sNoteP);
+      //SID.01 STOP GSP
+    END;
+
+    PROCEDURE AddAdditionalDocumentReference@1101103002();
+    VAR
+      EInvoiceAttachmentL@1101103004 : Record 5231118;
+      InStreamL@1101103000 : InStream;
+      MemoryStreamL@1101103001 : DotNet "'mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.IO.MemoryStream";
+      BytesL@1101103003 : DotNet "'mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      ConvertL@1101103002 : DotNet "'mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Convert";
+      XMLNewChildL@1101103005 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+    BEGIN
+      //SID.02 START GSP
+
+      {
+      <cac:AdditionalDocumentReference>
+        <cbc:ID>1000139928</cbc:ID>
+        <cbc:DocumentType>Commercial invoice</cbc:DocumentType>
+        <cac:Attachment>
+          <cbc:EmbeddedDocumentBinaryObject mimeCode="application/pdf" encodingCode="Base64">JVBERi0xLjcKJeLjz9MKNiAwIG9iago8PC==</cbc:EmbeddedDocumentBinaryObject>
+        </cac:Attachment>
+      </cac:AdditionalDocumentReference>
+      }
+
+      EInvoiceAttachmentL.RESET;
+      EInvoiceAttachmentL.SETRANGE("Document No.", TempEInvoiceExportHeader."No.");
+      EInvoiceAttachmentL.SETRANGE("Schema Name", TempEInvoiceExportHeader."Schema Name");
+
+      IF EInvoiceAttachmentL.ISEMPTY THEN
+        EXIT;
+
+      IF EInvoiceAttachmentL.FINDSET THEN BEGIN
+        REPEAT
+          EInvoiceAttachmentL.CALCFIELDS("Document Blob");
+          IF EInvoiceAttachmentL."Document Blob".HASVALUE THEN BEGIN
+            //MESSAGE(EInvoiceAttachmentL."Document No.", EInvoiceAttachmentL."Schema Name", EInvoiceAttachmentL."Document Type");
+            AddGroupNode(XMLCurrNode,'AdditionalDocumentReference',AggregateCompSpaceNameTxt,CACTxt);
+            AddNotEmptyNode(XMLCurrNode,'ID','1000139928',BasicCompSpaceNameTxt,CBCTxt);
+            AddNotEmptyNode(XMLCurrNode,'DocumentType','Commercial invoice',BasicCompSpaceNameTxt,CBCTxt);
+
+            AddGroupNode(XMLCurrNode,'Attachment',AggregateCompSpaceNameTxt,CACTxt);
+
+            // http://www.mibuso.com/forum/viewtopic.php?p=298421#p298421 Thanks Marijn
+            EInvoiceAttachmentL."Document Blob".CREATEINSTREAM(InStreamL);
+            MemoryStreamL := MemoryStreamL.MemoryStream();
+            COPYSTREAM(MemoryStreamL, InStreamL);
+            BytesL := MemoryStreamL.GetBuffer();
+
+            XMLDOMMgt.AddElement(XMLCurrNode,CBCTxt + ':' + 'EmbeddedDocumentBinaryObject', ConvertL.ToBase64String(BytesL),BasicCompSpaceNameTxt,XMLNewChildL);
+            XMLCurrNode := XMLNewChildL;
+
+            AddAttribute(XMLCurrNode,'mimeCode','application/pdf');
+            AddAttribute(XMLCurrNode,'encodingCode','Base64');
+            AddAttribute(XMLCurrNode,'filename',EInvoiceAttachmentL."File Name");
+
+            XMLCurrNode := XMLCurrNode.ParentNode;
+            XMLCurrNode := XMLCurrNode.ParentNode;
+            XMLCurrNode := XMLCurrNode.ParentNode;
+          END;
+        UNTIL EInvoiceAttachmentL.NEXT = 0;
+      END;
+    END;
+
+    PROCEDURE DefineFileName@1101103000(FileNameP@1101103000 : Text[250]) NewFileNameR : Text[250];
+    VAR
+      TimeL@1101103007 : Text[20];
+      MonthL@1101103006 : Integer;
+      DayL@1101103005 : Integer;
+      YearL@1101103004 : Integer;
+      MonthcL@1101103003 : Text[2];
+      DaycL@1101103002 : Text[2];
+      DateTextL@1101103001 : Text[8];
+      OurCustomerNoL@1101103012 : Code[20];
+      OurAccountDealerNoL@1101103011 : Record 5028747;
+      BOSLocationSetupL@1101103010 : Record 5231107;
+    BEGIN
+      YearL := DATE2DMY(WORKDATE,3);
+      MonthL := DATE2DMY(WORKDATE,2);
+      DayL := DATE2DMY(WORKDATE,1);
+      IF STRLEN(FORMAT(MonthL)) = 1 THEN
+        MonthcL := '0' + FORMAT(MonthL)
+      ELSE
+        MonthcL := FORMAT(MonthL);
+      IF STRLEN(FORMAT(DayL)) = 1 THEN
+        DaycL := '0' + FORMAT(DayL)
+      ELSE
+        DaycL := FORMAT(DayL);
+      DateTextL := FORMAT(YearL) + MonthcL +DaycL;
+      TimeL := FORMAT(TIME(),0,'<Hours12>:<Minutes,2> <Seconds,2>');
+      TimeL := DELCHR(TimeL,'=',' ');
+      TimeL := DELCHR(TimeL,'=',':');
+
+      OurAccountDealerNoL.RESET;
+      BOSLocationSetupL.SETFILTER("BOS Vendor No.",'<>%1','');
+      IF BOSLocationSetupL.FINDFIRST THEN BEGIN
+        OurAccountDealerNoL.SETRANGE("Vendor No.",BOSLocationSetupL."BOS Vendor No.");
+        IF OurAccountDealerNoL.FINDFIRST THEN
+          OurCustomerNoL := OurAccountDealerNoL."Our Account/Dealer No."
+        ELSE BEGIN
+          OurAccountDealerNoL.RESET;
+          OurAccountDealerNoL.SETRANGE("Vendor No.",BOSLocationSetupL."BOS Vendor No.");
+          IF OurAccountDealerNoL.FINDFIRST THEN
+            OurCustomerNoL := OurAccountDealerNoL."Our Account/Dealer No."
+        END;
+
+        NewFileNameR := 'DMSFB_' +  OurCustomerNoL +'_' + FileNameP + '_' + DateTextL + '_' + TimeL;
+      END ELSE
+        NewFileNameR := FileNameP;
+    END;
+
+    BEGIN
+    {
+      +----------------------------------------------+
+      | Copyright ∏ 2015 SI-DATA SID                 |
+      +----------------------------------------------+
+      | MYENGINE@INCADEA                             |
+      +----------------------------------------------+
+      No.  Version  Date      ID  Remark
+      -------------------------------------- ----------
+      01.           18.09.12  GSP TFS101644 : NO EHF Electronic Invoice
+                                  - Add "stylesheet type"
+                                  - Add AddVehicleDetalis
+                                  EHF 2.0.4 Issue : [NOGOV-T10-R030]- A VAT number MUST be nine numbers followed by the letters MVA.
+                                   -  Company Vat Org No : Remove NO and MVA from Vat Organisation number
+      02.           04.11.15  JAL Added changes according to NAV 2016 CU1 to fix DIFI error because of empty xml elements.
+                                  Changed call to function AddNode to AddNotEmptyNode.
+                                  Changed name of function AddNote to AddNodeNA.
+      03.           26.01.16  DNO Added new function: DefineFileName that formats the filename in accorance to specifications from BOS. Called from SaveToXML
+    }
+    END.
+  }
+}
+
+OBJECT Codeunit 5231118 E-Invoice Exit Point Handling
+{
+  OBJECT-PROPERTIES
+  {
+    Date=29.01.16;
+    Time=14:00:22;
+    Modified=Yes;
+    Version List=TFS101644,SID.01,#GS#;
+  }
+  PROPERTIES
+  {
+    TableNo=5207300;
+    OnRun=BEGIN
+            // Function to handleExit Point based on the Trigger, Type and the parameters
+            EPSetupG := Rec;
+            EPUnitG.GetParams(CurrentRecRefG, PrevRecRefG, CurrFieldNameG, ParameterRecG, FALSE);
+            IF CurrFieldNameG > '' THEN
+              CurrFieldNoG := EPUnitG.GetFieldNo(CurrentRecRefG);
+
+            CASE TRUE OF
+              // Triggered due to "Sales Header" Validate "Bill-to Customer No."
+              ( CurrFieldNameG = 'Bill-to Customer No.' ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Sales Header" ) :
+                BEGIN
+                  EhfFieldsAdd2SalesHdrRec(CurrentRecRefG);
+                END;
+
+              // Triggered due to "Servicer Header" Validate "Bill-to Customer No."
+              ( CurrFieldNameG = 'Bill-to Customer No.' ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Service Header" ) :
+                BEGIN
+                  EhfFieldsAdd2ServiceHdrRec(CurrentRecRefG);
+                END;
+
+
+              // Triggered due to "Reminder Header" Validate "Customer No."
+              ( CurrFieldNameG = 'Customer No.' ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Reminder Header" ) :
+                BEGIN
+                  EhfFieldsAdd2ReminderHdrRec(CurrentRecRefG);
+                END;
+
+              // Triggered due to "Finance Charge Memo Header" Validate "Customer No."
+              ( CurrFieldNameG = 'Customer No.' ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Finance Charge Memo Header" ) :
+                BEGIN
+                  EhfFieldsAdd2FinanceChargeMemoHdrRec(CurrentRecRefG);
+                END;
+
+
+              // Triggered due to Posting of Service Order
+              (EPSetupG.Trigger = EPSetupG.Trigger::"Function") AND ( CurrentRecRefG.NUMBER = DATABASE::"Service Header" ) AND
+              (EPSetupG.Type = EPSetupG.Type::Pre):
+                BEGIN
+                  EhfCheckServiceOrder(CurrentRecRefG);
+                END;
+
+              // Triggered due to Posting of "Sales Invoice" & "Sales Credit Memo"
+              // Check that EHF Prerequisite fields are not empty
+              (EPSetupG.Trigger IN [ EPSetupG.Trigger::"Function"] ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Sales Header" ) AND
+              (EPSetupG.Type = EPSetupG.Type::Pre):
+                BEGIN
+                  EhfCheckSalesHeader(CurrentRecRefG);
+                END;
+
+              // Triggered due to Posting of "Sales Invoice" & "Sales Credit Memo"
+              // Create E-Invoice Document
+              (EPSetupG.Trigger IN [ EPSetupG.Trigger::"Function" ] ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Sales Header" ) AND
+              (EPSetupG.Type = EPSetupG.Type::Post):
+                BEGIN
+                  EhfCreateDocument(CurrentRecRefG);
+                END;
+            END;
+
+            EPUnitG.SetParams(CurrentRecRefG, PrevRecRefG, ParameterRecG, CurrFieldNameG, FALSE);
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      EPSetupG@1101297640 : Record 5207300;
+      ParameterRecG@1101297644 : Record 5207301;
+      EPUnitG@1101297639 : Codeunit 5207300;
+      CurrentRecRefG@1101297641 : RecordRef;
+      PrevRecRefG@1101297642 : RecordRef;
+      CurrFieldNameG@1101297643 : Text[50];
+      CurrFieldNoG@1101297645 : Integer;
+      ReportNotCreatedtxtG@1101103000 : TextConst 'ENU=For some reason Invoice %1 Pdf could not be created with report %2;NOR=For noen grunn Faktura %1 Pdf ikke kunne opprettes med rapport %2';
+      FileNoteFoundG@1101103001 : TextConst 'ENU=Attachment could not be perfrom with the file \%1';
+
+    PROCEDURE EhfFieldsAdd2SalesHdrRec@1101103001(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      SalesHeaderL@1101103003 : Record 36;
+      CustomerL@1101103000 : Record 18;
+      CompanyInfoL@1101103001 : Record 79;
+    BEGIN
+      // EHF Fields from Customer Table add "Bill-to Customer No." EHF Fields to Sales Header
+      CurrentRecRefG.SETTABLE(SalesHeaderL);
+      WITH SalesHeaderL DO BEGIN
+        IF NOT CustomerL.GET("Bill-to Customer No.") THEN
+          EXIT;
+        "E-Invoice" := CustomerL."E-Invoice";
+        "GLN No." := CustomerL."GLN No.";
+        "Include PDF Copy" := CustomerL."Include PDF Copy";
+        "Account Code" := CustomerL."Account Code";
+        CompanyInfoL.GET;
+        CASE "Document Type" OF
+          "Document Type"::"Credit Memo":
+            BEGIN
+              "VAT Registration No." :=  CustomerL."VAT Registration No.";
+            END ELSE BEGIN
+              "VAT Registration No." :=  CustomerL."VAT Registration No.";
+              "External Document No." := "No.";
+            END;
+        END;
+      END;
+      CurrentRecRefG.GETTABLE(SalesHeaderL);
+    END;
+
+    PROCEDURE EhfFieldsAdd2ServiceHdrRec@1101103000(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      ServiceHeaderL@1101103003 : Record 5025624;
+      CustomerL@1101103000 : Record 18;
+      CompanyInfoL@1101103001 : Record 79;
+    BEGIN
+      // EHF Fields from Customer Table add "Bill-to Customer No." EHF Fields to Service Header
+      CurrentRecRefG.SETTABLE(ServiceHeaderL);
+      WITH ServiceHeaderL DO BEGIN
+        IF NOT CustomerL.GET("Bill-to Customer No.") THEN
+          EXIT;
+        "E-Invoice" := CustomerL."E-Invoice";
+        "GLN No." := CustomerL."GLN No.";
+        "Include PDF Copy" := CustomerL."Include PDF Copy";
+        "Account Code" := CustomerL."Account Code";
+        CompanyInfoL.GET;
+        CASE "Document Type" OF
+          //"Document Type"::"Credit Memo":
+          //  BEGIN
+          //    "VAT Registration No." :=  CustomerL."VAT Registration No.";
+          //  END;
+          "Document Type"::Quote, "Document Type"::Order, "Document Type"::Scheduling :
+            BEGIN
+              "VAT Registration No." :=  CustomerL."VAT Registration No.";
+              "External Document No." := "No.";
+            END;
+        END;
+      END;
+      CurrentRecRefG.GETTABLE(ServiceHeaderL);
+    END;
+
+    PROCEDURE EhfFieldsAdd2ReminderHdrRec@1101103014(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      ReminderHeaderL@1101103003 : Record 295;
+      CustomerL@1101103000 : Record 18;
+    BEGIN
+      // EHF Fields from Customer Table add "Bill-to Customer No." EHF Fields to Reminder Header
+      CurrentRecRefG.SETTABLE(ReminderHeaderL);
+
+      IF NOT CustomerL.GET(ReminderHeaderL."Customer No.") THEN
+        EXIT;
+      ReminderHeaderL."E-Invoice" := CustomerL."E-Invoice";
+      ReminderHeaderL."GLN No." := CustomerL."GLN No.";
+      ReminderHeaderL."Include PDF Copy" := CustomerL."Include PDF Copy";
+      ReminderHeaderL."Account Code" := CustomerL."Account Code";
+      ReminderHeaderL."VAT Registration No." :=  CustomerL."VAT Registration No.";
+
+      CurrentRecRefG.GETTABLE(ReminderHeaderL);
+    END;
+
+    PROCEDURE EhfFieldsAdd2FinanceChargeMemoHdrRec@1101103018(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      FinanceChargeMemoHdrL@1101103003 : Record 302;
+      CustomerL@1101103000 : Record 18;
+    BEGIN
+      // EHF Fields from Customer Table add "Customer No." EHF Fields to "Finance Charge Memo Header"
+      CurrentRecRefG.SETTABLE(FinanceChargeMemoHdrL);
+
+      IF NOT CustomerL.GET(FinanceChargeMemoHdrL."Customer No.") THEN
+        EXIT;
+      FinanceChargeMemoHdrL."E-Invoice" := CustomerL."E-Invoice";
+      FinanceChargeMemoHdrL."GLN No." := CustomerL."GLN No.";
+      FinanceChargeMemoHdrL."Include PDF Copy" := CustomerL."Include PDF Copy";
+      FinanceChargeMemoHdrL."Account Code" := CustomerL."Account Code";
+      FinanceChargeMemoHdrL."VAT Registration No." :=  CustomerL."VAT Registration No.";
+
+      CurrentRecRefG.GETTABLE(FinanceChargeMemoHdrL);
+    END;
+
+    PROCEDURE EhfCheckServiceOrder@1101103004(CurrentRecRefP@1101103000 : RecordRef);
+    VAR
+      ServiceHeaderL@1101103006 : Record 5025624;
+      ServiceLineL@1101103012 : Record 5025625;
+      ResponsibilityCenterL@1101103008 : Record 5714;
+      CustomerL@1101103011 : Record 18;
+      EInvoiceDocumentEncodeL@1101103002 : Codeunit 10610;
+      EInvoiceCheckalesDocumentL@1101103001 : Codeunit 10612;
+      Need2CheckServiceHdrL@1101103014 : Boolean;
+      Text007@1101103013 : TextConst 'ENU="You must specify an External document number in document type  = %1.  If you use E-Invoice, this field is required regardless of the value in the External Document No. field of the Sales & Receivables Setup table.";NOR="Du mÜ angi et eksterndokumentnummer i dokumenttype = %1. Hvis du bruker e-faktura, er dette feltet obligatorisk, uansett verdi i feltet Eksterndokumentnr. i tabellen Salgsoppsett."';
+    BEGIN
+      // Validate Service Order ready for EHF creation
+      CurrentRecRefP.SETTABLE(ServiceHeaderL);
+
+      // If a  »Bill-to Customer No.… on the »Service Line… has been setup for E-Invoice creation.
+      // Then check that the Bill-to Customer No. Has a valid »VAT No.…. Also check that the »Service Header… »Your Referance… is filled in.
+
+      Need2CheckServiceHdrL := FALSE;
+      ServiceLineL.SETRANGE("Document Type",ServiceHeaderL."Document Type");
+      ServiceLineL.SETRANGE("Document No.",ServiceHeaderL."No.");
+      IF ServiceLineL.FINDSET THEN
+      REPEAT
+        // If we are to create EHF-Invoice then
+        // If "Bill-to Customer No." used on the "Service lines" then check that "VAT Registration No." is valid in the Customer Table
+        IF ( ServiceLineL."Bill-to Customer No." <> '' ) AND ( ServiceLineL."Bill-to Customer No." <> ServiceHeaderL."Bill-to Customer No." ) THEN BEGIN
+          CustomerL.GET(ServiceLineL."Bill-to Customer No.");
+          CustomerL.TESTFIELD(Name);
+          CustomerL.TESTFIELD(Address);
+          CustomerL.TESTFIELD(City);
+          CustomerL.TESTFIELD("Post Code");
+          CustomerL."Country/Region Code" := EInvoiceDocumentEncodeL.GetEInvoiceCountryRegionCode(CustomerL."Country/Region Code");
+          CustomerL.TESTFIELD("Country/Region Code");
+          CustomerL.TESTFIELD("VAT Registration No.");
+          Need2CheckServiceHdrL := TRUE;
+        END;
+
+      UNTIL ( ServiceLineL.NEXT = 0 );
+
+      WITH ServiceHeaderL DO BEGIN
+        IF "E-Invoice" OR Need2CheckServiceHdrL THEN BEGIN
+
+          EhfCheckCompanySetup;
+
+          EInvoiceDocumentEncodeL.GetEInvoiceCurrencyCode("Currency Code");
+          IF "Responsibility Center" <> '' THEN BEGIN
+            ResponsibilityCenterL.GET("Responsibility Center");
+            ResponsibilityCenterL.TESTFIELD(Name);
+            ResponsibilityCenterL.TESTFIELD(Address);
+            ResponsibilityCenterL.TESTFIELD(City);
+            ResponsibilityCenterL.TESTFIELD("Post Code");
+            ResponsibilityCenterL.TESTFIELD("Country/Region Code");
+          END;
+
+          TESTFIELD("Bill-to Name");
+          TESTFIELD("Bill-to Address");
+          TESTFIELD("Bill-to City");
+          TESTFIELD("Bill-to Post Code");
+
+          "Bill-to Country Code" := EInvoiceDocumentEncodeL.GetEInvoiceCountryRegionCode("Bill-to Country Code");
+          TESTFIELD("Bill-to Country Code");
+          "Ship-to Country Code" := EInvoiceDocumentEncodeL.GetEInvoiceCountryRegionCode("Ship-to Country Code");
+          TESTFIELD("Ship-to Country Code");
+
+          TESTFIELD("Your Reference");
+          TESTFIELD("Due Date");
+        END;
+      END;
+    END;
+
+    PROCEDURE EhfCheckCompanySetup@1101103011();
+    VAR
+      CompanyInfoL@1101103005 : Record 79;
+      Text007@1101103013 : TextConst 'ENU="You must specify an External document number in document type  = %1.  If you use E-Invoice, this field is required regardless of the value in the External Document No. field of the Sales & Receivables Setup table.";NOR="Du mÜ angi et eksterndokumentnummer i dokumenttype = %1. Hvis du bruker e-faktura, er dette feltet obligatorisk, uansett verdi i feltet Eksterndokumentnr. i tabellen Salgsoppsett."';
+    BEGIN
+      // Check that Company setup is ready for EHF Invoice creation
+      CompanyInfoL.GET;
+      CompanyInfoL.TESTFIELD("VAT Registration No.");
+      CompanyInfoL.TESTFIELD(Name);
+      CompanyInfoL.TESTFIELD(Address);
+      CompanyInfoL.TESTFIELD(City);
+      CompanyInfoL.TESTFIELD("Post Code");
+
+      CompanyInfoL.TESTFIELD("Country/Region Code");
+
+      IF CompanyInfoL.IBAN = '' THEN BEGIN
+        CompanyInfoL.TESTFIELD("Bank Account No.");
+        CompanyInfoL.TESTFIELD("Bank Branch No.");
+      END;
+    END;
+
+    PROCEDURE EhfCheckSalesHeader@1101103002(CurrentRecRefP@1101103000 : RecordRef);
+    VAR
+      SalesHeaderL@1101103006 : Record 36;
+      Text007@1101103013 : TextConst 'ENU="You must specify an External document number in document type  = %1.  If you use E-Invoice, this field is required regardless of the value in the External Document No. field of the Sales & Receivables Setup table.";NOR="Du mÜ angi et eksterndokumentnummer i dokumenttype = %1. Hvis du bruker e-faktura, er dette feltet obligatorisk, uansett verdi i feltet Eksterndokumentnr. i tabellen Salgsoppsett."';
+    BEGIN
+      // Validate Sales Order Heade& Sales Credit Memo ready for EHF-Invoice creation
+      CurrentRecRefG.SETTABLE(SalesHeaderL);
+
+      IF SalesHeaderL."E-Invoice" THEN
+        CODEUNIT.RUN(CODEUNIT::"E-Invoice Check Sales Document", SalesHeaderL);
+    END;
+
+    PROCEDURE PrintInvoiceRecordMgt@1101103006(SalesInvHeaderP@1101103000 : Record 112);
+    VAR
+      EInvoiceAttachmentL@1101103001 : Record 5231118;
+    BEGIN
+      // Printing of "Sales Invoice Records" Which Type of Invoice to Print? "Parts Sales Invoice" or "Service Sales Invoice" or even "Vehicle Sales Invoice"
+
+      // Delete all old attachemnts for this Invoice
+      EInvoiceAttachmentL.RESET;
+      EInvoiceAttachmentL.SETRANGE("Document No.", SalesInvHeaderP."No.");
+      EInvoiceAttachmentL.DELETEALL;
+
+      // When printing the records Setup the Report filter just to print 1 Document No.
+      SalesInvHeaderP.SETRANGE("No.", SalesInvHeaderP."No.");
+      IF NOT SalesInvHeaderP.FINDFIRST THEN
+        SalesInvHeaderP.INIT;
+
+      CASE TRUE OF
+        SalesInvHeaderP."Include PDF Copy" AND ( SalesInvHeaderP."Order Type" = SalesInvHeaderP."Order Type"::Service ) :
+          BEGIN
+            PrintServiceRecords(SalesInvHeaderP);
+          END;
+        SalesInvHeaderP."Include PDF Copy" AND ( SalesInvHeaderP."Order Type" = SalesInvHeaderP."Order Type"::"Vehicle Sales & Purchases" ) :
+          BEGIN
+            PrintVehInvRecords(SalesInvHeaderP);
+          END;
+        ELSE BEGIN
+          IF SalesInvHeaderP."Include PDF Copy" THEN
+            PrintSalesPartsRecords(SalesInvHeaderP);
+        END;
+      END;
+
+      CopyInvoiceLinksRecords2Attachment(SalesInvHeaderP);
+    END;
+
+    PROCEDURE PrintServiceRecords@5025352(VAR SalesInvHeaderP@1101103000 : Record 112);
+    VAR
+      ServiceReportSelectionL@1109400001 : Record 5045389;
+      ServHeaderL@1109400002 : Record 5025624;
+      CustomerL@1101103001 : Record 18;
+      PrintAsPDFL@1109400004 : Boolean;
+      PathL@1109400003 : Text[1024];
+      RecordRefL@1109400005 : RecordRef;
+    BEGIN
+      // Get "Report ID"  and print records. This function has been copyed form PrintServiceRecords from T112::"Sales Invoice Header"
+
+      IF ServHeaderL.IsInternalCustomer(SalesInvHeaderP."Bill-to Customer No.") THEN BEGIN
+        IF SalesInvHeaderP.Prepayment THEN
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Prepmt. Invoice")
+        ELSE
+        ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Posted Internal Invoice");
+      END ELSE BEGIN
+        IF SalesInvHeaderP.Prepayment THEN
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Prepmt. Invoice")
+        ELSE
+        ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Posted Invoice");
+      END;
+
+      IF SalesInvHeaderP.Prepayment THEN
+        ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Prepmt. Invoice");
+
+      ServiceReportSelectionL.GetReportSelection(ServiceReportSelectionL, SalesInvHeaderP."Shortcut Dimension 2 Code", SalesInvHeaderP."Location Code");
+
+      REPEAT
+        PrintRecordsSavePdf(SalesInvHeaderP, ServiceReportSelectionL."Report ID", ServiceReportSelectionL.Sequence);
+      UNTIL ServiceReportSelectionL.NEXT = 0;
+
+      IF CustomerL.GET(SalesInvHeaderP."Bill-to Customer No.") THEN
+        IF CustomerL.Type = CustomerL.Type::"Service Contract" THEN BEGIN
+           ServiceReportSelectionL.RESET;
+           ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Service Contract Inclusive");
+
+          ServiceReportSelectionL.GetReportSelection(ServiceReportSelectionL, SalesInvHeaderP."Shortcut Dimension 2 Code",
+            SalesInvHeaderP."Location Code");
+
+           REPEAT
+             PrintRecordsSavePdf(SalesInvHeaderP, ServiceReportSelectionL."Report ID", ServiceReportSelectionL.Sequence);
+           UNTIL ServiceReportSelectionL.NEXT = 0;
+         END;
+    END;
+
+    PROCEDURE PrintSalesPartsRecords@1(VAR SalesInvHeaderP@1101103000 : Record 112);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      EInvoicePdfExportL@1101103001 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103005 : TEMPORARY Record 10606;
+      SalesSetupL@1101103006 : Record 311;
+      FileMgtL@1101103002 : Codeunit 419;
+      DocumentPathFileNameL@1101103003 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+    BEGIN
+      // Get "Report ID"  and print records. This function has been copyed form PrintRecords from T112::"Sales Invoice Header"
+
+      ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"S.Inv.");
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesInvHeaderP."Shortcut Dimension 2 Code", SalesInvHeaderP."Location Code");
+
+      REPEAT
+        PrintRecordsSavePdf(SalesInvHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE PrintVehInvRecords@1101103013(VAR SalesInvHeaderP@1101103003 : Record 112);
+    VAR
+      ReportSelectionL@1101103002 : Record 5025576;
+      PathL@1101103001 : Text[1024];
+      RecordRefL@1101103000 : RecordRef;
+    BEGIN
+      // Get "Report ID"  and print records. This function has been copyed form PrintVehicleRecords from T112::"Sales Invoice Header"
+
+      IF SalesInvHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Prepmt. Invoice")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Invoice");
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesInvHeaderP."Shortcut Dimension 2 Code", SalesInvHeaderP."Location Code");
+
+      REPEAT
+        PrintRecordsSavePdf(SalesInvHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE CopyInvoiceLinksRecords2Attachment@1101103021(SalesInvoiceHeaderP@1101103008 : Record 112);
+    VAR
+      SalesInvoiceHeaderL@1101103006 : Record 112;
+      SalesHeaderL@1101103005 : Record 36;
+      RecordLinkL@1101103004 : Record 2000000068;
+      ArchivedSalesHeaderL@1101103003 : Record 5046905;
+      ArchivedServiceHeaderL@1101103002 : Record 5025636;
+      ServiceHeaderL@1101103001 : Record 5025624;
+      EInvoiceAttachmentL@1101103009 : Record 5231118;
+      RecordLinkRecordRefL@1101103007 : RecordRef;
+    BEGIN
+      CASE SalesInvoiceHeaderP."Order Type" OF
+        SalesInvoiceHeaderP."Order Type"::"Parts Sales & Purchases",  SalesInvoiceHeaderP."Order Type"::"Vehicle Sales & Purchases" :
+          BEGIN
+            // Posted Part/Vehicle Order
+            IF SalesHeaderL.GET(SalesHeaderL."Document Type"::Order, SalesInvoiceHeaderP."Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(SalesHeaderL)
+            ELSE IF ArchivedSalesHeaderL.GET(ArchivedSalesHeaderL."Document Type"::Order, SalesInvoiceHeaderP."Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ArchivedSalesHeaderL)
+            ELSE
+              CLEAR(RecordLinkRecordRefL);
+          END;
+        SalesInvoiceHeaderP."Order Type"::Service :
+          BEGIN
+            // Posted Service Order
+            IF ServiceHeaderL.GET(ServiceHeaderL."Document Type"::Order, SalesInvoiceHeaderP."Service Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ServiceHeaderL)
+            ELSE IF ArchivedServiceHeaderL.GET(ArchivedServiceHeaderL."Document Type"::Order, SalesInvoiceHeaderP."Service Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ArchivedSalesHeaderL)
+            ELSE
+              CLEAR(RecordLinkRecordRefL);
+          END;
+      END;
+
+      CLEAR(EInvoiceAttachmentL);
+      EInvoiceAttachmentL."Schema Name" := 'Invoice';
+      EInvoiceAttachmentL."Document Type" := EInvoiceAttachmentL."Document Type"::Attachment;
+      EInvoiceAttachmentL."Document No." := SalesInvoiceHeaderP."No.";
+
+      AddLinksRecords2Attachment(RecordLinkRecordRefL, EInvoiceAttachmentL);
+    END;
+
+    PROCEDURE PrintCrMemoRecordMgt@1101103009(SalesCrMemoHeaderP@1101103001 : Record 114);
+    VAR
+      EInvoiceAttachmentl@1101103000 : Record 5231118;
+    BEGIN
+      // Sales Credit Memo Header : Which Type of Credit Memo to Print? Parts Sales, Service Sales or even Vehicle Sales
+
+      // Delete all old attachemnts for this CrMemo
+      EInvoiceAttachmentl.RESET;
+      EInvoiceAttachmentl.SETRANGE("Document No.", SalesCrMemoHeaderP."No.");
+      EInvoiceAttachmentl.DELETEALL;
+
+
+      // When printing the records Setup the Report filter just to print 1 Document No.
+      SalesCrMemoHeaderP.SETRANGE("No.", SalesCrMemoHeaderP."No.");
+      IF NOT SalesCrMemoHeaderP.FINDFIRST THEN
+        SalesCrMemoHeaderP.INIT;
+
+      CASE TRUE OF
+        SalesCrMemoHeaderP."Include PDF Copy" AND ( SalesCrMemoHeaderP."Order Type"= SalesCrMemoHeaderP."Order Type"::Service ) :
+          BEGIN
+            PrintCrMemoServiceRecords(SalesCrMemoHeaderP);
+          END;
+        SalesCrMemoHeaderP."Include PDF Copy" AND ( SalesCrMemoHeaderP."Order Type" = SalesCrMemoHeaderP."Order Type"::"Vehicle Sales & Purchases" ) :
+          BEGIN
+            PrintCrMemoVehRecords(SalesCrMemoHeaderP);
+          END
+        ELSE BEGIN
+            IF SalesCrMemoHeaderP."Include PDF Copy" THEN
+              PrintCrMemoSalesPartsRecords(SalesCrMemoHeaderP);
+          END;
+      END;
+
+      CopyCrMemoLinksRecords2Attachment(SalesCrMemoHeaderP);
+    END;
+
+    PROCEDURE PrintCrMemoServiceRecords@1101103010(VAR SalesCrMemoHeaderP@1101103000 : Record 114);
+    VAR
+      ReportSelectionL@1101103002 : Record 5045389;
+      ServHeaderL@1101103001 : Record 5025624;
+    BEGIN
+      // Get "Report ID"  and print records. This function has been copyed form PrintServiceRecords from T114::"Sales Credit Memo Header"
+
+      IF ServHeaderL.IsInternalCustomer(SalesCrMemoHeaderP."Bill-to Customer No.") THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Internal Cr. Memo")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Cr. Memo");
+
+      IF SalesCrMemoHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Prepmt. Cr. Memo");
+
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesCrMemoHeaderP."Shortcut Dimension 2 Code", SalesCrMemoHeaderP."Location Code");
+
+      REPEAT
+        PrintCrMemoRecordsSavePdf(SalesCrMemoHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE PrintCrMemoSalesPartsRecords@1101103012(VAR SalesCrMemoHeaderP@1101103000 : Record 114);
+    VAR
+      ReportSelectionL@1101103002 : Record 77;
+    BEGIN
+      // Get "Report Id" and print records. This function has been copyed form PrintRecords from T114::"Sales Credit Memo Header"
+
+      IF SalesCrMemoHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Prepmt. Cr. Memo")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"S.Cr.Memo");
+
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesCrMemoHeaderP."Shortcut Dimension 2 Code", SalesCrMemoHeaderP."Location Code");
+      REPEAT
+        PrintCrMemoRecordsSavePdf(SalesCrMemoHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE PrintCrMemoVehRecords@5025351(VAR SalesCrMemoHeaderP@1101103000 : Record 114);
+    VAR
+      ReportSelectionL@1109400001 : Record 5025576;
+    BEGIN
+      // Get "Report Id" and print records. This function has been copyed form PrintVehicleRecords from T114::"Sales Credit Memo Header"
+
+      IF SalesCrMemoHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Prepmt. Cr. Memo")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Cr. Memo");
+
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesCrMemoHeaderP."Shortcut Dimension 2 Code", SalesCrMemoHeaderP."Location Code");
+      REPEAT
+        PrintCrMemoRecordsSavePdf(SalesCrMemoHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE PrintCrMemoRecordsSavePdf@1101103005(VAR SalesCrMemoHeaderP@1101103000 : Record 114;ReportIdP@1101103008 : Integer;SequenceP@1101103007 : Code[10]);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      EInvoicePdfExportL@1101103001 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103005 : TEMPORARY Record 10606;
+      SalesSetupL@1101103006 : Record 311;
+      FileMgtL@1101103002 : Codeunit 419;
+      DocumentPathFileNameL@1101103003 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+    BEGIN
+      // Used when we have a Credit Memo Invoice that needs printing as pdf.
+      // Prints the Credit Memo invoice document as pdf then imports is as Blob into Table ready for embadding into EHF-CreditMemo
+
+      EInvoicePdfExportL.INIT;
+      EInvoicePdfExportL."Document No." := SalesCrMemoHeaderP."No.";
+      EInvoicePdfExportL."Document Type" := EInvoicePdfExportL."Document Type"::"Cr.Memo";
+      EInvoicePdfExportL.Sequence := SequenceP;
+      EInvoicePdfExportL."Schema Name" := 'CreditNote';
+      IF NOT EInvoicePdfExportL.INSERT THEN ;
+
+      DocumentPathFileNameL := FileMgtL.ServerTempFileName(ReportSelectionL.Sequence);
+
+      REPORT.SAVEASPDF(ReportIdP, DocumentPathFileNameL , SalesCrMemoHeaderP);
+
+      // Check that Pdf Document exists before importing to table as a Blog
+      IF NOT Wait4Report(DocumentPathFileNameL) THEN
+        ERROR(ReportNotCreatedtxtG, SalesCrMemoHeaderP."No.", ReportSelectionL."Report ID");
+
+      IF  EXISTS( DocumentPathFileNameL) THEN
+        EInvoicePdfExportL."Document Blob".IMPORT(DocumentPathFileNameL);
+      EInvoicePdfExportL."File Name" := STRSUBSTNO('%1.pdf', SalesCrMemoHeaderP."No.");
+      EInvoicePdfExportL.MODIFY;
+
+      // Testing Start
+      // Copyies Pdf Document to User's Local Path
+      SalesSetupL.GET;
+      TempEInvoiceTransferFileL."Server Temp File Name" := DocumentPathFileNameL;
+      TempEInvoiceTransferFileL."Local Path" := DELCHR(SalesSetupL."E-Invoice Sales Cr. Memo Path",'>','\');
+      TempEInvoiceTransferFileL."Local File Name" := STRSUBSTNO('%1.pdf', SalesCrMemoHeaderP."No.");
+      PdfDownloadPdfFile(TempEInvoiceTransferFileL);
+      // Testing Stop
+    END;
+
+    PROCEDURE CopyCrMemoLinksRecords2Attachment@1101103022(SalesCrMemoHeaderP@1101103008 : Record 114);
+    VAR
+      ArchivedSalesHeaderL@1101103003 : Record 5046905;
+      ArchivedServiceHeaderL@1101103002 : Record 5025636;
+      ServiceHeaderL@1101103001 : Record 5025624;
+      SalesHeaderL@1101103000 : Record 36;
+      EInvoiceAttachmentL@1101103009 : Record 5231118;
+      RecordLinkRecordRefL@1101103007 : RecordRef;
+    BEGIN
+      CASE SalesCrMemoHeaderP."Order Type" OF
+        SalesCrMemoHeaderP."Order Type"::"Parts Sales & Purchases",  SalesCrMemoHeaderP."Order Type"::"Vehicle Sales & Purchases" :
+          BEGIN
+            // Posted Part/Vehicle Order
+
+            IF SalesHeaderL.GET(SalesHeaderL."Document Type"::Order, SalesCrMemoHeaderP."Prepayment Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(SalesHeaderL)
+            ELSE IF ArchivedSalesHeaderL.GET(ArchivedSalesHeaderL."Document Type"::Order, SalesCrMemoHeaderP."Prepayment Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ArchivedSalesHeaderL)
+            ELSE
+              CLEAR(RecordLinkRecordRefL);
+
+          END;
+        SalesCrMemoHeaderP."Order Type"::Service :
+          BEGIN
+            // Posted Service Order
+            IF ServiceHeaderL.GET(ServiceHeaderL."Document Type"::Order, SalesCrMemoHeaderP."Service Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ServiceHeaderL)
+            ELSE IF ArchivedServiceHeaderL.GET(ArchivedServiceHeaderL."Document Type"::Order, SalesCrMemoHeaderP."Service Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ArchivedSalesHeaderL)
+            ELSE
+              CLEAR(RecordLinkRecordRefL);
+          END;
+      END;
+
+      CLEAR(EInvoiceAttachmentL);
+      EInvoiceAttachmentL."Schema Name" := 'CreditNote';
+      EInvoiceAttachmentL."Document Type" := EInvoiceAttachmentL."Document Type"::Attachment;
+      EInvoiceAttachmentL."Document No." := SalesCrMemoHeaderP."No.";
+
+      AddLinksRecords2Attachment(RecordLinkRecordRefL, EInvoiceAttachmentL);
+    END;
+
+    PROCEDURE PrintRemindersRecordMgt@1101103015(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      IssuedReminderHeaderL@1101103000 : Record 297;
+      IssuedFinChargeMemoHdrL@1101103001 : Record 304;
+      EInvoiceAttachmentL@1101103004 : Record 5231118;
+      FieldRefL@1101103003 : FieldRef;
+      IncludePDFCopyL@1101103005 : Boolean;
+    BEGIN
+      // Reminders Header : Which Type of Reminders to Print? Reminders or Issued Reminders
+
+      // Delete all old attachemnts for this CrMemo
+      EInvoiceAttachmentL.RESET;
+      FieldRefL := CurrentRecRefP.FIELD(GetFieldNo(CurrentRecRefP, 'No.'));
+      IssuedReminderHeaderL."No." := FieldRefL.VALUE;
+      IF IssuedReminderHeaderL."No." <> '' THEN BEGIN
+        EInvoiceAttachmentL.SETRANGE("Document No.", IssuedReminderHeaderL."No.");
+        EInvoiceAttachmentL.DELETEALL;
+      END;
+
+      CLEAR(EInvoiceAttachmentL);
+      EInvoiceAttachmentL."Schema Name" := 'Reminder';
+      EInvoiceAttachmentL."Document Type" := EInvoiceAttachmentL."Document Type"::Attachment;
+
+      FieldRefL := CurrentRecRefP.FIELD(GetFieldNo(CurrentRecRefP, 'Include PDF Copy')); // "Include PDF Copy"
+      IncludePDFCopyL := ( UPPERCASE(FORMAT(FieldRefL.VALUE)) = 'YES' );
+
+      CASE TRUE OF
+        IncludePDFCopyL AND ( CurrentRecRefP.NUMBER = DATABASE::"Issued Reminder Header" ) :
+          BEGIN
+            CurrentRecRefP.SETTABLE(IssuedReminderHeaderL);
+            IssuedReminderHeaderL.SETRANGE("No.", IssuedReminderHeaderL."No.");
+            IF NOT IssuedReminderHeaderL.FINDFIRST THEN
+              IssuedReminderHeaderL.INIT;
+            PrintIssueRemindersRecords(IssuedReminderHeaderL);
+            EInvoiceAttachmentL."Document No." := IssuedReminderHeaderL."No.";
+          END;
+        IncludePDFCopyL AND ( CurrentRecRefP.NUMBER = DATABASE::"Issued Fin. Charge Memo Header" ) :
+          BEGIN
+            CurrentRecRefP.SETTABLE(IssuedFinChargeMemoHdrL);
+            IssuedReminderHeaderL.SETRANGE("No.", IssuedFinChargeMemoHdrL."No.");
+            IF NOT IssuedFinChargeMemoHdrL.FINDFIRST THEN
+              IssuedFinChargeMemoHdrL.INIT;
+            PrintIssueFinChangeMemoRecords(IssuedFinChargeMemoHdrL);
+            EInvoiceAttachmentL."Document No." := IssuedFinChargeMemoHdrL."No.";
+          END;
+      END;
+
+      AddLinksRecords2Attachment(CurrentRecRefP, EInvoiceAttachmentL);
+    END;
+
+    PROCEDURE PrintIssueRemindersRecords@1101103016(VAR IssuedReminderHeaderP@1101103000 : Record 297);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      UserSessionL@1109400002 : Record 5028686;
+    BEGIN
+      WITH IssuedReminderHeaderP DO BEGIN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::Reminder);
+        ReportSelectionL.GetReportSelection(ReportSelectionL, "Shortcut Dimension 2 Code", UserSessionL.GetLocation);
+        ReportSelectionL.ASCENDING := FALSE;
+        ReportSelectionL.FINDFIRST;
+        REPEAT
+          PrintIssueRemindersRecordsSavePdf(IssuedReminderHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+        UNTIL ReportSelectionL.NEXT = 0;
+      END;
+    END;
+
+    PROCEDURE PrintIssueRemindersRecordsSavePdf@1101103017(VAR IssuedReminderHeaderP@1101103003 : Record 297;ReportIdP@1101103000 : Integer;SequenceP@1101103001 : Code[10]);
+    VAR
+      EInvoicePdfExportL@1101103002 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103008 : TEMPORARY Record 10606;
+      FileMgtL@1101103006 : Codeunit 419;
+      DocumentPathFileNameL@1101103005 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+      SalesSetupL@1101103007 : Record 311;
+    BEGIN
+      // Prints the invoice document as pdf then imports its as Blob into Table ready for embadding into EHF-Invoice
+      EInvoicePdfExportL.INIT;
+      EInvoicePdfExportL."Document No." := IssuedReminderHeaderP."No.";
+      EInvoicePdfExportL."Document Type" := EInvoicePdfExportL."Document Type"::Reminder;
+      EInvoicePdfExportL.Sequence := SequenceP;
+      EInvoicePdfExportL."Schema Name" := 'Reminder';
+      IF NOT EInvoicePdfExportL.INSERT THEN ;
+
+      DocumentPathFileNameL := FileMgtL.ServerTempFileName(SequenceP);
+
+      REPORT.SAVEASPDF(ReportIdP, DocumentPathFileNameL , IssuedReminderHeaderP);
+
+      IF NOT Wait4Report(DocumentPathFileNameL) THEN
+        ERROR(ReportNotCreatedtxtG, IssuedReminderHeaderP."No.", ReportIdP);
+
+      IF  EXISTS( DocumentPathFileNameL) THEN
+        EInvoicePdfExportL."Document Blob".IMPORT(DocumentPathFileNameL);
+      EInvoicePdfExportL."File Name" := STRSUBSTNO('%1.pdf', IssuedReminderHeaderP."No.");
+      EInvoicePdfExportL.MODIFY;
+
+      // Testing Start
+      // Copyies Pdf Document to User's Local Path
+      SalesSetupL.GET;
+      TempEInvoiceTransferFileL."Server Temp File Name" := DocumentPathFileNameL;
+      TempEInvoiceTransferFileL."Local Path" := DELCHR(SalesSetupL."E-Invoice Reminder Path",'>','\');
+      TempEInvoiceTransferFileL."Local File Name" := STRSUBSTNO('%1.pdf', IssuedReminderHeaderP."No.");
+      PdfDownloadPdfFile(TempEInvoiceTransferFileL);
+      // Testing Stop
+    END;
+
+    PROCEDURE PrintIssueFinChangeMemoRecords@1101103019(VAR IssueFinChangeMemoHdrP@1101103000 : Record 304);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      UserSessionL@1109400002 : Record 5028686;
+    BEGIN
+      WITH IssueFinChangeMemoHdrP DO BEGIN
+        ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Fin.Charge");
+        ReportSelectionL.GetReportSelection(ReportSelectionL, "Shortcut Dimension 2 Code", UserSessionL.GetLocation);
+        ReportSelectionL.ASCENDING := FALSE;
+        ReportSelectionL.FINDFIRST;
+        REPEAT
+          PrintIssueFinChangeMemoRecordsSavePdf(IssueFinChangeMemoHdrP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+        UNTIL ReportSelectionL.NEXT = 0;
+      END;
+    END;
+
+    PROCEDURE PrintIssueFinChangeMemoRecordsSavePdf@1101103020(VAR IssueFinChangeMemoHdrP@1101103003 : Record 304;ReportIdP@1101103000 : Integer;SequenceP@1101103001 : Code[10]);
+    VAR
+      EInvoicePdfExportL@1101103002 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103008 : TEMPORARY Record 10606;
+      FileMgtL@1101103006 : Codeunit 419;
+      DocumentPathFileNameL@1101103005 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+      SalesSetupL@1101103007 : Record 311;
+    BEGIN
+      // Prints the invoice document as pdf then imports its as Blob into Table ready for embadding into EHF-Invoice
+      EInvoicePdfExportL.INIT;
+      EInvoicePdfExportL."Document No." := IssueFinChangeMemoHdrP."No.";
+      EInvoicePdfExportL."Document Type" := EInvoicePdfExportL."Document Type"::Reminder;
+      EInvoicePdfExportL.Sequence := SequenceP;
+      EInvoicePdfExportL."Schema Name" := 'Reminder';
+      IF NOT EInvoicePdfExportL.INSERT THEN ;
+
+      DocumentPathFileNameL := FileMgtL.ServerTempFileName(SequenceP);
+
+      REPORT.SAVEASPDF(ReportIdP, DocumentPathFileNameL , IssueFinChangeMemoHdrP);
+
+      IF NOT Wait4Report(DocumentPathFileNameL) THEN
+        ERROR(ReportNotCreatedtxtG, IssueFinChangeMemoHdrP."No.", ReportIdP);
+
+      IF  EXISTS( DocumentPathFileNameL) THEN
+        EInvoicePdfExportL."Document Blob".IMPORT(DocumentPathFileNameL);
+      EInvoicePdfExportL."File Name" := STRSUBSTNO('%1.pdf', IssueFinChangeMemoHdrP."No.");
+      EInvoicePdfExportL.MODIFY;
+
+      // Testing Start
+      // Copyies Pdf Document to User's Local Path
+      SalesSetupL.GET;
+      TempEInvoiceTransferFileL."Server Temp File Name" := DocumentPathFileNameL;
+      TempEInvoiceTransferFileL."Local Path" := DELCHR(SalesSetupL."E-Invoice Fin. Charge Path",'>','\');
+      TempEInvoiceTransferFileL."Local File Name" := STRSUBSTNO('%1.pdf', IssueFinChangeMemoHdrP."No.");
+      PdfDownloadPdfFile(TempEInvoiceTransferFileL);
+      // Testing Stop
+    END;
+
+    PROCEDURE AddLinksRecords2Attachment@1101103023(RecordLinkRecordRefP@1101103014 : RecordRef;EInvoiceAttachmentP@1101103001 : Record 5231118);
+    VAR
+      RecordLinkL@1101103004 : Record 2000000068;
+      EInvoiceAttachmentL@1101103009 : Record 5231118;
+      CurrentRecordRefL@1101103000 : RecordRef;
+      RecordLinkRecordRefL@1101103007 : RecordRef;
+      InStreamL@1101103010 : InStream;
+      OutStreamL@1101103011 : OutStream;
+      FileManagement@1101103012 : Codeunit 419;
+      ServTempFileNameL@1101103013 : Text[1024];
+    BEGIN
+      // Add attachments records to attachment table for importing into EHF-Invoice
+
+      IF RecordLinkRecordRefP.HASLINKS THEN BEGIN
+        RecordLinkL.SETCURRENTKEY("Record ID");
+        RecordLinkL.SETRANGE("Record ID", RecordLinkRecordRefP.RECORDID);
+        RecordLinkL.SETRANGE(Type, RecordLinkL.Type::Link);
+        IF RecordLinkL.FINDSET THEN BEGIN
+          REPEAT
+            IF NOT EXISTS(RecordLinkL.URL1) THEN
+              MESSAGE(FileNoteFoundG,  CONVERTSTR(RecordLinkL.URL1,'\','/'))
+            ELSE BEGIN
+              EInvoiceAttachmentL.INIT;
+              EInvoiceAttachmentL."Document No." := EInvoiceAttachmentP."Document No.";
+              EInvoiceAttachmentL."Document Type" := EInvoiceAttachmentP."Document Type";
+              EInvoiceAttachmentL.Sequence := STRSUBSTNO('%1', RecordLinkL."Link ID");
+              EInvoiceAttachmentL."Schema Name" :=EInvoiceAttachmentP."Schema Name";
+              EInvoiceAttachmentL."File Name" := RecordLinkL.Description;
+
+              ServTempFileNameL := FileManagement.UploadFileSilent(RecordLinkL.URL1);
+              EInvoiceAttachmentL."Document Blob".IMPORT(ServTempFileNameL);
+
+              IF NOT EInvoiceAttachmentL.INSERT THEN ;
+
+              MESSAGE(STRSUBSTNO(' Create xml %1 %2 Hash=%3 Schema=%4', RecordLinkL.Description
+                                                                      , CONVERTSTR(RecordLinkL.URL1,'\','/')
+                                                                      , EInvoiceAttachmentL."Document Blob".HASVALUE)
+                                                                      ,EInvoiceAttachmentL."Schema Name");
+            END;
+          UNTIL RecordLinkL.NEXT = 0;
+        END;
+      END;
+    END;
+
+    PROCEDURE PrintRecordsSavePdf@1101103007(VAR SalesInvHeaderP@1101103003 : Record 112;ReportIdP@1101103000 : Integer;SequenceP@1101103001 : Code[10]);
+    VAR
+      EInvoicePdfExportL@1101103002 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103008 : TEMPORARY Record 10606;
+      FileMgtL@1101103006 : Codeunit 419;
+      DocumentPathFileNameL@1101103005 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+      SalesSetupL@1101103007 : Record 311;
+    BEGIN
+      // Prints the invoice document as pdf then imports its as Blob into Table ready for embadding into EHF-Invoice
+      EInvoicePdfExportL.INIT;
+      EInvoicePdfExportL."Document No." := SalesInvHeaderP."No.";
+      EInvoicePdfExportL."Document Type" := EInvoicePdfExportL."Document Type"::Invoice;
+      EInvoicePdfExportL.Sequence := SequenceP;
+      EInvoicePdfExportL."Schema Name" := 'Invoice';
+      IF NOT EInvoicePdfExportL.INSERT THEN ;
+
+      DocumentPathFileNameL := FileMgtL.ServerTempFileName(SequenceP);
+
+      REPORT.SAVEASPDF(ReportIdP, DocumentPathFileNameL , SalesInvHeaderP);
+
+      IF NOT Wait4Report(DocumentPathFileNameL) THEN
+        ERROR(ReportNotCreatedtxtG, SalesInvHeaderP."No.", ReportIdP);
+
+      IF  EXISTS( DocumentPathFileNameL) THEN
+        EInvoicePdfExportL."Document Blob".IMPORT(DocumentPathFileNameL);
+      EInvoicePdfExportL."File Name" := STRSUBSTNO('%1.pdf', SalesInvHeaderP."No.");
+      EInvoicePdfExportL.MODIFY;
+
+      // Testing Start
+      // Copyies Pdf Document to User's Local Path
+      SalesSetupL.GET;
+      TempEInvoiceTransferFileL."Server Temp File Name" := DocumentPathFileNameL;
+      TempEInvoiceTransferFileL."Local Path" := DELCHR(SalesSetupL."E-Invoice Sales Invoice Path",'>','\');
+      TempEInvoiceTransferFileL."Local File Name" := STRSUBSTNO('%1.pdf', SalesInvHeaderP."No.");
+      PdfDownloadPdfFile(TempEInvoiceTransferFileL);
+      // Testing Stop
+    END;
+
+    PROCEDURE Wait4Report@1101103008(DocumentPathFileNameP@1101103000 : Text[250]) : Boolean;
+    VAR
+      NoTime2WaitL@1101103001 : Integer;
+    BEGIN
+      // Check that Pdf Document exists before importing to table as a Blog
+      NoTime2WaitL := 50;
+      WHILE ( ( NOT EXISTS( DocumentPathFileNameP ) ) AND ( NoTime2WaitL <= 0 ) ) DO BEGIN
+        SLEEP(1000);
+        NoTime2WaitL -=1;
+      END;
+      EXIT(EXISTS( DocumentPathFileNameP ) );
+    END;
+
+    PROCEDURE PdfDownloadPdfFile@1080033(VAR TempEInvoiceTransferFile@1080000 : TEMPORARY Record 10606);
+    VAR
+      FileManagement@1080001 : Codeunit 419;
+      ZipFileName@1080002 : Text;
+      EInvoiceDocumentsTxt@1101103000 : TextConst 'ENU=Documents;NOR=Dokumenter';
+    BEGIN
+      IF NOT FileManagement.CanRunDotNetOnClient THEN BEGIN
+        ZipFileName := FileManagement.CreateZipArchiveObject;
+        REPEAT
+          FileManagement.AddFileToZipArchive(TempEInvoiceTransferFile."Server Temp File Name",
+            TempEInvoiceTransferFile."Local File Name");
+        UNTIL TempEInvoiceTransferFile.NEXT = 0;
+        FileManagement.CloseZipArchive;
+        FileManagement.DownloadHandler(ZipFileName,'','','',STRSUBSTNO('%1.zip',EInvoiceDocumentsTxt));
+      END ELSE
+        REPEAT
+          FileManagement.DownloadToFile(
+            TempEInvoiceTransferFile."Server Temp File Name",
+            STRSUBSTNO('%1\%2',TempEInvoiceTransferFile."Local Path",TempEInvoiceTransferFile."Local File Name"));
+        UNTIL TempEInvoiceTransferFile.NEXT = 0;
+    END;
+
+    PROCEDURE EhfCreateDocument@1101103003(CurrentRecRefP@1101103000 : RecordRef);
+    VAR
+      SalesHeaderL@1101103006 : Record 36;
+      Text007@1101103013 : TextConst 'ENU="You must specify an External document number in document type  = %1.  If you use E-Invoice, this field is required regardless of the value in the External Document No. field of the Sales & Receivables Setup table.";NOR="Du mÜ angi et eksterndokumentnummer i dokumenttype = %1. Hvis du bruker e-faktura, er dette feltet obligatorisk, uansett verdi i feltet Eksterndokumentnr. i tabellen Salgsoppsett."';
+      SalesInvHeaderL@1101103001 : Record 112;
+      SalesCreMemoHeaderL@1101103002 : Record 114;
+    BEGIN
+      // "Parts Sales Order" or "Parts Credit Memo" now posted do we need to create an E-Invoice?
+
+      CurrentRecRefG.SETTABLE(SalesHeaderL);
+
+      IF NOT SalesHeaderL."E-Invoice" THEN
+        EXIT;
+
+      CASE SalesHeaderL."Document Type" OF
+        SalesHeaderL."Document Type"::"Credit Memo" :
+          BEGIN
+            SalesCreMemoHeaderL.RESET;
+            SalesCreMemoHeaderL.SETRANGE("No.", SalesHeaderL."Last Posting No.");
+            COMMIT; // Fix write transaction Problem
+      //SID.02 START
+            //REPORT.RUNMODAL(REPORT::"Create Electronic Credit Memos",TRUE,FALSE,SalesCreMemoHeaderL);
+            REPORT.RUNMODAL(REPORT::"Create Electronic Credit Memos",FALSE,FALSE,SalesCreMemoHeaderL);
+      //SID.02 STOP
+          END ELSE BEGIN;
+            SalesInvHeaderL.RESET;
+            SalesInvHeaderL.SETRANGE("No.", SalesHeaderL."Last Posting No.");
+            COMMIT; // Fix write transaction Problem
+      //SID.02 START
+            // REPORT.RUNMODAL(REPORT::"Create Electronic Invoices",TRUE,FALSE,SalesInvHeaderL);
+            REPORT.RUNMODAL(REPORT::"Create Electronic Invoices",FALSE,FALSE,SalesInvHeaderL);
+      //SID.02 STOP
+
+          END;
+      END;
+    END;
+
+    PROCEDURE GetFieldNo@1101382983(RecordRefP@1101382986 : RecordRef;FieldNameP@1101103000 : Text[20]) : Integer;
+    VAR
+      FieldL@1101103001 : Record 2000000041;
+    BEGIN
+      FieldL.RESET;
+      FieldL.SETRANGE(TableNo, RecordRefP.NUMBER);
+      FieldL.SETRANGE(FieldName, FieldNameP);
+      IF FieldL.FINDFIRST THEN
+        EXIT(FieldL."No.");
+      EXIT(0);
+    END;
+
+    BEGIN
+    {
+      +----------------------------------------------+
+      | Copyright ∏ 2015 SI-DATA SID                 |
+      +----------------------------------------------+
+      | MYENGINE@INCADEA                             |
+      +----------------------------------------------+
+      No.  Version  Date      ID  Remark
+      -------------------------------------- ----------
+      01.           01.09.15  GSP TFS101644 : NO EHF Electronic Invoice
+      02.           29.01.16  DNO Set the report to be triggered without a box
+    }
+    END.
+  }
+}
+

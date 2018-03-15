@@ -1,0 +1,400 @@
+OBJECT Codeunit 70005 Compello Management
+{
+  OBJECT-PROPERTIES
+  {
+    Date=13.01.17;
+    Time=11:03:09;
+    Modified=Yes;
+    Version List=CMP2.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      CompelloSetup@1101103000 : Record 70000;
+      NextDocNo@1101103001 : Code[20];
+      NextLineNo@1101103002 : Integer;
+      HasGotGLSetup@1101103003 : Boolean;
+      GLSetupShortcutDimCode@1101103004 : ARRAY [8] OF Code[20];
+      DimensionUpdatedTxt@1101103005 : TextConst 'ENU=All referances to dimension numbers have been updated based on Financial Setup for Dimensions.;NOR=Alle referanser til dimensjon tallene har blitt oppdatert basert p† Finansoppsett for Dimensjoner.';
+
+    PROCEDURE CreateGenJnlLine@5(VAR ImportHdr@1101103005 : Record 70008;VAR HeaderRecRef@1101103000 : RecordRef;VAR POHeaderAmount@1101103003 : Decimal);
+    VAR
+      PurchaseHeader@1101103002 : Record 38;
+      PurchaseLine@1101103001 : Record 39;
+      GenJnlLine@1101103006 : Record 81;
+      LastGenJnlLine@1101103009 : Record 81;
+    BEGIN
+      CompelloSetup.GET;
+
+      IF CheckVoucherType(ImportHdr) THEN BEGIN
+        CompelloSetup.TESTFIELD("Journal Template");
+        CompelloSetup.TESTFIELD("Journal Batch");
+
+        NextDocNo := '';
+        NextLineNo := 0;
+
+        IF PurchaseHeader.GET(HeaderRecRef.RECORDID) THEN BEGIN
+          GenJnlLineSetLineNo(GenJnlLine);
+
+          CreateGenJnlLinePurchHeader(PurchaseHeader, GenJnlLine, POHeaderAmount);
+
+          LastGenJnlLine := GenJnlLine;
+
+          PurchaseLine.SETRANGE("Document Type", PurchaseHeader."Document Type");
+          PurchaseLine.SETRANGE("Document No.", PurchaseHeader."No.");
+          PurchaseLine.SETRANGE(Type, PurchaseLine.Type::"G/L Account");
+          PurchaseLine.SETFILTER("Line Amount", '<>0');
+          IF PurchaseLine.FINDFIRST THEN BEGIN
+            REPEAT
+              NextLineNo := NextLineNo + 10000;
+              CreateGenJnlLinePurchLine(PurchaseHeader, PurchaseLine, GenJnlLine, LastGenJnlLine);
+            UNTIL PurchaseLine.NEXT = 0;
+          END;
+        END;
+
+        PurchaseHeader.DELETE(TRUE);
+      END;
+    END;
+
+    LOCAL PROCEDURE CreateGenJnlLinePurchHeader@1101103004(VAR PurchaseHeader@1101103000 : Record 38;VAR GenJnlLine@1101103002 : Record 81;VAR POHeaderAmount@1101103003 : Decimal);
+    VAR
+      DimensionMgt@1101103004 : Codeunit 408;
+      AmountLCY@1101103001 : Decimal;
+    BEGIN
+      //Create Vendor line
+      GenJnlLine.INIT;
+      GenJnlLine.VALIDATE(GenJnlLine."Journal Template Name",CompelloSetup."Journal Template");
+      GenJnlLine.VALIDATE(GenJnlLine."Journal Batch Name",CompelloSetup."Journal Batch");
+      GenJnlLine.VALIDATE(GenJnlLine."Line No.", NextLineNo);
+      GenJnlLine.VALIDATE(GenJnlLine."Document No.", NextDocNo);
+      IF PurchaseHeader."Posting Date" <> 0D THEN
+        GenJnlLine.VALIDATE(GenJnlLine."Posting Date", PurchaseHeader."Posting Date");
+
+      GenJnlLine.VALIDATE(GenJnlLine."Document Date", PurchaseHeader."Document Date");
+      GenJnlLine.VALIDATE(GenJnlLine."Account Type", GenJnlLine."Account Type"::Vendor);
+      GenJnlLine.VALIDATE(GenJnlLine."Account No.", PurchaseHeader."Pay-to Vendor No.");
+      GenJnlLine.VALIDATE(GenJnlLine."Currency Code", PurchaseHeader."Currency Code");
+      GenJnlLine.VALIDATE(KID, PurchaseHeader.KID);
+      CalcPurhaseHeaderLCY(PurchaseHeader, AmountLCY);
+
+      IF PurchaseHeader."Document Type" = PurchaseHeader."Document Type"::Invoice THEN BEGIN
+        GenJnlLine.VALIDATE(GenJnlLine."Document Type", PurchaseHeader."Document Type"::Invoice);
+        GenJnlLine.VALIDATE(GenJnlLine.Amount, -POHeaderAmount);
+        GenJnlLine.VALIDATE(GenJnlLine."Sales/Purch. (LCY)", -AmountLCY);
+        GenJnlLine.VALIDATE(GenJnlLine."External Document No.", PurchaseHeader."Vendor Invoice No.");
+      END ELSE BEGIN
+        GenJnlLine.VALIDATE(GenJnlLine."Document Type", PurchaseHeader."Document Type"::"Credit Memo");
+        GenJnlLine.VALIDATE(GenJnlLine.Amount, POHeaderAmount);
+        GenJnlLine.VALIDATE(GenJnlLine."Sales/Purch. (LCY)", AmountLCY);
+        GenJnlLine.VALIDATE(GenJnlLine."External Document No.", PurchaseHeader."Vendor Cr. Memo No.");
+      END;
+
+      GenJnlLine.VALIDATE(GenJnlLine."Due Date", PurchaseHeader."Due Date");
+      DimensionMgt.UpdateGenJnlLineDim(GenJnlLine, PurchaseHeader."Dimension Set ID");
+      GenJnlLine.UpdateSource;
+      GenJnlLine.INSERT(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreateGenJnlLinePurchLine@1101103005(VAR PurchaseHeader@1101103005 : Record 38;VAR PurchaseLine@1101103000 : Record 39;VAR GenJnlLine@1101103003 : Record 81;VAR LastGenJnlLine@1101103004 : Record 81);
+    VAR
+      GenJnlBatch@1101103006 : Record 232;
+      DimensionMgt@1101103002 : Codeunit 408;
+    BEGIN
+      GenJnlLine.INIT;
+      GenJnlLine.VALIDATE(GenJnlLine."Journal Template Name",CompelloSetup."Journal Template");
+      GenJnlLine.VALIDATE(GenJnlLine."Journal Batch Name",CompelloSetup."Journal Batch");
+      GenJnlLine.VALIDATE(GenJnlLine."Line No.", NextLineNo);
+      GenJnlLine.SetUpNewLine(LastGenJnlLine, 0, TRUE);
+      GenJnlLine.VALIDATE(GenJnlLine."Account Type", GenJnlLine."Account Type"::"G/L Account");
+      GenJnlLine.VALIDATE(GenJnlLine."Account No.", PurchaseLine."No.");
+      GenJnlLine.VALIDATE(GenJnlLine."Gen. Posting Type", GenJnlLine."Gen. Posting Type"::" ");
+      GenJnlLine.VALIDATE(GenJnlLine."Gen. Bus. Posting Group", '');
+      GenJnlLine.VALIDATE(GenJnlLine."Gen. Prod. Posting Group", '');
+      GenJnlLine.VALIDATE(GenJnlLine."VAT Bus. Posting Group", '');
+      GenJnlLine.VALIDATE(GenJnlLine."VAT Prod. Posting Group", '');
+      GenJnlLine.VALIDATE(GenJnlLine."VAT Code", PurchaseLine."VAT Prod. Posting Group");
+      GenJnlLine.VALIDATE(GenJnlLine."Currency Code", PurchaseLine."Currency Code");
+      GenJnlLine.VALIDATE(KID, PurchaseHeader.KID);
+
+      IF PurchaseLine."Document Type" = PurchaseLine."Document Type"::Invoice THEN BEGIN
+        GenJnlLine.VALIDATE(GenJnlLine."Document Type", PurchaseLine."Document Type"::Invoice);
+        GenJnlLine.VALIDATE(GenJnlLine.Amount, (PurchaseLine.Quantity * PurchaseLine."Direct Unit Cost"));
+        GenJnlLine.VALIDATE(GenJnlLine."External Document No.", PurchaseHeader."Vendor Invoice No.");
+      END ELSE BEGIN
+         GenJnlLine.VALIDATE(GenJnlLine."Document Type", PurchaseLine."Document Type"::"Credit Memo");
+         GenJnlLine.VALIDATE(GenJnlLine.Amount, -(PurchaseLine.Quantity * PurchaseLine."Direct Unit Cost"));
+         GenJnlLine.VALIDATE(GenJnlLine."External Document No.", PurchaseHeader."Vendor Cr. Memo No.");
+      END;
+
+      GenJnlLine.VALIDATE(Description, PurchaseLine.Description);
+      GenJnlLine.VALIDATE(GenJnlLine."Due Date", PurchaseHeader."Due Date");
+      DimensionMgt.UpdateGenJnlLineDim(GenJnlLine, PurchaseLine."Dimension Set ID");
+      GenJnlLine.UpdateSource;
+      GenJnlLine.INSERT(TRUE);
+    END;
+
+    LOCAL PROCEDURE GenJnlLineSetLineNo@1101103007(VAR GenJnlLine@1101103000 : Record 81);
+    VAR
+      LastGenJnlLine@1101103002 : Record 81;
+      GenJnlBatch@1101103003 : Record 232;
+      NoSeriesMgt@1101103005 : Codeunit 396;
+    BEGIN
+      GenJnlBatch.GET(CompelloSetup."Journal Template", CompelloSetup."Journal Batch");
+
+      GenJnlLine.SETRANGE("Journal Template Name", CompelloSetup."Journal Template");
+      GenJnlLine.SETRANGE("Journal Batch Name", CompelloSetup."Journal Batch");
+
+      IF GenJnlLine.FINDLAST THEN BEGIN
+        NextLineNo := GenJnlLine."Line No." + 10000;
+        NextDocNo := INCSTR(GenJnlLine."Document No.");
+      END
+      ELSE BEGIN
+        NextLineNo := 10000;
+        NextDocNo := NoSeriesMgt.GetNextNo(GenJnlBatch."No. Series", TODAY, FALSE);
+      END;
+    END;
+
+    PROCEDURE CheckVoucherType@1101103001(ImportHdr@1101103000 : Record 70008) : Boolean;
+    BEGIN
+      EXIT(IsVoucherType2Journal(ImportHdr."Voucher Type"));
+    END;
+
+    PROCEDURE IsVoucherTypeValid@1101103010(VoucherType@1101103000 : Text[30]) : Boolean;
+    BEGIN
+      CompelloSetup.GET;
+
+      IF (VoucherType IN [CompelloSetup."Doc. Type Journal Invoice",
+                          CompelloSetup."Doc. Type Journal Credit",
+                          CompelloSetup."Doc. Type Item Invoice",
+                          CompelloSetup."Doc. Type Item Credit"]) THEN
+        EXIT(TRUE)
+      ELSE
+        EXIT(FALSE);
+    END;
+
+    PROCEDURE IsVoucherType2Journal@1101103002(VoucherType@1101103000 : Text[30]) : Boolean;
+    BEGIN
+      CompelloSetup.GET;
+      IF (VoucherType IN [CompelloSetup."Doc. Type Journal Invoice", CompelloSetup."Doc. Type Journal Credit"]) THEN
+        EXIT(TRUE)
+      ELSE
+        EXIT(FALSE);
+    END;
+
+    PROCEDURE IsVoucherTypeInvoice@1101103000(VoucherType@1101103000 : Text[30]) : Boolean;
+    BEGIN
+      CompelloSetup.GET;
+      IF (VoucherType IN [CompelloSetup."Doc. Type Journal Invoice", CompelloSetup."Doc. Type Item Invoice"]) THEN
+        EXIT(TRUE)
+      ELSE
+        EXIT(FALSE);
+    END;
+
+    PROCEDURE IsVoucherTypeCreditMemo@1101103003(VoucherType@1101103000 : Text[30]) : Boolean;
+    BEGIN
+      CompelloSetup.GET;
+      IF (VoucherType IN [CompelloSetup."Doc. Type Journal Credit", CompelloSetup."Doc. Type Item Credit"]) THEN
+        EXIT(TRUE)
+      ELSE
+        EXIT(FALSE);
+    END;
+
+    PROCEDURE GetDimensionCodeByNumber@1101103008(DimNo@1101103000 : Integer) : Code[20];
+    BEGIN
+      IF (DimNo < 1) OR (DimNo > 8) THEN EXIT;
+
+      GetGLSetup;
+
+      EXIT(GLSetupShortcutDimCode[DimNo]);
+    END;
+
+    LOCAL PROCEDURE GetGLSetup@52();
+    VAR
+      GLSetup@1000 : Record 98;
+    BEGIN
+      IF NOT HasGotGLSetup THEN BEGIN
+        GLSetup.GET;
+        GLSetupShortcutDimCode[1] := GLSetup."Shortcut Dimension 1 Code";
+        GLSetupShortcutDimCode[2] := GLSetup."Shortcut Dimension 2 Code";
+        GLSetupShortcutDimCode[3] := GLSetup."Shortcut Dimension 3 Code";
+        GLSetupShortcutDimCode[4] := GLSetup."Shortcut Dimension 4 Code";
+        GLSetupShortcutDimCode[5] := GLSetup."Shortcut Dimension 5 Code";
+        GLSetupShortcutDimCode[6] := GLSetup."Shortcut Dimension 6 Code";
+        GLSetupShortcutDimCode[7] := GLSetup."Shortcut Dimension 7 Code";
+        GLSetupShortcutDimCode[8] := GLSetup."Shortcut Dimension 8 Code";
+        HasGotGLSetup := TRUE;
+      END;
+    END;
+
+    PROCEDURE UpdateDimensionsForSetupTables@1101103006();
+    VAR
+      CompelloIntegrTable@1101103000 : Record 70003;
+      CompelloIntegrTableField@1101103001 : Record 70004;
+    BEGIN
+      CompelloIntegrTable.SETFILTER("Dimension No.", '>0');
+      IF CompelloIntegrTable.FINDSET THEN BEGIN
+        REPEAT
+          CompelloIntegrTable."Dimension Code" := GetDimensionCodeByNumber(CompelloIntegrTable."Dimension No.");
+          CompelloIntegrTable.MODIFY;
+        UNTIL CompelloIntegrTable.NEXT = 0;
+      END;
+
+      CompelloIntegrTableField.SETFILTER("Dimension No.", '>0');
+      IF CompelloIntegrTableField.FINDSET THEN BEGIN
+        REPEAT
+          CompelloIntegrTableField."Dimension Code" := GetDimensionCodeByNumber(CompelloIntegrTableField."Dimension No.");
+          CompelloIntegrTableField.MODIFY;
+        UNTIL CompelloIntegrTableField.NEXT = 0;
+      END;
+      MESSAGE(DimensionUpdatedTxt);
+    END;
+
+    PROCEDURE UpdateDimensions@1101103009(VAR CompelloIntegrTable@1101103000 : Record 70003);
+    VAR
+      CompelloIntegrTableField@1101103001 : Record 70004;
+    BEGIN
+      IF (CompelloIntegrTable."Dimension No." > 0) AND (CompelloIntegrTable."Dimension No." < 9) THEN BEGIN
+        CompelloIntegrTable."Dimension Code" := GetDimensionCodeByNumber(CompelloIntegrTable."Dimension No.");
+        CompelloIntegrTable.MODIFY;
+      END;
+
+      CompelloIntegrTableField.SETRANGE("Table Code", CompelloIntegrTable.Code);
+      CompelloIntegrTableField.SETFILTER("Dimension No.", '>0');
+      IF CompelloIntegrTableField.FINDSET THEN BEGIN
+        REPEAT
+          CompelloIntegrTableField."Dimension Code" := GetDimensionCodeByNumber(CompelloIntegrTableField."Dimension No.");
+          CompelloIntegrTableField.MODIFY;
+        UNTIL CompelloIntegrTableField.NEXT = 0;
+      END;
+      MESSAGE(DimensionUpdatedTxt);
+    END;
+
+    PROCEDURE GetReceiptFromImportLine@1101103011(VAR ImportLine@1101103000 : Record 70009;VAR PurchaseRcptLine@1101103004 : Record 121) : Boolean;
+    VAR
+      ReceiptDocNo@1101103003 : Code[20];
+      ReceiptLineNo@1101103002 : Integer;
+      SplitSympolPos@1101103001 : Integer;
+    BEGIN
+      // The solution excpect receipt "Document No." to be in "User Defined 8" field.
+      // and the receipt "Line No." in "User Defined 15" field.
+      // Some company have receipt "Document No." and receipt "Line No." attached with the ù-ù in "User Defined 6" field.
+
+      IF (ImportLine."User Defined 8" <> '') AND (ImportLine."User Defined 15" <> '') THEN BEGIN
+        ReceiptDocNo := ImportLine."User Defined 8";
+        EVALUATE(ReceiptLineNo, ImportLine."User Defined 15");
+      END ELSE IF(ImportLine."User Defined 6" <> '') THEN BEGIN
+        SplitSympolPos := GetLastSplitSympolPos(ImportLine."User Defined 6", '-'); //01. 13.01.17 JAL
+        ReceiptDocNo := GetReceiptNo(ImportLine."User Defined 6"); //01. 13.01.17 JAL
+        EVALUATE(ReceiptLineNo, COPYSTR(ImportLine."User Defined 6", (SplitSympolPos + 1), (STRLEN(ImportLine."User Defined 6") - SplitSympolPos)));
+      END;
+      IF (ReceiptDocNo <> '') AND (ReceiptLineNo > 0) THEN
+        IF PurchaseRcptLine.GET(ReceiptDocNo, ReceiptLineNo) THEN
+          EXIT(TRUE);
+
+      EXIT(FALSE)
+    END;
+
+    PROCEDURE CheckForReceiptLineInfo@1101103012(VAR ImportLine@1101103000 : Record 70009);
+    VAR
+      ReceiptDocNo@1101103003 : Code[20];
+      ReceiptLineNo@1101103002 : Integer;
+      SplitSympolPos@1101103001 : Integer;
+    BEGIN
+      // The solution excpect receipt "Document No." to be in "User Defined 8" field.
+      // and the receipt "Line No." in "User Defined 15" field.
+      // Some company have receipt "Document No." and receipt "Line No." attached with the ù-ù in "User Defined 6" field.
+
+      IF ((ImportLine."User Defined 8" = '') OR (ImportLine."User Defined 15" = '')) AND (ImportLine."User Defined 6" <> '') THEN BEGIN
+        SplitSympolPos := GetLastSplitSympolPos(ImportLine."User Defined 6", '-'); //01. 13.01.17 JAL
+        ReceiptDocNo := GetReceiptNo(ImportLine."User Defined 6"); //01. 13.01.17 JAL
+        EVALUATE(ReceiptLineNo, COPYSTR(ImportLine."User Defined 6", (SplitSympolPos + 1), (STRLEN(ImportLine."User Defined 6") - SplitSympolPos)));
+        IF (ReceiptDocNo <> '') AND (ReceiptLineNo > 0) THEN BEGIN
+          ImportLine."User Defined 8" := ReceiptDocNo;
+          ImportLine."User Defined 15" := FORMAT(ReceiptLineNo);
+        END;
+      END ELSE IF (ImportLine."User Defined 8" <> '') OR (ImportLine."User Defined 15" <> '') THEN BEGIN
+        ImportLine."User Defined 8" := '';
+        ImportLine."User Defined 15" := '';
+      END;
+    END;
+
+    LOCAL PROCEDURE CalcPurhaseHeaderLCY@1101103013(VAR PurchaseHeader@1101103004 : Record 38;VAR LCYAmount@1101103000 : Decimal);
+    VAR
+      TotalPurchLine@1101103001 : Record 39;
+      TotalPurchLineLCY@1101103002 : Record 39;
+      TempPurchLine@1101103003 : TEMPORARY Record 39;
+      PurchPost@1101103005 : Codeunit 90;
+      VATAmount@1101103006 : Decimal;
+      VATAmountText@1101103007 : Text;
+    BEGIN
+      CLEAR(TempPurchLine);
+      CLEAR(TotalPurchLine);
+      CLEAR(TotalPurchLineLCY);
+      CLEAR(PurchPost);
+
+      PurchPost.GetPurchLines(PurchaseHeader,TempPurchLine,0);
+      CLEAR(PurchPost);
+      PurchPost.SumPurchLinesTemp(
+        PurchaseHeader,TempPurchLine, 0, TotalPurchLine, TotalPurchLineLCY, VATAmount, VATAmountText);
+
+      LCYAmount := TotalPurchLineLCY.Amount;
+    END;
+
+    PROCEDURE UserInAdminRole@1101103014() : Boolean;
+    VAR
+      AccessControl@1101103001 : Record 2000000053;
+      CompelloSetup@1101103000 : Record 70000;
+    BEGIN
+      CompelloSetup.GET;
+      AccessControl.SETRANGE("User Name", USERID);
+      AccessControl.SETRANGE("Role ID", CompelloSetup."Admin Role ID");
+      IF AccessControl.FINDFIRST THEN
+        EXIT(TRUE)
+      ELSE
+        EXIT(FALSE);
+    END;
+
+    LOCAL PROCEDURE GetReceiptNo@1101103021(FieldValueP@1101103000 : Text) : Code[20];
+    VAR
+      ReceiptNoL@1101103001 : Code[20];
+    BEGIN
+      ReceiptNoL := '';
+      ReceiptNoL := COPYSTR(FieldValueP, 1, (GetLastSplitSympolPos(FieldValueP, '-') - 1));
+      EXIT(ReceiptNoL);
+    END;
+
+    LOCAL PROCEDURE GetLastSplitSympolPos@1101103015(StringP@1101103000 : Text;SplitSymbolP@1101103001 : Text) : Integer;
+    VAR
+      SplitSympolPosL@1101103002 : Integer;
+      iStrPosL@1101103003 : Integer;
+    BEGIN
+      SplitSympolPosL := 0;
+      IF STRLEN(StringP) < 1 THEN
+        EXIT(SplitSympolPosL);
+      FOR iStrPosL := STRLEN(StringP) DOWNTO 1 DO BEGIN
+        IF COPYSTR(StringP, iStrPosL, 1) = SplitSymbolP THEN BEGIN
+          SplitSympolPosL := iStrPosL;
+          BREAK;
+        END;
+      END;
+      EXIT(SplitSympolPosL);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 13.01.17 JAL Fixed bug when Receipt No. has '-' symbol.
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,224 @@
+OBJECT Report 10640 Create Electronic Invoices
+{
+  OBJECT-PROPERTIES
+  {
+    Date=19.06.16;
+    Time=10:18:03;
+    Modified=Yes;
+    Version List=NAVNO7.10.00.37563,SID.03,#GS#;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Create Electronic Invoices;
+               NOR=Opprett elektroniske fakturaer;
+               SVE=Skapa elektroniska fakturor];
+    ProcessingOnly=Yes;
+    OnInitReport=BEGIN
+                   //SID.01 START GSP
+                   //SID.03 START
+                   //UploadEInvoice := TRUE;
+                   //SID.03 STOP
+                   SalesReceivSetupG.GET;
+                   //SID.01 STOP GSP
+                 END;
+
+    OnPreReport=BEGIN
+                  //SID.01 START GSP
+                  //IF NOT CurrReport.USEREQUESTPAGE THEN
+                  //  InitLogInteraction;
+                  //SID.01 STOP GSP
+                END;
+
+  }
+  DATASET
+  {
+    { 5581;    ;DataItem;                    ;
+               DataItemTable=Table112;
+               DataItemTableView=SORTING(No.);
+               OnPreDataItem=VAR
+                               SalesInvHeader@1101100000 : Record 112;
+                             BEGIN
+                               Counter := 0;
+
+                               // Any electronic invoices?
+                               SalesInvHeader.COPY("Sales Invoice Header");
+                               SalesInvHeader.FILTERGROUP(6);
+                               SalesInvHeader.SETRANGE("E-Invoice",TRUE);
+                               IF NOT SalesInvHeader.FINDFIRST THEN
+                                 ERROR(Text003);
+
+                               // All electronic invoices?
+                               SalesInvHeader.SETRANGE("E-Invoice",FALSE);
+                               IF SalesInvHeader.FINDFIRST THEN
+                                 IF NOT CONFIRM(Text000,TRUE) THEN
+                                   CurrReport.QUIT;
+                               SalesInvHeader.SETRANGE("E-Invoice");
+
+                               // Some already sent?
+                               SalesInvHeader.SETRANGE("E-Invoice Created",TRUE);
+                               IF SalesInvHeader.FINDFIRST THEN
+                                 IF NOT CONFIRM(Text001,TRUE) THEN
+                                   CurrReport.QUIT;
+
+                               SETRANGE("E-Invoice",TRUE);
+                             END;
+
+               OnAfterGetRecord=VAR
+                                  EInvoicePdfExportL@1101103000 : Record 5231118;
+                                  SalesInvHeaderL@1101103002 : Record 112;
+                                  EInvoiceExportSalesInvoice@1080000 : Codeunit 10619;
+                                  FtpLibaryL@1101103001 : Codeunit 5206805;
+                                BEGIN
+                                  //SID.01 START GSP
+                                  SalesInvHeaderL.COPY("Sales Invoice Header");
+                                  EInvoiceManagement.PrintInvoiceRecordMgt(SalesInvHeaderL);
+                                  //SID.01 STOP GSP
+
+                                  EInvoiceExportSalesInvoice.RUN(SalesInvHeaderL);
+                                  EInvoiceExportSalesInvoice.GetExportedFileInfo(TempEInvoiceTransferFile);
+                                  TempEInvoiceTransferFile."Line No." := Counter + 1;
+                                  TempEInvoiceTransferFile.INSERT;
+
+                                  //SID.01 START GSP
+                                  IF UploadEInvoice THEN BEGIN
+                                    SalesReceivSetupG.TESTFIELD("E-Invoice Server Name");
+                                    SalesReceivSetupG.TESTFIELD("E-Invoice User Name");
+                                    SalesReceivSetupG.TESTFIELD("E-Invoice Password");
+                                    FtpLibaryL.UploadFile(TempEInvoiceTransferFile."Server Temp File Name"
+                                    //SID.02 DNO START
+                                    ,''
+                                    //SID.02 DNO STOP
+                                                          //'ftp://mail.si-data.no/gsp/BOS/Invoice/PO00001.xml'
+                                                          ,STRSUBSTNO('ftp://%1/%2/%3'
+                                                                      ,SalesReceivSetupG."E-Invoice Server Name"
+                                                                      ,DELCHR(SalesReceivSetupG."E-Invoice Ftp Invoice Path", '<>', '/')
+                                                                      ,TempEInvoiceTransferFile."Local File Name")
+                                                          ,SalesReceivSetupG."E-Invoice User Name"
+                                                          ,SalesReceivSetupG."E-Invoice Password");
+
+                                  END;
+
+                                  SalesInvHeaderL.GET("No.");
+                                  SalesInvHeaderL."E-Invoice Created" := TRUE;
+                                  SalesInvHeaderL."E-Invoice Date Sent" := TODAY;
+                                  SalesInvHeaderL.MODIFY;
+
+                                  //IF LogInteraction THEN
+                                  //  IF "Bill-to Contact No." <> '' THEN
+                                  //SegManagement.LogDocument(
+                                  //      4,"No.",0,0,DATABASE::Contact,"Bill-to Contact No.","Salesperson Code",
+                                  //      "Campaign No.","Posting Description",'')
+                                  //  ELSE
+                                  //    SegManagement.LogDocument(
+                                  //      4,"No.",0,0,DATABASE::Customer,"Bill-to Customer No.","Salesperson Code",
+                                  //
+                                  //      "Campaign No.","Posting Description",'');
+                                  //SID.01 STOP GSP
+
+                                  COMMIT;
+                                  Counter := Counter + 1;
+                                END;
+
+               OnPostDataItem=VAR
+                                EInvoiceExportCommon@1080000 : Codeunit 10628;
+                              BEGIN
+                                EInvoiceExportCommon.DownloadEInvoiceFile(TempEInvoiceTransferFile);
+
+
+                                MESSAGE(Text002,Counter);
+                              END;
+
+               ReqFilterFields=No.,Sell-to Customer No.,Bill-to Customer No.,Field10605,Field10612 }
+
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+      OnInit=BEGIN
+               //SID.01 START GSP
+               //LogInteractionEnable := TRUE;
+               //SID.01 STOP GSP
+             END;
+
+      OnOpenPage=BEGIN
+                   //SID.01 START GSP
+                   //InitLogInteraction;
+                   //LogInteractionEnable := LogInteraction;
+                   //SID.01 STOP GSP
+                 END;
+
+    }
+    CONTROLS
+    {
+      { 1900000001;0;Container;
+                  ContainerType=ContentArea }
+
+      { 1900000002;1;Group  ;
+                  CaptionML=[ENU=Options;
+                             NOR=Alternativer;
+                             SVE=Tillbeh”r] }
+
+      { 1101100000;2;Field  ;
+                  Name=LogInteraction;
+                  CaptionML=[ENU=Log Interaction;
+                             NOR=Loggf›r samhandling;
+                             SVE=Logga interaktion];
+                  SourceExpr=LogInteraction;
+                  Visible=FALSE;
+                  Enabled=LogInteractionEnable }
+
+      { 1101103001;2;Field  ;
+                  CaptionML=[ENU=Upload E-Invoice;
+                             NOR=Laste opp E-faktura];
+                  SourceExpr=UploadEInvoice }
+
+    }
+  }
+  LABELS
+  {
+  }
+  CODE
+  {
+    VAR
+      Text000@1080005 : TextConst 'ENU=One or more invoice documents that match your filter criteria are not electronic invoices and will be skipped.\\Do you want to continue?;NOR=Ett eller flere fakturadokumenter som samsvarer med filterkriteriene, er ikke elektroniske fakturaer og hoppes over.\\Vil du fortsette?';
+      Text001@1080006 : TextConst 'ENU=One or more invoice documents that match your filter critera have been created before.\\Do you want to continue?;NOR=Ett eller flere fakturadokumenter som samsvarer med filterkriteriene, er allerede opprettet.\\Vil du fortsette?';
+      Text002@1080007 : TextConst 'ENU=Successfully created %1 electronic invoice documents.;NOR=Opprettet %1 elektroniske fakturadokumenter.';
+      TempEInvoiceTransferFile@1080000 : TEMPORARY Record 10606;
+      SalesReceivSetupG@1101103002 : Record 311;
+      SegManagement@1080002 : Codeunit 5051;
+      EInvoiceManagement@1101103001 : Codeunit 5231118;
+      Counter@1080003 : Integer;
+      Text003@1080008 : TextConst 'ENU=Nothing to create.;NOR=Ingenting † opprette.;SVE=Ingenting att skapa';
+      LogInteraction@1080004 : Boolean;
+      LogInteractionEnable@19003940 : Boolean INDATASET;
+      UploadEInvoice@1101103000 : Boolean INDATASET;
+
+    PROCEDURE InitLogInteraction@1080009();
+    BEGIN
+      LogInteraction := SegManagement.FindInteractTmplCode(4) <> '';
+    END;
+
+    BEGIN
+    {
+      +----------------------------------------------+
+      | Copyright ¸ 2015 SI-DATA SID                 |
+      +----------------------------------------------+
+      | MYENGINE@INCADEA                             |
+      +----------------------------------------------+
+      No.  Version  Date      ID  Remark
+      -------------------------------------- ----------
+      01.           29.06.15  GSP TFS101644 : NO EHF Electronic Invoice
+                                  - Remove LogInteraction function and set Visible=False. Add "Request Page" control "Update E-Invoice"
+                                  - Add functionality to create pdf document
+
+      02 .          25.01.16  DNO Temporary fix to support the change in the upload function
+      03 .          25.01.16  DNO BOS, set the send to FTP = false. We should not send the files at BOS
+    }
+    END.
+  }
+  RDLDATA
+  {
+  }
+}
+

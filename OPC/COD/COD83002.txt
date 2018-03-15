@@ -1,0 +1,242 @@
+OBJECT Codeunit 83002 Clocking Overtime
+{
+  OBJECT-PROPERTIES
+  {
+    Date=20.04.17;
+    Time=16.20.12;
+    Modified=Yes;
+    Version List=OPC (RSI);
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+
+    PROCEDURE ClockOvertime@1117700003(VAR TimeRegister@1117700001 : Record 83007);
+    VAR
+      DayType@1117700000 : 'Normal Day,Holiday,Saturday';
+    BEGIN
+      WITH TimeRegister DO BEGIN
+        CASE TRUE OF
+          IsNormalDay("Start Date"):
+            DayAndOvertimeClocking(TimeRegister, DayType::"Normal Day");
+
+          IsHoliday("Start Date"):
+            DayAndOvertimeClocking(TimeRegister, DayType::Holiday);
+
+          IsSaturday("Start Date"):
+            DayAndOvertimeClocking(TimeRegister, DayType::Saturday);
+        END;
+      END;
+    END;
+
+    PROCEDURE DayAndOvertimeClocking@1117700000(VAR TimeRegister@1101104000 : Record 83007;DayType@1117700013 : 'Normal Day,Holiday,Saturday');
+    VAR
+      TimeRegister2@1101104001 : Record 83007;
+      TimeRegister3@1101104002 : Record 83007;
+      WorkTime@1117700003 : Record 83003;
+      FilterFromTime@1117700005 : Text[50];
+      RestClockTime@1117700000 : Decimal;
+      WorkQty@1117700007 : Decimal;
+      FirstFromTime@1117700006 : Time;
+      LastTimeUntil@1117700008 : Time;
+      ClockedFirstTime@1117700014 : Time;
+      DayTypeChanged@1117700015 : Boolean;
+      Holiday@1117700010 : Boolean;
+      Saturday@1117700011 : Boolean;
+      NormalDay@1117700012 : Boolean;
+    BEGIN
+      RestClockTime := 0;
+      ClockedFirstTime := 0T;
+      DayTypeChanged := FALSE;
+
+      Holiday := DayType = DayType::Holiday;
+      Saturday := DayType = DayType::Saturday;
+      NormalDay := DayType = DayType::"Normal Day";
+
+      WorkTime.RESET;
+      WorkTime.SETCURRENTKEY("From Time","To Time","Day Type","Time Type");
+      WorkTime.SETRANGE("Day Type", DayType);
+      IF WorkTime.FIND('-') THEN REPEAT
+
+        WorkTime.TESTFIELD("From Time");
+        WorkTime.TESTFIELD("To Time");
+
+        WorkQty := 0;
+        FirstFromTime := 0T;
+        LastTimeUntil := 0T;
+
+        IF ClockedFirstTime = 0T THEN BEGIN
+          ClockedFirstTime := FindFirstClockingToday(TimeRegister);
+
+          IF ClockedFirstTime = 0T THEN
+            EXIT;
+
+          FilterFromTime := STRSUBSTNO('>=%1&<%2',
+            CONVERTSTR(FORMAT(ClockedFirstTime - 36000), ':', '.'),
+              CONVERTSTR(FORMAT(WorkTime."To Time"), ':', '.'));
+        END ELSE
+          FilterFromTime := STRSUBSTNO('>=%1&<%2',
+            CONVERTSTR(FORMAT(WorkTime."From Time"), ':', '.'),
+              CONVERTSTR(FORMAT(WorkTime."To Time"), ':', '.'));
+
+        TimeRegister2.RESET;
+        TimeRegister2.SETRANGE("Machine Center", TimeRegister."Machine Center");
+        TimeRegister2.SETRANGE("Start Date", TimeRegister."Start Date");
+        TimeRegister2.SETFILTER("Start Time", FilterFromTime);
+        IF TimeRegister2.FIND('-') THEN REPEAT
+          // Tar vare p† den f›rste innstemplingen som finnes f›rst
+          // for † regne ut totaltiden.
+          IF FirstFromTime = 0T THEN
+            FirstFromTime := TimeRegister2."Start Time";
+
+          // F›rste stempling blir rettet p†
+          WorkQty += TimeRegister2.Quantity;
+
+          IF WorkQty > WorkTime.Duration THEN BEGIN
+            RestClockTime := WorkQty - WorkTime.Duration;
+
+            // Tar vare p† "Time Until" for † bruke den
+            // i neste splittet post.
+            IF LastTimeUntil = 0T THEN
+              LastTimeUntil := TimeRegister2."End Time";
+
+            IF ClockedFirstTime < WorkTime."From Time" THEN
+              TimeRegister2.VALIDATE("End Time",
+                WorkTime."To Time")
+            ELSE
+              TimeRegister2.VALIDATE("End Time",
+                (FirstFromTime + (WorkTime.Duration * 3600000)));
+
+          END ELSE
+            RestClockTime := 0;
+
+          TimeRegister2.VALIDATE("Work Type Code",
+            GetWorkTypeCode(TimeRegister2."Work Type Code", WorkTime."Time Type"));
+          TimeRegister2.MODIFY;
+
+          // Sette inn ny stempling hvis RestClockTime har en restverdi
+          // Slutttiden til den forrige stemplingen blir n† starttiden tile den neste
+
+          IF RestClockTime > 0 THEN BEGIN
+            InsertTimeRegisterEntry(TimeRegister3, TimeRegister,
+              TimeRegister2."End Time", LastTimeUntil);
+
+            // Sjekker hva DayType er blitt forandret.
+            CASE TRUE OF
+              Holiday <> IsHoliday(TimeRegister3."Start Date"):
+                DayTypeChanged := TRUE;
+
+              Saturday <> IsSaturday(TimeRegister3."Start Date"):
+                DayTypeChanged := TRUE;
+
+              NormalDay <> IsNormalDay(TimeRegister3."Start Date"):
+                DayTypeChanged := TRUE;
+
+              ELSE
+                DayTypeChanged := FALSE;
+            END;
+
+          END;
+
+        UNTIL ((TimeRegister2.NEXT = 0) OR DayTypeChanged);
+
+      UNTIL ((WorkTime.NEXT = 0) OR DayTypeChanged);
+
+
+      IF DayTypeChanged THEN
+        ClockOvertime(TimeRegister3)
+      ELSE
+        EXIT;
+    END;
+
+    PROCEDURE IsNormalDay@1117700002(ClockingDate@1117700000 : Date) : Boolean;
+    BEGIN
+      EXIT(NOT (IsHoliday(ClockingDate) OR IsSaturday(ClockingDate)));
+    END;
+
+    PROCEDURE IsHoliday@1117700006(ClockingDate@1117700000 : Date) : Boolean;
+    VAR
+      DateTable@1117700001 : Record 2000000007;
+      Holidays@1117700002 : Record 83005;
+      Found@1117700003 : Boolean;
+    BEGIN
+      Found := Holidays.GET(ClockingDate);
+
+      IF NOT Found THEN BEGIN
+        DateTable.RESET;
+        DateTable.SETRANGE("Period Type", DateTable."Period Type"::Date);
+        DateTable.SETRANGE("Period No.", 7);  // Sunday
+        DateTable.SETRANGE("Period Start", ClockingDate);
+        Found := DateTable.FIND('-');
+      END;
+
+      EXIT(Found);
+    END;
+
+    PROCEDURE IsSaturday@1117700008(ClockingDate@1117700000 : Date) : Boolean;
+    VAR
+      DateTable@1117700001 : Record 2000000007;
+    BEGIN
+      DateTable.RESET;
+      DateTable.SETRANGE("Period Type", DateTable."Period Type"::Date);
+      DateTable.SETRANGE("Period No.", 6); // Saturday
+      DateTable.SETRANGE("Period Start", ClockingDate);
+      EXIT(DateTable.FIND('-'));
+    END;
+
+    PROCEDURE FindFirstClockingToday@1117700005(VAR TimeRegister@1117700000 : Record 83007) : Time;
+    VAR
+      TimeRegister2@1101104000 : Record 83007;
+    BEGIN
+      WITH TimeRegister DO BEGIN
+        TimeRegister2.RESET;
+        TimeRegister2.SETRANGE("Machine Center", "Machine Center");
+        TimeRegister2.SETRANGE("Start Date", "Start Date");
+        IF TimeRegister2.FIND('-') THEN
+          EXIT(TimeRegister2."Start Time")
+        ELSE
+          EXIT(0T);
+      END;
+    END;
+
+    PROCEDURE InsertTimeRegisterEntry@1101104000(VAR TimeRegisterNew@1117700003 : Record 83007;TimeRegister@1117700000 : Record 83007;TimeFrom@1117700002 : Time;TimeUntil@1117700006 : Time);
+    BEGIN
+      // Ordre
+      IF TimeFrom = TimeUntil THEN
+        EXIT;
+
+      WITH TimeRegister DO BEGIN
+        TimeRegisterNew.RESET;
+        TimeRegisterNew.INIT;
+        TimeRegisterNew."Machine Center" := "Machine Center";
+        TimeRegisterNew."Start Date" := "Start Date";
+        TimeRegisterNew."Start Time" := TimeFrom;
+        TimeRegisterNew."End Date" := "Start Date";
+        TimeRegisterNew."End Time" := TimeUntil;
+        TimeRegisterNew."Time Type" := "Time Type";
+        TimeRegisterNew.CalcQty;
+        TimeRegisterNew.INSERT;
+      END;
+    END;
+
+    PROCEDURE GetWorkTypeCode@1117700001(WorkType@1117700000 : Code[10];TimeType@1117700001 : 'Normal,Overtime 50%,Overtime 100%') : Code[10];
+    VAR
+      WorkTypeCode@1000000000 : Record 83004;
+    BEGIN
+      WorkTypeCode.RESET;
+      WorkTypeCode.SETRANGE("Time Type", TimeType);
+      WorkTypeCode.SETRANGE(Absence, FALSE);
+      WorkTypeCode.FIND('-');
+      EXIT(WorkTypeCode.Code);
+    END;
+
+    BEGIN
+    END.
+  }
+}
+

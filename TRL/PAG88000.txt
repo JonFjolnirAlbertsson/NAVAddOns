@@ -1,0 +1,44 @@
+OBJECT Page 88000 Translation Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=14:06:36;
+    Modified=Yes;
+    Version List=TRL1.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Translation Setup;
+               NOR=Oversettelse oppsett];
+    SourceTable=Table88000;
+    PageType=Card;
+  }
+  CONTROLS
+  {
+    { 1000000000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1000000001;1;Group  ;
+                Name=Generelt;
+                GroupType=Group }
+
+    { 1000000002;2;Field  ;
+                SourceExpr="Use Page Filter in OMA" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Incadea Translation Tool
+    }
+    END.
+  }
+}
+

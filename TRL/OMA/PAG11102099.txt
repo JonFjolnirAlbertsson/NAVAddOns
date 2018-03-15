@@ -1,0 +1,1245 @@
+OBJECT Page 11102099 OM - Translation Tool
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=14:19:18;
+    Modified=Yes;
+    Version List=OMA11.00;
+  }
+  PROPERTIES
+  {
+    CaptionML=[DEU=Translation Tool;
+               ENU=Translation Tool;
+               ESP=Translation Tool;
+               FRA=Translation Tool;
+               NLD=Vertaaltool;
+               DEA=Translation Tool];
+    SaveValues=Yes;
+    InsertAllowed=No;
+    SourceTable=Table11102068;
+    SourceTableView=SORTING(Object Type,Object No.,Caption Entry No.);
+    PageType=Worksheet;
+    OnOpenPage=VAR
+                 Line@1000 : Record 11102068;
+                 Line2@1001 : ARRAY [2] OF Record 11102068;
+                 Initialize@1002 : Codeunit 11102041;
+                 TranslationMgt@1003 : Codeunit 11102051;
+               BEGIN
+                 Initialize.RUN;
+
+                 IF LanguageId = 0 THEN BEGIN
+                   Line.SETFILTER("Language Id", '<>0');
+                   IF Line.FINDFIRST THEN
+                     LanguageId := Line."Language Id"
+                   ELSE
+                     LanguageId := GLOBALLANGUAGE;
+                 END;
+
+                 FILTERGROUP(2);
+                 SETFILTER("Language Id", '0|%1', LanguageId);
+                 FILTERGROUP(0);
+
+                 IF CreateMissingCaptions THEN
+                   TranslationMgt.CreateMissingCaptions(Line2, LanguageId, FALSE);
+
+                 UpdateCounters;
+               END;
+
+    OnAfterGetRecord=BEGIN
+                       FormatCaption;
+                       NoOfCaptionsHideValue := NOT Captions;
+                     END;
+
+    OnDeleteRecord=VAR
+                     TranslationToolLine@1000 : Record 11102068;
+                     Progressbar@1001 : Codeunit 11102044;
+                     ctDeletingRecords@1002 : TextConst 'DEU=Deleting records...;ENU=Deleting records...;ESP=Deleting records...;FRA=Deleting records...;NLD=Records verwijderen...;DEA=Deleting records...';
+                   BEGIN
+                     IF EmptyBuffer THEN BEGIN
+
+                       EmptyBuffer := FALSE;
+
+                       Progressbar.Open(ctDeletingRecords, 0);
+                       Progressbar.BarSize(DeleteBuffer.COUNT);
+
+                       IF DeleteBuffer.FINDSET THEN
+                         REPEAT
+                           Progressbar.AddToBar(1);
+                           TranslationToolLine := DeleteBuffer;
+                           TranslationToolLine.DELETE(TRUE);
+                         UNTIL DeleteBuffer.NEXT = 0;
+
+                       Progressbar.Close;
+
+                       DoUpdateCounters := TRUE;
+                     END;
+
+                     IF NOT GET("Entry No.") THEN
+                       EXIT(FALSE);
+
+                     TranslationToolLine.LOCKTABLE;
+
+                     CurrPage.SETSELECTIONFILTER(TranslationToolLine);
+                     IF TranslationToolLine.COUNT = 1 THEN BEGIN
+                       TranslationToolLine.FINDFIRST;
+                       TranslationToolLine.DELETE(TRUE);
+                     END ELSE BEGIN
+                       DeleteBuffer.DELETEALL;
+                       EmptyBuffer := TRUE;
+                       IF TranslationToolLine.FINDSET THEN
+                         REPEAT
+                           DeleteBuffer := TranslationToolLine;
+                           DeleteBuffer.INSERT;
+                         UNTIL TranslationToolLine.NEXT = 0;
+                     END;
+
+                     DoUpdateCounters := TRUE;
+
+                     EXIT(FALSE);
+                   END;
+
+    OnAfterGetCurrRecord=BEGIN
+                           IF DoUpdateCounters THEN BEGIN
+                             UpdateCounters;
+                             DoUpdateCounters := FALSE;
+                           END;
+
+                           NameEditable := FALSE;
+
+                           CASE Type OF
+
+                             Type::" ", Type::Object, Type::Field, Type::"Tab Names", Type::"Function",
+                             Type::Variable, Type::"Text Constante", Type::"Key Group" :
+                               NameEditable := TRUE;
+
+                             Type::Option :
+                               IF "Character Identifiers" <> 'TF' THEN
+                                 NameEditable := TRUE;
+
+                           END;
+
+                           Caption1Editable := Captions OR NOT ("Max. Length" IN [30, 128, 132, 256]);
+
+                           FormatLanguageId;
+                           DisplayComment := DatabaseComment;
+                         END;
+
+    ActionList=ACTIONS
+    {
+      { 1       ;0   ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 2       ;1   ;ActionGroup;
+                      CaptionML=[DEU=Import;
+                                 ENU=Import;
+                                 ESP=Import;
+                                 FRA=Import;
+                                 NLD=Importeren;
+                                 DEA=Import] }
+      { 3       ;2   ;ActionGroup;
+                      CaptionML=[DEU=Import;
+                                 ENU=Import;
+                                 ESP=Import;
+                                 FRA=Import;
+                                 NLD=Importeren;
+                                 DEA=Import];
+                      Image=Import }
+      { 4       ;3   ;Action    ;
+                      ShortCutKey=Ctrl+I;
+                      Ellipsis=Yes;
+                      CaptionML=[DEU=Import Translation File;
+                                 ENU=Import Translation File;
+                                 ESP=Import Translation File;
+                                 FRA=Import Translation File;
+                                 NLD=Vertaalbestand importeren;
+                                 DEA=Import Translation File];
+                      Image=Import;
+                      OnAction=BEGIN
+                                 Import;
+                               END;
+                                }
+      { 5       ;3   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=[DEU=Import &Object Text File;
+                                 ENU=Import &Object Text File;
+                                 ESP=Import &Object Text File;
+                                 FRA=Import &Object Text File;
+                                 NLD=Objecttekstbestand inlezen;
+                                 DEA=Import &Object Text File];
+                      Image=Import;
+                      OnAction=VAR
+                                 TranslationMgt@1000 : Codeunit 11102051;
+                                 CommonDialog@1001 : Codeunit 11102059;
+                                 ServerFileName@1002 : Text;
+                               BEGIN
+                                 CommonDialog.AddKnownExtension('txt-o');
+                                 IF NOT CommonDialog.OpenFile(ImportFileName, ServerFileName) THEN
+                                   EXIT;
+
+                                 TranslationMgt.ImportObjectFile(ServerFileName);
+                                 ChangeLanguageId;
+                               END;
+                                }
+      { 6       ;3   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=[DEU=I&mport CSV;
+                                 ENU=I&mport CSV;
+                                 ESP=I&mport CSV;
+                                 FRA=I&mport CSV;
+                                 NLD=Als CSV importeren;
+                                 DEA=I&mport CSV];
+                      Image=Import;
+                      OnAction=VAR
+                                 TranslationMgt@1000 : Codeunit 11102051;
+                                 CommonDialog@1001 : Codeunit 11102059;
+                                 ServerFileName@1002 : Text;
+                               BEGIN
+                                 CommonDialog.AddKnownExtension('csv');
+                                 IF NOT CommonDialog.OpenFile(CSVFileName, ServerFileName) THEN
+                                   EXIT;
+
+                                 TranslationMgt.ImportCSV(ServerFileName);
+                               END;
+                                }
+      { 7       ;1   ;ActionGroup;
+                      CaptionML=[DEU=Export;
+                                 ENU=Export;
+                                 ESP=Export;
+                                 FRA=Export;
+                                 NLD=Exporteren;
+                                 DEA=Export] }
+      { 8       ;2   ;ActionGroup;
+                      CaptionML=[DEU=Export;
+                                 ENU=Export;
+                                 ESP=Export;
+                                 FRA=Export;
+                                 NLD=Exporteren;
+                                 DEA=Export];
+                      Image=Export }
+      { 9       ;3   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=[DEU=Export Changes to Translation File;
+                                 ENU=Export Changes to Translation File;
+                                 ESP=Export Changes to Translation File;
+                                 FRA=Export Changes to Translation File;
+                                 NLD=Wijzigingen naar vertaalbestand exporteren;
+                                 DEA=Export Changes to Translation File];
+                      Image=Export;
+                      OnAction=BEGIN
+                                 Export(FALSE);
+                               END;
+                                }
+      { 10      ;3   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=[DEU=E&xport all to Translation File;
+                                 ENU=E&xport all to Translation File;
+                                 ESP=E&xport all to Translation File;
+                                 FRA=E&xport all to Translation File;
+                                 NLD=Alles naar vertaalbestand exporteren;
+                                 DEA=E&xport all to Translation File];
+                      Image=Export;
+                      OnAction=BEGIN
+                                 Export(TRUE);
+                               END;
+                                }
+      { 11      ;3   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=[DEU=Expor&t to CSV;
+                                 ENU=Expor&t to CSV;
+                                 ESP=Expor&t to CSV;
+                                 FRA=Expor&t to CSV;
+                                 NLD=Als &CSV exporteren;
+                                 DEA=Expor&t to CSV];
+                      Image=Export;
+                      OnAction=VAR
+                                 TranslationMgt@1000 : Codeunit 11102051;
+                                 CommonDialog@1001 : Codeunit 11102059;
+                                 FileHandler@1002 : Codeunit 11102097;
+                                 ServerFileName@1003 : Text;
+                                 ctDefaultFileName@1004 : TextConst 'DEU=translation.csv;ENU=translation.csv;ESP=translation.csv;FRA=translation.csv;NLD=translation.csv;DEA=translation.csv';
+                               BEGIN
+                                 CommonDialog.AddKnownExtension('csv');
+                                 IF NOT CommonDialog.SaveFile(CSVFileName, ServerFileName, ctDefaultFileName) THEN
+                                   EXIT;
+
+                                 TranslationMgt.ExportCSV(ServerFileName, LanguageId);
+                                 FileHandler.DownloadToClient(ServerFileName, CSVFileName, ctDefaultFileName);
+                               END;
+                                }
+      { 12      ;1   ;ActionGroup;
+                      CaptionML=[DEU=&Object;
+                                 ENU=&Object;
+                                 ESP=&Object;
+                                 FRA=&Object;
+                                 NLD=&Object;
+                                 DEA=&Object] }
+      { 13      ;2   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+G;
+                      Ellipsis=Yes;
+                      CaptionML=[DEU=Add Objects;
+                                 ENU=Add Objects;
+                                 ESP=Add Objects;
+                                 FRA=Add Objects;
+                                 NLD=Objecten toevoegen;
+                                 DEA=Add Objects];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Add;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 ImportCaptions@1000 : Report 11102050;
+                                 TranslationMgt@1001 : Codeunit 11102051;
+                               BEGIN
+                                 IF NOT TranslationMgt.ConfirmRecordsChanged THEN
+                                   EXIT;
+
+                                 ImportCaptions.RUNMODAL;
+                                 IF ImportCaptions.GetLinesAdded THEN
+                                   ChangeLanguageId;
+                               END;
+                                }
+      { 14      ;2   ;Separator  }
+      { 15      ;2   ;Action    ;
+                      ShortCutKey=Ctrl+F2;
+                      CaptionML=[DEU=Design;
+                                 ENU=Design;
+                                 ESP=Design;
+                                 FRA=Design;
+                                 NLD=Design;
+                                 DEA=Design];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Design;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 Object@1000 : Record 2000000001;
+                                 ObjectMgt@1001 : Codeunit 11102046;
+                               BEGIN
+                                 Object.GET("Object Type", '', "Object No.");
+                                 ObjectMgt.DesignObject(Object);
+                               END;
+                                }
+      { 16      ;2   ;Action    ;
+                      ShortCutKey=Ctrl+R;
+                      CaptionML=[DEU=Run;
+                                 ENU=Run;
+                                 ESP=Run;
+                                 FRA=Run;
+                                 NLD=Run;
+                                 DEA=Run];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Start;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 Object@1000 : Record 2000000001;
+                                 ObjectMgt@1001 : Codeunit 11102046;
+                               BEGIN
+                                 Object.GET("Object Type", '', "Object No.");
+                                 ObjectMgt.RunObject(Object);
+                               END;
+                                }
+      { 17      ;2   ;Action    ;
+                      CaptionML=[DEU=&Code;
+                                 ENU=&Code;
+                                 ESP=&Code;
+                                 FRA=&Code;
+                                 NLD=&Code;
+                                 DEA=&Code];
+                      Image=DesignCodeBehind;
+                      OnAction=BEGIN
+                                 ShowCode;
+                               END;
+                                }
+      { 77      ;2   ;Action    ;
+                      CaptionML=[DEU=Navigate;
+                                 ENU=Navigate;
+                                 ESP=Navigate;
+                                 FRA=Navigate;
+                                 NLD=Navigeren;
+                                 DEA=Navigate];
+                      Image=Navigate;
+                      OnAction=VAR
+                                 Object@1000 : Record 2000000001;
+                                 ObjectMgt@1001 : Codeunit 11102046;
+                               BEGIN
+                                 Object.GET("Object Type", '', "Object No.");
+                                 ObjectMgt.Navigate(Object);
+                               END;
+                                }
+      { 18      ;2   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+H;
+                      CaptionML=[DEU=Show C/AL History;
+                                 ENU=Show C/AL History;
+                                 ESP=Show C/AL History;
+                                 FRA=Show C/AL History;
+                                 NLD=C/AL Historie;
+                                 DEA=Show C/AL History];
+                      RunObject=Page 11102072;
+                      RunPageView=SORTING(Object Type,Object No.);
+                      RunPageLink=Object Type=FIELD(Object Type),
+                                  Object No.=FIELD(Object No.);
+                      Image=History }
+      { 19      ;2   ;Separator  }
+      { 20      ;2   ;ActionGroup;
+                      CaptionML=[DEU=Mark Objects;
+                                 ENU=Mark Objects;
+                                 ESP=Mark Objects;
+                                 FRA=Mark Objects;
+                                 NLD=Objecten &markeren;
+                                 DEA=Mark Objects];
+                      Image=EditFilter }
+      { 21      ;3   ;Action    ;
+                      ShortCutKey=Ctrl+M;
+                      CaptionML=[DEU=Mark Changed Objects;
+                                 ENU=Mark Changed Objects;
+                                 ESP=Mark Changed Objects;
+                                 FRA=Mark Changed Objects;
+                                 NLD=Gewijzigde objecten markeren;
+                                 DEA=Mark Changed Objects];
+                      Image=EditFilter;
+                      OnAction=VAR
+                                 TranslationMgt@1000 : Codeunit 11102051;
+                               BEGIN
+                                 TranslationMgt.MarkChangedObjects;
+                               END;
+                                }
+      { 22      ;3   ;Action    ;
+                      CaptionML=[DEU=Mark Objects;
+                                 ENU=Mark Objects;
+                                 ESP=Mark Objects;
+                                 FRA=Mark Objects;
+                                 NLD=Objecten markeren;
+                                 DEA=Mark Objects];
+                      Image=EditFilter;
+                      OnAction=VAR
+                                 TranslationToolLine@1000 : Record 11102068;
+                                 Object@1001 : Record 2000000001;
+                                 VersionControl@1002 : Codeunit 11102040;
+                               BEGIN
+                                 VersionControl.CheckMarkLock;
+
+                                 CurrPage.SETSELECTIONFILTER(TranslationToolLine);
+                                 IF TranslationToolLine.FINDSET THEN
+                                   REPEAT
+                                     IF Object.GET(TranslationToolLine."Object Type", '', TranslationToolLine."Object No.") THEN
+                                       VersionControl.MarkObject(Object, TRUE);
+                                   UNTIL TranslationToolLine.NEXT = 0;
+                               END;
+                                }
+      { 23      ;3   ;Action    ;
+                      CaptionML=[DEU=Remove Marks;
+                                 ENU=Remove Marks;
+                                 ESP=Remove Marks;
+                                 FRA=Remove Marks;
+                                 NLD=Verwijder markeringen;
+                                 DEA=Remove Marks];
+                      Image=RemoveFilterLines;
+                      OnAction=VAR
+                                 TranslationToolLine@1000 : Record 11102068;
+                                 Object@1001 : Record 2000000001;
+                                 VersionControl@1002 : Codeunit 11102040;
+                               BEGIN
+                                 VersionControl.CheckMarkLock;
+                                 CurrPage.SETSELECTIONFILTER(TranslationToolLine);
+                                 IF TranslationToolLine.FINDSET THEN
+                                   REPEAT
+                                     IF Object.GET(TranslationToolLine."Object Type", '', TranslationToolLine."Object No.") THEN
+                                       VersionControl.RemoveObjectMark(Object);
+                                   UNTIL TranslationToolLine.NEXT = 0;
+
+                                 VersionControl.RemoveMarkLock(TRUE);
+                               END;
+                                }
+      { 24      ;3   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+M;
+                      CaptionML=[DEU=Remove &all Marks;
+                                 ENU=Remove &all Marks;
+                                 ESP=Remove &all Marks;
+                                 FRA=Remove &all Marks;
+                                 NLD=Verwijder &alle markeringen;
+                                 DEA=Remove &all Marks];
+                      Image=ClearFilter;
+                      OnAction=VAR
+                                 VersionControl@1000 : Codeunit 11102040;
+                               BEGIN
+                                 VersionControl.RemoveObjectMarks(FALSE);
+                               END;
+                                }
+      { 25      ;1   ;ActionGroup;
+                      CaptionML=[DEU=F&unctions;
+                                 ENU=F&unctions;
+                                 ESP=F&unctions;
+                                 FRA=F&unctions;
+                                 NLD=F&uncties;
+                                 DEA=F&unctions] }
+      { 26      ;2   ;ActionGroup;
+                      CaptionML=[DEU=Validate &Caption;
+                                 ENU=Validate &Caption;
+                                 ESP=Validate &Caption;
+                                 FRA=Validate &Caption;
+                                 NLD=Caption vullen;
+                                 DEA=Validate &Caption];
+                      Image=MoveDown }
+      { 27      ;3   ;Action    ;
+                      ShortCutKey=Ctrl+D;
+                      CaptionML=[DEU=With &Calculated Caption;
+                                 ENU=With &Calculated Caption;
+                                 ESP=With &Calculated Caption;
+                                 FRA=With &Calculated Caption;
+                                 NLD=Met &berekende caption;
+                                 DEA=With &Calculated Caption];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=MoveDown;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 Line@1000 : Record 11102068;
+                                 Line2@1001 : Record 11102068;
+                                 Progressbar@1002 : Codeunit 11102044;
+                                 TranslationMgt@1003 : Codeunit 11102051;
+                                 CalculatedCaption@1004 : Text;
+                                 ctValidatingCaption@1005 : TextConst 'DEU=Validating captions...;ENU=Validating captions...;ESP=Validating captions...;FRA=Validating captions...;NLD=Captions valideren...;DEA=Validating captions...';
+                               BEGIN
+                                 CurrPage.SETSELECTIONFILTER(Line);
+
+                                 IF Line.COUNT > 1 THEN BEGIN
+                                   Progressbar.Open(ctValidatingCaption, 0);
+                                   Progressbar.BarSize := Line.COUNT;
+                                 END;
+
+                                 IF Line.FINDSET THEN
+                                   REPEAT
+
+                                     IF Progressbar.IsOpen THEN
+                                       Progressbar.AddToBar(1);
+
+                                     Line2 := Line;
+                                     CalculatedCaption := TranslationMgt.CaptionAfterRulesApplied(Line);
+                                     IF CalculatedCaption <> '' THEN
+                                       Line2.ValidateCaption(CalculatedCaption);
+
+                                   UNTIL Line.NEXT = 0;
+
+                                 IF Progressbar.IsOpen THEN
+                                   Progressbar.Close;
+
+                                 CurrPage.UPDATE(FALSE);
+                                 UpdateCounters;
+                               END;
+                                }
+      { 28      ;3   ;Action    ;
+                      ShortCutKey=Ctrl+E;
+                      CaptionML=[DEU=With &Base Language Caption;
+                                 ENU=With &Base Language Caption;
+                                 ESP=With &Base Language Caption;
+                                 FRA=With &Base Language Caption;
+                                 NLD=Met basistaal caption;
+                                 DEA=With &Base Language Caption];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=MoveDown;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 Line@1000 : Record 11102068;
+                                 Line2@1001 : Record 11102068;
+                                 Progressbar@1002 : Codeunit 11102044;
+                                 DefaultMissingCaption2@1003 : Text;
+                                 ctValidatingCaption@1004 : TextConst 'DEU=Validating captions...;ENU=Validating captions...;ESP=Validating captions...;FRA=Validating captions...;NLD=Captions valideren...;DEA=Validating captions...';
+                               BEGIN
+                                 CurrPage.SETSELECTIONFILTER(Line);
+
+                                 IF Line.COUNT > 1 THEN BEGIN
+                                   Progressbar.Open(ctValidatingCaption, 0);
+                                   Progressbar.BarSize := Line.COUNT;
+                                 END;
+
+                                 IF Line.FINDSET THEN
+                                   REPEAT
+
+                                     IF Progressbar.IsOpen THEN
+                                       Progressbar.AddToBar(1);
+
+                                     Line2 := Line;
+                                     DefaultMissingCaption2 := Line.DefaultMissingCaption;
+                                     IF DefaultMissingCaption2 <> '' THEN
+                                       Line2.ValidateCaption(DefaultMissingCaption2);
+
+                                   UNTIL Line.NEXT = 0;
+
+                                 IF Progressbar.IsOpen THEN
+                                   Progressbar.Close;
+
+                                 CurrPage.UPDATE(FALSE);
+                                 UpdateCounters;
+                               END;
+                                }
+      { 29      ;3   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=[DEU=With Captions of Selected &Language;
+                                 ENU=With Captions of Selected &Language;
+                                 ESP=With Captions of Selected &Language;
+                                 FRA=With Captions of Selected &Language;
+                                 NLD=Met captions van geselecteerde &taal;
+                                 DEA=With Captions of Selected &Language];
+                      Image=MoveDown;
+                      OnAction=VAR
+                                 Line@1000 : Record 11102068;
+                                 Line2@1001 : Record 11102068;
+                                 Line3@1002 : Record 11102068;
+                                 Progressbar@1003 : Codeunit 11102044;
+                                 TranslationMgt@1004 : Codeunit 11102051;
+                                 CopyLanguageId@1005 : Integer;
+                                 ctValidatingCaption@1006 : TextConst 'DEU=Validating captions...;ENU=Validating captions...;ESP=Validating captions...;FRA=Validating captions...;NLD=Captions valideren...;DEA=Validating captions...';
+                               BEGIN
+                                 IF NOT TranslationMgt.GetCopyLanguageId(LanguageId, CopyLanguageId) THEN
+                                   EXIT;
+
+                                 CurrPage.SETSELECTIONFILTER(Line);
+
+                                 IF Line.COUNT > 1 THEN BEGIN
+                                   Progressbar.Open(ctValidatingCaption, 0);
+                                   Progressbar.BarSize := Line.COUNT;
+                                 END;
+
+                                 IF Line.FINDSET THEN
+                                   REPEAT
+
+                                     IF Progressbar.IsOpen THEN
+                                       Progressbar.AddToBar(1);
+
+                                     Line3 := Line;
+                                     IF Line."Caption Entry No." <> 0 THEN BEGIN
+                                       Line2.SETCURRENTKEY("Caption Entry No.", "Language Id");
+                                       Line2.SETRANGE("Caption Entry No.", Line."Caption Entry No.");
+                                       Line2.SETRANGE("Language Id", CopyLanguageId);
+                                       IF Line2.FINDFIRST THEN
+                                         IF Line2."Caption 1" <> '' THEN
+                                           Line3.ValidateCaption(Line2.TotalCaption);
+                                     END;
+
+                                   UNTIL Line.NEXT = 0;
+
+                                 IF Progressbar.IsOpen THEN
+                                   Progressbar.Close;
+
+                                 CurrPage.UPDATE(FALSE);
+                                 UpdateCounters;
+                               END;
+                                }
+      { 30      ;3   ;Action    ;
+                      ShortCutKey=Ctrl+N;
+                      CaptionML=[DEU=With &Name;
+                                 ENU=With &Name;
+                                 ESP=With &Name;
+                                 FRA=With &Name;
+                                 NLD=Met &naam;
+                                 DEA=With &Name];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=MoveDown;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 Line@1000 : Record 11102068;
+                                 Line2@1001 : Record 11102068;
+                                 Progressbar@1002 : Codeunit 11102044;
+                                 ctValidatingCaption@1003 : TextConst 'DEU=Validating captions...;ENU=Validating captions...;ESP=Validating captions...;FRA=Validating captions...;NLD=Captions valideren...;DEA=Validating captions...';
+                               BEGIN
+                                 CurrPage.SETSELECTIONFILTER(Line);
+
+                                 IF Line.COUNT > 1 THEN BEGIN
+                                   Progressbar.Open(ctValidatingCaption, 0);
+                                   Progressbar.BarSize := Line.COUNT;
+                                 END;
+
+                                 IF Line.FINDSET THEN
+                                   REPEAT
+
+                                     IF Progressbar.IsOpen THEN
+                                       Progressbar.AddToBar(1);
+
+                                     Line2 := Line;
+                                     IF Line2.TotalName <> '' THEN
+                                       Line2.ValidateCaption(Line2.TotalName);
+
+                                   UNTIL Line.NEXT = 0;
+
+                                 IF Progressbar.IsOpen THEN
+                                   Progressbar.Close;
+
+                                 CurrPage.UPDATE(FALSE);
+                                 UpdateCounters;
+                               END;
+                                }
+      { 31      ;2   ;Separator  }
+      { 32      ;2   ;Action    ;
+                      ShortCutKey=Ctrl+S;
+                      CaptionML=[DEU=Save &Translation as Rule;
+                                 ENU=Save &Translation as Rule;
+                                 ESP=Save &Translation as Rule;
+                                 FRA=Save &Translation as Rule;
+                                 NLD=Vertaling &opslaan als regel;
+                                 DEA=Save &Translation as Rule];
+                      Image=Save;
+                      OnAction=VAR
+                                 Line@1000 : Record 11102068;
+                                 TranslationMgt@1001 : Codeunit 11102051;
+                               BEGIN
+                                 Line := Rec;
+                                 Line.SETRECFILTER;
+
+                                 TranslationMgt.CreateRule(Line, TRUE);
+                                 TranslationMgt.UpdateCalculatedCaptions(Line);
+
+                                 CurrPage.UPDATE(FALSE);
+                                 UpdateCounters;
+                               END;
+                                }
+      { 33      ;2   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+S;
+                      CaptionML=[DEU=Save Selection as Rules;
+                                 ENU=Save Selection as Rules;
+                                 ESP=Save Selection as Rules;
+                                 FRA=Save Selection as Rules;
+                                 NLD=Ver&talingen opslaan als regel;
+                                 DEA=Save Selection as Rules];
+                      Image=Save;
+                      OnAction=VAR
+                                 Line@1000 : Record 11102068;
+                                 TranslationMgt@1001 : Codeunit 11102051;
+                               BEGIN
+                                 CurrPage.SETSELECTIONFILTER(Line);
+
+                                 TranslationMgt.CreateRules(Line, TRUE);
+                                 TranslationMgt.UpdateCalculatedCaptions(Line);
+
+                                 CurrPage.UPDATE(FALSE);
+
+                                 UpdateCounters;
+                               END;
+                                }
+      { 34      ;2   ;Separator  }
+      { 35      ;2   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+L;
+                      CaptionML=[DEU=Re&fresh;
+                                 ENU=Re&fresh;
+                                 ESP=Re&fresh;
+                                 FRA=Re&fresh;
+                                 NLD=Vernieuwen;
+                                 DEA=Re&fresh];
+                      Image=Refresh;
+                      OnAction=BEGIN
+                                 UpdateLines;
+                               END;
+                                }
+      { 36      ;2   ;Action    ;
+                      ShortCutKey=Ctrl+F5;
+                      CaptionML=[DEU=Refres&h Selection;
+                                 ENU=Refres&h Selection;
+                                 ESP=Refres&h Selection;
+                                 FRA=Refres&h Selection;
+                                 NLD=Selectie vernieuwen;
+                                 DEA=Refres&h Selection];
+                      Image=Refresh;
+                      OnAction=BEGIN
+                                 UpdateSelection;
+                               END;
+                                }
+      { 38      ;2   ;Separator  }
+      { 39      ;2   ;Action    ;
+                      CaptionML=[DEU=Write all Captions to Database;
+                                 ENU=Write all Captions to Database;
+                                 ESP=Write all Captions to Database;
+                                 FRA=Write all Captions to Database;
+                                 NLD=Alle captions wegschrijven naar database;
+                                 DEA=Write all Captions to Database];
+                      Image=Save;
+                      OnAction=VAR
+                                 Line@1000 : ARRAY [2] OF Record 11102068;
+                                 TranslationMgt@1001 : Codeunit 11102051;
+                                 ctAreYouSure@1002 : TextConst 'DEU=Objects will be updated.\Are you sure?;ENU=Objects will be updated.\Are you sure?;ESP=Objects will be updated.\Are you sure?;FRA=Objects will be updated.\Are you sure?;NLD=Objecten zullen worden aangepast.\Weet u het zeker?;DEA=Objects will be updated.\Are you sure?';
+                               BEGIN
+                                 IF CONFIRM(ctAreYouSure, TRUE) THEN BEGIN
+                                   Line[1] := Rec;
+                                   TranslationMgt.WriteToDatabase(Line, TRUE);
+                                 END;
+                               END;
+                                }
+      { 40      ;2   ;Action    ;
+                      ShortCutKey=F9;
+                      CaptionML=[DEU=Write Changed Captions to &Database;
+                                 ENU=Write Changed Captions to &Database;
+                                 ESP=Write Changed Captions to &Database;
+                                 FRA=Write Changed Captions to &Database;
+                                 NLD=Gewijzigde captions wegschrijven naar database;
+                                 DEA=Write Changed Captions to &Database];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Save;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 Line@1000 : ARRAY [2] OF Record 11102068;
+                                 TranslationMgt@1001 : Codeunit 11102051;
+                                 ctAreYouSure@1002 : TextConst 'DEU=Objects will be updated.\Are you sure?;ENU=Objects will be updated.\Are you sure?;ESP=Objects will be updated.\Are you sure?;FRA=Objects will be updated.\Are you sure?;NLD=Objecten zullen worden aangepast.\Weet u het zeker?;DEA=Objects will be updated.\Are you sure?';
+                                 TranslationSetupL@1000000000 : Record 88000;
+                               BEGIN
+                                 IF CONFIRM(ctAreYouSure, TRUE) THEN BEGIN
+                                   Line[1] := Rec;
+                                   TranslationSetupL.GET();
+                                   IF TranslationSetupL."Use Page Filter in OMA" THEN
+                                     Line[1].COPYFILTERS(Rec); //01. 01.09.17 JAL
+                                   TranslationMgt.WriteToDatabase(Line, FALSE);
+                                 END;
+                               END;
+                                }
+      { 1000000000;2 ;Separator  }
+      { 1000000001;2 ;Action    ;
+                      Name=Incadea Translation Tool;
+                      CaptionML=[ENU=Incadea Translation Tool;
+                                 NOR=Incadea Oversettelsesverkt›y];
+                      RunObject=Page 88001;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Translation;
+                      PromotedCategory=Process }
+      { 41      ;0   ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 42      ;1   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=[DEU=Rules;
+                                 ENU=Rules;
+                                 ESP=Rules;
+                                 FRA=Rules;
+                                 NLD=Regels;
+                                 DEA=Rules];
+                      Image=QuestionaireSetup;
+                      OnAction=BEGIN
+                                 PAGE.RUNMODAL(PAGE::"OM - Translation Tool Rules");
+                               END;
+                                }
+      { 43      ;1   ;Action    ;
+                      ShortCutKey=Ctrl+T;
+                      CaptionML=[DEU=E&xisting Translations;
+                                 ENU=E&xisting Translations;
+                                 ESP=E&xisting Translations;
+                                 FRA=E&xisting Translations;
+                                 NLD=Ge&bruikte vertalingen;
+                                 DEA=E&xisting Translations];
+                      Image=Translations;
+                      OnAction=BEGIN
+                                 ShowExistingTranslations;
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 44  ;0   ;Container ;
+                ContainerType=ContentArea }
+
+    { 45  ;1   ;Field     ;
+                CaptionML=[DEU=Language;
+                           ENU=Language;
+                           ESP=Language;
+                           FRA=Language;
+                           NLD=Taal;
+                           DEA=Language];
+                BlankZero=Yes;
+                SourceExpr=DisplayLanguageId;
+                OnValidate=VAR
+                             TranslationMgt@1000 : Codeunit 11102051;
+                           BEGIN
+                             LanguageId := TranslationMgt.LanguageIdOfInput(DisplayLanguageId);
+                             FormatLanguageId;
+                             ChangeLanguageId;
+                           END;
+
+                OnLookup=VAR
+                           TranslationMgt@1000 : Codeunit 11102051;
+                         BEGIN
+                           EXIT(TranslationMgt.LookupLanguageId(Text));
+                         END;
+                          }
+
+    { 46  ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 47  ;2   ;Field     ;
+                SourceExpr="Object Type" }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Object No.";
+                LookupPageID=OM - Object List }
+
+    { 49  ;2   ;Field     ;
+                DrillDown=No;
+                SourceExpr="Object Name" }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr="Object Caption";
+                Visible=FALSE }
+
+    { 51  ;2   ;Field     ;
+                SourceExpr=Type }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr=Id }
+
+    { 53  ;2   ;Field     ;
+                SourceExpr=Name;
+                Editable=NameEditable }
+
+    { 54  ;2   ;Field     ;
+                SourceExpr=Captions }
+
+    { 55  ;2   ;Field     ;
+                SourceExpr="Missing Caption" }
+
+    { 56  ;2   ;Field     ;
+                CaptionML=[DEU=Caption;
+                           ENU=Caption;
+                           ESP=Caption;
+                           FRA=Caption;
+                           NLD=Caption;
+                           DEA=Caption];
+                SourceExpr=DisplayCaption;
+                Editable=Caption1Editable;
+                StyleExpr=CaptionStyle;
+                OnValidate=BEGIN
+                             ValidateCaption(DisplayCaption);
+                             FormatCaption;
+
+                             CurrPage.UPDATE(TRUE);
+                           END;
+                            }
+
+    { 57  ;2   ;Field     ;
+                CaptionML=[DEU=No. of Captions;
+                           ENU=No. of Captions;
+                           ESP=No. of Captions;
+                           FRA=No. of Captions;
+                           NLD=Aantal captions;
+                           DEA=No. of Captions];
+                SourceExpr=NoOfCaptions;
+                HideValue=NoOfCaptionsHideValue;
+                OnDrillDown=BEGIN
+                              CurrPage.SAVERECORD;
+                              DrillDownNoOfCaptions;
+                              CurrPage.UPDATE(FALSE);
+                            END;
+                             }
+
+    { 58  ;2   ;Field     ;
+                SourceExpr="Calculated Caption Differs";
+                Visible=FALSE }
+
+    { 59  ;2   ;Field     ;
+                SourceExpr="Calculated Caption 1";
+                Visible=FALSE }
+
+    { 37  ;2   ;Field     ;
+                SourceExpr=Comment;
+                Visible=FALSE }
+
+    { 76  ;2   ;Field     ;
+                SourceExpr="Translate Later";
+                Visible=FALSE }
+
+    { 60  ;1   ;Group      }
+
+    { 61  ;2   ;Group     ;
+                GroupType=Group }
+
+    { 62  ;3   ;Field     ;
+                CaptionML=[DEU=Database Comment;
+                           ENU=Database Comment;
+                           ESP=Database Comment;
+                           FRA=Database Comment;
+                           NLD=Databaseopmerking;
+                           DEA=Database Comment];
+                SourceExpr=DisplayComment;
+                Editable=Caption1Editable;
+                OnValidate=BEGIN
+                             ValidateComment(DisplayComment);
+                           END;
+                            }
+
+    { 63  ;3   ;Field     ;
+                CaptionML=[DEU=Name;
+                           ENU=Name;
+                           ESP=Name;
+                           FRA=Name;
+                           NLD=Naam;
+                           DEA=Name];
+                SourceExpr=NameOrNameOfParent;
+                Editable=FALSE }
+
+    { 64  ;3   ;Field     ;
+                CaptionML=[DEU=ENU Caption;
+                           ENU=ENU Caption;
+                           ESP=ENU Caption;
+                           FRA=ENU Caption;
+                           NLD=ENU Caption;
+                           DEA=ENU Caption];
+                SourceExpr=DefaultMissingCaption;
+                CaptionClass=BaseLanguageCaption;
+                Editable=FALSE }
+
+    { 65  ;3   ;Field     ;
+                SourceExpr=TotalCaption;
+                CaptionClass=FIELDCAPTION("Caption 1");
+                Editable=FALSE }
+
+    { 66  ;3   ;Field     ;
+                Name=CalculatedCaption1;
+                SourceExpr=TotalCalculatedCaption;
+                CaptionClass=FIELDCAPTION("Calculated Caption 1");
+                Editable=FALSE }
+
+    { 67  ;2   ;Group     ;
+                GroupType=Group }
+
+    { 68  ;3   ;Field     ;
+                Name=MissingCaptionFooter;
+                SourceExpr="Missing Caption" }
+
+    { 69  ;3   ;Field     ;
+                CaptionML=[DEU=No. of Missing Captions;
+                           ENU=No. of Missing Captions;
+                           ESP=No. of Missing Captions;
+                           FRA=No. of Missing Captions;
+                           NLD=Aantal ontbr. captions;
+                           DEA=No. of Missing Captions];
+                SourceExpr=DisplayNoOfMissingCaptions;
+                Editable=FALSE }
+
+    { 70  ;3   ;Field     ;
+                Name=CalculatedCaptionDiffersFooter;
+                SourceExpr="Calculated Caption Differs" }
+
+    { 71  ;3   ;Field     ;
+                CaptionML=[DEU=No. of Diff. Captions;
+                           ENU=No. of Diff. Captions;
+                           ESP=No. of Diff. Captions;
+                           FRA=No. of Diff. Captions;
+                           NLD=Aantal afw. captions;
+                           DEA=No. of Diff. Captions];
+                SourceExpr=DisplayNoOfCaptionsDiffer;
+                Editable=FALSE }
+
+    { 72  ;1   ;Field     ;
+                SourceExpr=ExportFileName;
+                Visible=FALSE }
+
+    { 73  ;1   ;Field     ;
+                SourceExpr=ImportFileName;
+                Visible=FALSE }
+
+    { 74  ;1   ;Field     ;
+                SourceExpr=CSVFileName;
+                Visible=FALSE }
+
+    { 75  ;1   ;Field     ;
+                SourceExpr=LanguageId;
+                Visible=FALSE }
+
+  }
+  CODE
+  {
+    VAR
+      DeleteBuffer@1000 : TEMPORARY Record 11102068;
+      CaptionStyle@1001 : Text INDATASET;
+      CSVFileName@1002 : Text;
+      DisplayCaption@1003 : Text INDATASET;
+      DisplayComment@1004 : Text INDATASET;
+      DisplayLanguageId@1005 : Text;
+      ExportFileName@1006 : Text;
+      ImportFileName@1007 : Text;
+      DisplayNoOfCaptionsDiffer@1008 : Integer;
+      DisplayNoOfMissingCaptions@1009 : Integer;
+      LanguageId@1010 : Integer;
+      Caption1Editable@1011 : Boolean INDATASET;
+      CreateMissingCaptions@1012 : Boolean;
+      DoUpdateCounters@1013 : Boolean;
+      EmptyBuffer@1014 : Boolean;
+      NameEditable@1015 : Boolean INDATASET;
+      NoOfCaptionsHideValue@1016 : Boolean INDATASET;
+
+    LOCAL PROCEDURE ChangeLanguageId@1();
+    VAR
+      Line@1000 : ARRAY [2] OF Record 11102068;
+      TranslationMgt@1001 : Codeunit 11102051;
+      ActiveCaptionEntry@1002 : Integer;
+    BEGIN
+      ActiveCaptionEntry := "Caption Entry No.";
+
+      TranslationMgt.CreateMissingCaptions(Line, LanguageId, FALSE);
+      FILTERGROUP(2);
+      SETRANGE(Captions);
+      SETFILTER("Language Id", '0|%1', LanguageId);
+      FILTERGROUP(0);
+
+      SETCURRENTKEY("Caption Entry No.");
+      SETRANGE("Caption Entry No.", ActiveCaptionEntry);
+      IF FINDFIRST THEN
+        ;
+
+      SETRANGE("Caption Entry No.");
+      SETCURRENTKEY("Object Type", "Object No.", "C/AL Line No.");
+
+      CurrPage.UPDATE(FALSE);
+
+      UpdateCounters;
+    END;
+
+    LOCAL PROCEDURE UpdateLines@2();
+    VAR
+      Line@1000 : Record 11102068;
+      TranslationMgt@1001 : Codeunit 11102051;
+    BEGIN
+      Line.SETCURRENTKEY("Language Id");
+      Line.SETRANGE("Language Id", LanguageId);
+      TranslationMgt.UpdateCalculatedCaptions(Line);
+
+      CurrPage.UPDATE(FALSE);
+      UpdateCounters;
+    END;
+
+    LOCAL PROCEDURE UpdateSelection@3();
+    VAR
+      Line@1000 : Record 11102068;
+      TmpLine@1001 : TEMPORARY Record 11102068;
+      TranslationMgt@1002 : Codeunit 11102051;
+    BEGIN
+      CurrPage.SETSELECTIONFILTER(Line);
+
+      IF Line.FINDSET THEN
+        REPEAT
+          TmpLine := Line;
+          TmpLine.INSERT;
+        UNTIL Line.NEXT = 0;
+
+      TranslationMgt.UpdateCalculatedCaptions(TmpLine);
+
+      IF TmpLine.FINDSET THEN
+        REPEAT
+          Line := TmpLine;
+          Line.MODIFY;
+        UNTIL TmpLine.NEXT = 0;
+
+      CurrPage.UPDATE(FALSE);
+      UpdateCounters;
+    END;
+
+    LOCAL PROCEDURE UpdateCounters@4();
+    BEGIN
+      DisplayNoOfMissingCaptions := NoOfMissingCaptions;
+      DisplayNoOfCaptionsDiffer := NoOfCaptionsDiffer;
+    END;
+
+    LOCAL PROCEDURE NoOfMissingCaptions@5() : Integer;
+    VAR
+      Line@1000 : Record 11102068;
+    BEGIN
+      Line.SETCURRENTKEY("Language Id", "Missing Caption");
+      Line.SETRANGE("Language Id", LanguageId);
+      Line.SETRANGE("Missing Caption", TRUE);
+      EXIT(Line.COUNT);
+    END;
+
+    LOCAL PROCEDURE NoOfCaptionsDiffer@6() : Integer;
+    VAR
+      Line@1000 : Record 11102068;
+    BEGIN
+      Line.SETCURRENTKEY("Language Id", "Calculated Caption Differs");
+      Line.SETRANGE("Language Id", LanguageId);
+      Line.SETRANGE("Calculated Caption Differs", TRUE);
+      EXIT(Line.COUNT);
+    END;
+
+    LOCAL PROCEDURE BaseLanguageCaption@7() : Text;
+    VAR
+      TranslationMgt@1000 : Codeunit 11102051;
+      BaseLanguage@1001 : Text;
+      ctCaption@1002 : TextConst 'DEU=%1 Caption;ENU=%1 Caption;ESP=%1 Caption;FRA=%1 Caption;NLD=%1 Caption;DEA=%1 Caption';
+    BEGIN
+      BaseLanguage := TranslationMgt.LanguageCodeOfId(TranslationMgt.BaseLanguage);
+
+      EXIT(STRSUBSTNO(ctCaption, BaseLanguage));
+    END;
+
+    LOCAL PROCEDURE Export@8(All@1000 : Boolean);
+    VAR
+      TranslationMgt@1001 : Codeunit 11102051;
+      CommonDialog@1002 : Codeunit 11102059;
+      FileHandler@1003 : Codeunit 11102097;
+      ServerFileName@1004 : Text;
+      ctDefaultFileName@1005 : TextConst 'DEU=translation.txt;ENU=translation.txt;ESP=translation.txt;FRA=translation.txt;NLD=translation.txt;DEA=translation.txt';
+    BEGIN
+      CommonDialog.AddKnownExtension('txt-o');
+      IF NOT CommonDialog.SaveFile(ExportFileName, ServerFileName, ctDefaultFileName) THEN
+        EXIT;
+
+      TranslationMgt.ExportFile(ServerFileName, LanguageId, All);
+
+      FileHandler.DownloadToClient(ServerFileName, ExportFileName, ctDefaultFileName);
+    END;
+
+    LOCAL PROCEDURE Import@9();
+    VAR
+      Line@1000 : ARRAY [2] OF Record 11102068;
+      TranslationMgt@1001 : Codeunit 11102051;
+      CommonDialog@1002 : Codeunit 11102059;
+      ServerFileName@1003 : Text;
+    BEGIN
+      CommonDialog.AddKnownExtension('txt-o');
+
+      IF NOT CommonDialog.OpenFile(ImportFileName, ServerFileName) THEN
+        EXIT;
+
+      TranslationMgt.ImportTranslationFile(ServerFileName);
+      TranslationMgt.CreateMissingCaptions(Line, LanguageId, FALSE);
+      UpdateCounters;
+    END;
+
+    PROCEDURE SetCreateMissingCaptions@10(NewValue@1000 : Boolean);
+    BEGIN
+      CreateMissingCaptions := NewValue;
+    END;
+
+    LOCAL PROCEDURE FormatLanguageId@11();
+    VAR
+      TranslationMgt@1000 : Codeunit 11102051;
+    BEGIN
+      DisplayLanguageId := TranslationMgt.LanguageCodeOfId(LanguageId);
+    END;
+
+    LOCAL PROCEDURE FormatCaption@12();
+    BEGIN
+      IF TotalCaption = '' THEN
+        IF Captions THEN BEGIN
+          DisplayCaption := '<' + DefaultMissingCaption + '>';
+          CaptionStyle := 'Subordinate';
+        END ELSE BEGIN
+          DisplayCaption := '';
+          CaptionStyle := '';
+        END
+      ELSE BEGIN
+        DisplayCaption := TotalCaption;
+        CaptionStyle := '';
+      END;
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Added Action for Incadea Translation Tool
+                       Set filter on record before "Write Changed Captions to Database"
+    }
+    END.
+  }
+}
+

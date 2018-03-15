@@ -1,0 +1,464 @@
+OBJECT Codeunit 91073 ICA Testing
+{
+  OBJECT-PROPERTIES
+  {
+    Date=13.09.17;
+    Time=13:41:38;
+    Modified=Yes;
+    Version List=TST1.01,ICA2.01;
+  }
+  PROPERTIES
+  {
+    Subtype=Test;
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      LibraryUtilityG@1101103000 : Codeunit 131000;
+      LibraryVariableStorageG@1101103003 : Codeunit 131004;
+      LibrarySetupStorageG@1101103005 : Codeunit 131009;
+      LibraryPlanningG@1101103009 : Codeunit 132203;
+      LibraryRandomG@1101103011 : Codeunit 130440;
+      LibraryManufacturingG@1101103012 : Codeunit 132202;
+      LibraryPurchaseG@1101103013 : Codeunit 130512;
+      LibraryInventoryG@1101103014 : Codeunit 132201;
+      LibraryItemIncG@1101103015 : Codeunit 91008;
+      AssertG@1101103002 : Codeunit 130000;
+      LibraryUtilityIncG@1101103001 : Codeunit 91001;
+      LibrarySalesIncG@1101103006 : Codeunit 91010;
+      LibraryProductionIncG@1101103010 : Codeunit 91062;
+      IsInitializedG@1101103004 : Boolean;
+      DummyMessage@1101103007 : TextConst 'ENU=Message?';
+      FirmPlannedProdOrderCreatedTxt@1101103008 : TextConst 'ENU=Firm Planned Prod. Order';
+
+    LOCAL PROCEDURE Initialize@6();
+    VAR
+      LibraryERMCountryData@1000 : Codeunit 131305;
+    BEGIN
+      LibraryVariableStorageG.Clear;
+      LibrarySetupStorageG.Restore;
+      IF IsInitializedG THEN
+        EXIT;
+      InventorySetup();
+      LibrarySetupStorageG.Save(DATABASE::"Inventory Setup");
+      IsInitializedG := TRUE;
+      COMMIT;
+    END;
+
+    [ConfirmHandler]
+    PROCEDURE ConfirmHandler@19(Question@1000 : Text[1024];VAR Reply@1001 : Boolean);
+    BEGIN
+      Reply := TRUE;
+    END;
+
+    [MessageHandler]
+    PROCEDURE MessageHandler@10(Message@1000 : Text[1024]);
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE ExecuteUIHandlers@1101103002();
+    BEGIN
+      MESSAGE('');
+      IF CONFIRM(DummyMessage) THEN ;
+    END;
+
+    PROCEDURE InventorySetup@74();
+    VAR
+      InventorySetupL@1002 : Record 313;
+    BEGIN
+      IF NOT InventorySetupL.GET THEN
+        InventorySetupL.INSERT;
+      InventorySetupL.VALIDATE("Item Calculation Nos.",  LibraryUtilityIncG.GetNoSeriesCode('ICA'));
+      InventorySetupL.MODIFY(TRUE);
+    END;
+
+    PROCEDURE CreateSalesOrderWithProdItems@12(VAR SalesHeaderP@1101103001 : Record 36;VAR SalesLineP@1101103000 : Record 37);
+    BEGIN
+      LibrarySalesIncG.CreateSalesOrderWithProdItems(SalesHeaderP, SalesLineP);
+    END;
+
+    [ModalPageHandler]
+    PROCEDURE SalesOrderPlanningPageHandler@1101103008(VAR SalesOrderPlanningP@1000 : TestPage 99000883);
+    VAR
+      SalesPlanningLineL@1101103000 : TEMPORARY Record 99000800;
+      NoL@1101103001 : Code[20];
+    BEGIN
+      SalesOrderPlanningP.Action25.INVOKE();
+    END;
+
+    [ModalPageHandler]
+    PROCEDURE CreateOrderFromSalesModalPageHandler@182(VAR CreateOrderFromSales@1000 : Page 99000884;VAR Response@1001 : Action);
+    BEGIN
+      Response := ACTION::Yes;
+    END;
+
+    PROCEDURE CreateCalculationNoForSalesLine@1101103001(VAR SalesLineP@1101103000 : Record 37);
+    VAR
+      SalesLineL@1101103001 : Record 37;
+    BEGIN
+      LibrarySalesIncG.SetFilterOnSalesLinesFromLine(SalesLineP, SalesLineL);
+      SalesLineL.SETRANGE(Type, SalesLineP.Type::Item);
+      SalesLineL.FINDFIRST();
+      REPEAT
+        //GetRandomItemCalculationNoForSalesLine(SalesLineL);
+        SalesLineL.VALIDATE("Calculation No.", CreateItemCalculationNo(SalesLineL."No."));
+        SalesLineL.MODIFY(TRUE);
+      UNTIL SalesLineL.NEXT = 0;
+      //Verify Item Calculation for each Item on Sales Line
+      VerifyCalculationNoOnSalesLine(SalesLineL);
+    END;
+
+    PROCEDURE CreateItemCalculationNo@1101103005(ItemNoP@1101103000 : Code[20]) : Code[20];
+    VAR
+      PriceCalcHeadL@1101103001 : Record 73051;
+    BEGIN
+      PriceCalcHeadL.INIT();
+      PriceCalcHeadL.VALIDATE("Order Quantity", LibraryRandomG.RandInt(200));
+      PriceCalcHeadL.INSERT(TRUE);
+      PriceCalcHeadL.VALIDATE("Item No.", ItemNoP);
+      PriceCalcHeadL.VALIDATE("Calc. Factor", LibraryRandomG.RandDecInRange(1, 2, 2));
+      PriceCalcHeadL.MODIFY(TRUE);
+      SetCapacityForCalculationNo(PriceCalcHeadL."No.");
+      EXIT(PriceCalcHeadL."No.");
+    END;
+
+    PROCEDURE SetCapacityForCalculationNo@1101103024(CalculationNoP@1101103000 : Code[20]);
+    VAR
+      ItemCalcLineL@1101103002 : Record 73052;
+    BEGIN
+      ItemCalcLineL.SETRANGE("Calc. No.", CalculationNoP);
+      ItemCalcLineL.SETRANGE(Type, ItemCalcLineL.Type::Capacity);
+      IF ItemCalcLineL.FINDFIRST() THEN
+        REPEAT
+          //If Work Center has Specific Unit Cost Checked we have to enter value
+          IF ItemCalcLineL."Unit Cost" = 0 THEN
+            ItemCalcLineL.VALIDATE("Unit Cost", LibraryRandomG.RandDecInRange(1, 10000, 2));
+          ItemCalcLineL.MODIFY(TRUE);
+        UNTIL ItemCalcLineL.NEXT = 0;
+    END;
+
+    PROCEDURE RandomModifyOfCalculation@1101103011(VAR ItemCalcHeaderP@1101103000 : Record 73051);
+    VAR
+      ItemCalcLineL@1101103001 : Record 73052;
+      SequenceNoL@1101103002 : Integer;
+    BEGIN
+      ItemCalcLineL.SETRANGE("Calc. No.", ItemCalcHeaderP."No.");
+      //Modify Quantity and Unit Cost for all Capacity and Material lines.
+      ItemCalcLineL.FINDFIRST();
+      REPEAT
+        CASE ItemCalcLineL.Type OF
+          ItemCalcLineL.Type::Capacity,ItemCalcLineL.Type::Material,ItemCalcLineL.Type::Additional:
+            BEGIN
+              ItemCalcLineL.VALIDATE(Quantity, LibraryRandomG.RandDecInRange(1, 1000, 2));
+              ItemCalcLineL.VALIDATE("Unit Cost", LibraryRandomG.RandDecInRange(1, 10000, 2));
+              ItemCalcLineL.MODIFY(TRUE);
+            END;
+        END;
+      UNTIL ItemCalcLineL.NEXT = 0;
+      //Add Freight Line
+      ItemCalcLineL.RESET;
+      ItemCalcLineL.SETRANGE("Calc. No.", ItemCalcHeaderP."No.");
+      ItemCalcLineL.SETRANGE(Type, ItemCalcLineL.Type::Additional);
+      IF ItemCalcLineL.FINDLAST THEN
+        SequenceNoL := ItemCalcLineL."Sequence No." + 10
+      ELSE
+        SequenceNoL := 10;
+      ItemCalcLineL.RESET;
+      ItemCalcLineL.INIT();
+      ItemCalcLineL.VALIDATE("Calc. No.", ItemCalcHeaderP."No.");
+      ItemCalcLineL.VALIDATE(Type, ItemCalcLineL.Type::Additional);
+      ItemCalcLineL."Sequence No." := ItemCalcLineL."Sequence No." + 10;
+      ItemCalcLineL.VALIDATE(Description, 'Freight');
+      //ItemCalcLineL.VALIDATE("Unit of Measure", 'STK');
+      ItemCalcLineL.VALIDATE(Quantity, LibraryRandomG.RandDecInRange(1, 1000, 2));
+      ItemCalcLineL.VALIDATE("Unit Cost", LibraryRandomG.RandDecInRange(1, 10000, 2));
+      ItemCalcLineL.INSERT(TRUE);
+      //Get New version of the Header because of recalculation
+      ItemCalcHeaderP.GET(ItemCalcHeaderP."No.");
+      //Lock the Item Calculation
+      ItemCalcHeaderP.GET(ItemCalcHeaderP."No.");
+      ItemCalcHeaderP.VALIDATE(Locked, TRUE);
+      ItemCalcHeaderP.MODIFY(TRUE);
+      //Verify that the Calc. Factor is not 0.
+      AssertG.AreNotEqual(ItemCalcHeaderP."Calc. Factor", 0, '');
+    END;
+
+    PROCEDURE GetRandomItemCalculationNoForSalesLine@1101103021(VAR SalesLineP@1101103000 : Record 37);
+    VAR
+      PriceCalcHeadL@1101103001 : Record 73051;
+    BEGIN
+      PriceCalcHeadL.SETRANGE("Item No.", SalesLineP."No.");
+      PriceCalcHeadL.FINDSET;
+      PriceCalcHeadL.NEXT(LibraryRandomG.RandIntInRange(0, (PriceCalcHeadL.COUNT - 1)));
+      SalesLineP.VALIDATE("Calculation No.", PriceCalcHeadL."No.");
+    END;
+
+    PROCEDURE VerifyProductionOrderLine@78(Status@1001 : Option;ProductionOrderNo@1002 : Code[20];ItemNo@1003 : Code[20];Quantity@1004 : Decimal;LocationCode@1005 : Code[10];CalculationNoP@1101103000 : Code[20]);
+    VAR
+      ProdOrderLine@1000 : Record 5406;
+    BEGIN
+      LibraryProductionIncG.FindProductionOrderLine(ProdOrderLine,Status,ProductionOrderNo);
+      ProdOrderLine.TESTFIELD("Item No.",ItemNo);
+      ProdOrderLine.TESTFIELD(Quantity,Quantity);
+      ProdOrderLine.TESTFIELD("Location Code",LocationCode);
+      ProdOrderLine.TESTFIELD("Calculation No.", CalculationNoP);
+    END;
+
+    PROCEDURE VerifyProdOrderLineFromSalesLine@208(SalesLine@1000 : Record 37);
+    VAR
+      ProdOrder@1001 : Record 5405;
+    BEGIN
+      LibraryProductionIncG.FindProdOrderBySourceNo(ProdOrder,SalesLine."No.");
+      VerifyProductionOrderLine(
+        ProdOrder.Status,ProdOrder."No.",SalesLine."No.",SalesLine.Quantity,SalesLine."Location Code", SalesLine."Calculation No.");
+    END;
+
+    PROCEDURE VerifyCalculationNoOnSalesLine@1101103015(SalesLineP@1101103000 : Record 37);
+    VAR
+      SalesLineL@1101103001 : Record 37;
+      ItemCalcLineL@1101103002 : Record 73052;
+    BEGIN
+      LibrarySalesIncG.SetFilterOnSalesLinesFromLine(SalesLineP, SalesLineL);
+      SalesLineL.SETRANGE(Type, SalesLineP.Type::Item);
+      SalesLineL.FINDFIRST();
+      REPEAT
+        VerifyCalculationNo(SalesLineL."Calculation No.");
+      UNTIL SalesLineL.NEXT = 0;
+    END;
+
+    PROCEDURE VerifyCalculationNo@1101103013(CalculationNoP@1101103000 : Code[20]);
+    VAR
+      ItemCalcLineL@1101103002 : Record 73052;
+    BEGIN
+      ItemCalcLineL.SETRANGE("Calc. No.", CalculationNoP);
+      ItemCalcLineL.SETRANGE(Type, ItemCalcLineL.Type::Capacity);
+      IF ItemCalcLineL.FINDFIRST() THEN
+        REPEAT
+          ItemCalcLineL.TESTFIELD("Unit Cost");
+        UNTIL ItemCalcLineL.NEXT = 0;
+    END;
+
+    [Test]
+    PROCEDURE TestInventorySetup@1101103003();
+    VAR
+      InventorySetupL@1101103000 : Record 313;
+    BEGIN
+      // [FEATURE] [Production] [Item Calculation]
+      // [SCENARIO 1] Test Case Inventory Setup
+
+      // [GIVEN] Stored test values are cleared.
+      // [GIVEN] Inventory Setup exists
+      Initialize();
+      // [WHEN] "Item Calculation Nos." has been defined
+      InventorySetupL.GET();
+      // [THEN] "Item Calculation Nos." has been defined
+      AssertG.AreNotEqual(InventorySetupL."Item Calculation Nos.", '', '');
+    END;
+
+    [Test]
+    PROCEDURE TestCreateWorkCenterGroup@1101103004();
+    VAR
+      InventorySetupL@1101103000 : Record 313;
+      WorkCenterL@1101103002 : Record 99000754;
+      WorkCenterGroupL@1101103001 : Record 99000756;
+    BEGIN
+      // [FEATURE] [Production] [Item Calculation]
+      // [SCENARIO 2] Create Work Center Group
+
+      // [WHEN] Work Center Group is Created
+      LibraryManufacturingG.CreateWorkCenterGroup(WorkCenterGroupL);
+      // [THEN] Work Center Group is Created
+      AssertG.RecordIsNotEmpty(WorkCenterGroupL);
+    END;
+
+    [Test]
+    PROCEDURE TestCreateWorkCenter@1101103009();
+    VAR
+      InventorySetupL@1101103000 : Record 313;
+      WorkCenterL@1101103002 : Record 99000754;
+      WorkCenterGroupL@1101103001 : Record 99000756;
+    BEGIN
+      // [FEATURE] [Production] [Item Calculation]
+      // [SCENARIO 3] Create Work Center
+      // [GIVEN] Work Center Group is Created
+      LibraryManufacturingG.CreateWorkCenterGroup(WorkCenterGroupL);
+      // [WHEN] Work Center is Created
+      LibraryProductionIncG.CreateWorkCenterWithGroup(WorkCenterL, WorkCenterGroupL);
+      // [THEN] Work Center is Created
+      AssertG.RecordIsNotEmpty(WorkCenterL);
+    END;
+
+    [Test]
+    PROCEDURE TestCreateCapacityUoM@1101103016();
+    VAR
+      CapacityUnitofMeasureL@1101103000 : Record 99000780;
+    BEGIN
+      // [FEATURE] [Production] [Item Calculation]
+      // [SCENARIO 4] Create Capacity Units of Measure
+
+      // [WHEN] Capacity Units of Measure is created
+      LibraryManufacturingG.CreateCapacityUnitOfMeasure(CapacityUnitofMeasureL, 0); // Use blank Type = 0
+      // [THEN] Capacity Units of Measure is created
+      AssertG.RecordIsNotEmpty(CapacityUnitofMeasureL);
+    END;
+
+    [Test]
+    PROCEDURE TestCreateRoutings@1101103020();
+    VAR
+      WorkCenterGroupL@1101103003 : Record 99000756;
+      WorkCenterL@1101103004 : Record 99000754;
+      RoutingHeaderL@1101103000 : Record 99000763;
+      RoutingLineL@1101103001 : Record 99000764;
+      TypeL@1101103002 : 'Serial,Parallel';
+    BEGIN
+      // [FEATURE] [Production] [Item Calculation]
+      // [SCENARIO 5] Create Routings
+
+      // [WHEN] Routing Header and Routing Line is created
+      LibraryProductionIncG.CreateRoutings(RoutingHeaderL, RoutingLineL);
+      // [THEN] Routing Header and Routing Line is created
+      AssertG.RecordIsNotEmpty(RoutingHeaderL);
+    END;
+
+    [Test]
+    PROCEDURE TestCreateItemWithBOM@1101103019();
+    VAR
+      ItemL@1101103000 : Record 27;
+      ItemTemplateL@1101103001 : Record 1301;
+      ItemDiscountGroupL@1101103002 : Record 341;
+      TestTextL@1101103003 : Text;
+    BEGIN
+      // [FEATURE] [Item] [Item Calculation]
+      // [SCENARIO 6] Create Item with BOM
+
+      // [WHEN] Creating Item With BOM
+      LibraryItemIncG.CreateItemWithBOM(ItemL);
+      // [THEN] Item With BOM is created
+      AssertG.RecordIsNotEmpty(ItemL);
+    END;
+
+    [Test]
+    PROCEDURE TestCreateItemCalculation@1101103010();
+    VAR
+      ItemL@1101103000 : Record 27;
+      ItemCalcHeaderL@1101103001 : Record 73051;
+    BEGIN
+      // [FEATURE] [Item] [Item Calculation]
+      // [SCENARIO 7] Create Item Calculation
+
+      // [GIVEN] Item exists
+      LibraryItemIncG.CreateItemWithBOM(ItemL);
+      // [WHEN] Create Item Calculation
+      ItemCalcHeaderL.GET(CreateItemCalculationNo(ItemL."No."));
+      // [THEN] Item Calculation is created
+      AssertG.RecordIsNotEmpty(ItemL);
+      //Verify that the Item Calculation has the correct Item No.
+      AssertG.AreEqual(ItemCalcHeaderL."Item No.", ItemL."No.", '');
+    END;
+
+    [Test]
+    PROCEDURE TestCreateItemCalculationWithChangedBOM@1101103007();
+    VAR
+      ItemL@1101103000 : Record 27;
+      ItemCalcHeaderL@1101103001 : Record 73051;
+      SalesPriceL@1101103002 : Decimal;
+    BEGIN
+      // [FEATURE] [Item] [Item Calculation]
+      // [SCENARIO 8] Create Item Calculation
+
+      // [GIVEN] Item exists
+      LibraryItemIncG.CreateItemWithBOM(ItemL);
+      // [GIVEN] Item Calculation exists
+      ItemCalcHeaderL.GET(CreateItemCalculationNo(ItemL."No."));
+      SalesPriceL := ItemCalcHeaderL."Sales Price";
+      // [WHEN] Item Calculation is changed
+      RandomModifyOfCalculation(ItemCalcHeaderL);
+      // [THEN] Item Calculation is created
+      AssertG.RecordIsNotEmpty(ItemL);
+      //Verify that the Item Calculation has the correct Item No.
+      AssertG.AreEqual(ItemCalcHeaderL."Item No.", ItemL."No.", '');
+      //Verify that the Sales Price has changed and is not 0.
+      AssertG.AreNotEqual(SalesPriceL, 0, '');
+      AssertG.AreNotEqual(SalesPriceL, ItemCalcHeaderL."Sales Price", '');
+    END;
+
+    [Test]
+    [HandlerFunctions(ConfirmHandler)]
+    PROCEDURE TestCreateSalesOrderWithProdItems@1101103006();
+    VAR
+      SalesHeaderL@1101103002 : Record 36;
+      SalesLineL@1101103001 : Record 37;
+      SalesLine2L@1101103003 : Record 37;
+    BEGIN
+      // [FEATURE] [UI] [Sales] [Order] [Production] [Item Calculation]
+      // [SCENARIO 9] Create Sales order and set Item Calculation on Sales Line.
+
+      // [GIVEN] Stored test values are cleared.
+      Initialize();
+      // [GIVEN] Sales Order exists
+      CreateSalesOrderWithProdItems(SalesHeaderL, SalesLineL);
+      // [GIVEN] Sales Order Line have "Calculation No." defined for item
+      CreateCalculationNoForSalesLine(SalesLineL);
+      LibrarySalesIncG.SetFilterOnSalesLinesFromHeader(SalesHeaderL, SalesLineL);
+      SalesLineL.FINDFIRST;
+      REPEAT
+        // Verify: Calculation No." is not empty on the Sales Line
+        AssertG.AreNotEqual(SalesLineL."Calculation No.", '', '');
+      UNTIL SalesLineL.NEXT = 0;
+    END;
+
+    [Test]
+    [HandlerFunctions(MessageHandler,ConfirmHandler,SalesOrderPlanningPageHandler,CreateOrderFromSalesModalPageHandler)]
+    PROCEDURE UI_CreateSalesOrderWithProdItems@1101103000();
+    VAR
+      SalesOrderL@1101103000 : TestPage 42;
+      SalesOrderPlanningL@1101103004 : TestPage 99000883;
+      CreateOrderFromSalesL@1101103006 : TestPage 99000884;
+      SalesHeaderL@1101103002 : Record 36;
+      SalesLineL@1101103001 : Record 37;
+      SalesLine2L@1101103003 : Record 37;
+      ProductionOrderL@1101103005 : Record 5405;
+    BEGIN
+      // [FEATURE] [UI] [Sales] [Order] [Production] [Item Calculation]
+      // [SCENARIO 10] Create Sales order, set Item Calculation on Sales Line. Create Production Order for line.
+
+      // [GIVEN] Stored test values are cleared.
+      Initialize();
+      // [GIVEN] Sales Order exists
+      CreateSalesOrderWithProdItems(SalesHeaderL, SalesLineL);
+      // [GIVEN] Sales Order Line have "Calculation No." defined for item
+      CreateCalculationNoForSalesLine(SalesLineL);
+      // [GIVEN] Sales Order page is open
+      SalesOrderL.OPENVIEW;
+      // [GIVEN] The created Sales Order is selected.
+      SalesOrderL.GOTORECORD(SalesHeaderL);
+      AssertG.AreEqual(SalesOrderL."No.".VALUE, SalesHeaderL."No.",'');
+      // [WHEN] "Sales Order Planning" is opened from "Sales Order" page
+      SalesOrderL.Action121.INVOKE(); // Message handlers will control the flow
+      // [THEN] Production Order is created.
+      LibrarySalesIncG.SetFilterOnSalesLinesFromHeader(SalesHeaderL, SalesLineL);
+      SalesLineL.FINDFIRST;
+      REPEAT
+        // Verify: Calculation No." is not empty on the Sales Line
+        AssertG.AreNotEqual(SalesLineL."Calculation No.", '', '');
+        // Verify: Verify Created new Firm Planned Production Order.
+        VerifyProdOrderLineFromSalesLine(SalesLineL);
+      UNTIL SalesLineL.NEXT = 0;
+      SalesOrderL.CLOSE();
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 18.08.17 JAL Common Incadea functions for testing
+    }
+    END.
+  }
+}
+

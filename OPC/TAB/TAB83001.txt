@@ -1,0 +1,98 @@
+OBJECT Table 83001 OPC Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=20.04.17;
+    Time=16.20.12;
+    Modified=Yes;
+    Version List=OPC1.0;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=OPC Setup;
+               NOR=OPC Oppsett];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Primary Key         ;Code10        ;CaptionML=[ENU=Primary Key;
+                                                              NOR=Prim‘r n›kkel] }
+    { 10  ;   ;Output Template Name Qty;Code10    ;TableRelation="Item Journal Template".Name;
+                                                   CaptionML=[ENU=Output Template Name Qty;
+                                                              NOR=Ferdigmeld.kladd mal - antall] }
+    { 20  ;   ;Output Jrn Batch Name Qty;Code10   ;TableRelation="Item Journal Batch".Name WHERE (Journal Template Name=FIELD(Output Template Name Qty));
+                                                   CaptionML=[ENU=Output Jrn Batch Name Qty;
+                                                              NOR=Ferdigmeld.kladdnavn - antall] }
+    { 30  ;   ;Output Batch Name Time;Code10      ;TableRelation="Item Journal Template".Name;
+                                                   CaptionML=[ENU=Output Batch Name Time;
+                                                              NOR=Ferdigmeld.kladd mal - tid] }
+    { 40  ;   ;Output Jrn Name Time;Code10        ;TableRelation="Item Journal Batch".Name WHERE (Journal Template Name=FIELD(Output Batch Name Time));
+                                                   CaptionML=[ENU=Output Jrn Name Time;
+                                                              NOR=Ferdigmeld.kladdnavn - tid] }
+    { 100 ;   ;Document No. Ind.Time;Code10       ;CaptionML=[ENU=Document No. Ind.Time;
+                                                              NOR=Bilagsnr. Ind.Tid] }
+    { 200 ;   ;Item Reclass. Journal (templ.);Code10;
+                                                   TableRelation="Item Journal Template".Name;
+                                                   CaptionML=[ENU=Item Reclass. Journal;
+                                                              NOR=Vareoverf›ringskladd mal (flytting)] }
+    { 201 ;   ;Item Reclass. Journal (Name);Code10;TableRelation="Item Journal Batch".Name WHERE (Journal Template Name=FIELD("Item Reclass. Journal (templ.)"));
+                                                   CaptionML=NOR=Vareoverf›ringskladdnavn }
+    { 202 ;   ;OPC-Move Location Code;Code10      ;TableRelation=Location.Code;
+                                                   CaptionML=NOR=Lokasjonskode - OPC-flytt fra }
+    { 300 ;   ;Warning Picture     ;BLOB          ;CaptionML=[ENU=Warning Picture;
+                                                              NOR=Advarsler bilde];
+                                                   SubType=Bitmap }
+    { 400 ;   ;Item Journal Template Name;Code10  ;TableRelation="Item Journal Template";
+                                                   CaptionML=[ENU=Item Journal Template Name;
+                                                              NOR=Varekladdemalnavn] }
+    { 410 ;   ;Item Journal Batch Name;Code10     ;TableRelation="Item Journal Batch".Name WHERE (Journal Template Name=FIELD(Item Journal Template Name));
+                                                   CaptionML=[ENU=Item Journal Batch Name;
+                                                              NOR=Varekladdenavn] }
+	{ 1000;   ;Cap. Journal Batch Name Corr;Code10;TableRelation="Item Journal Template".Name;
+                                                   CaptionML=NOR=Kapasitetskladd mal korreksjon }
+																										
+    { 1001;   ;Cap. Journal Name Corr;Code10      ;TableRelation="Item Journal Batch".Name WHERE (Template Type=FILTER(Capacity));
+                                                   CaptionML=NOR=Kapasitetskladd korreksjon }
+    { 2000;   ;Cap. Journal Batch Name OPC;Code10 ;TableRelation="Item Journal Template".Name;
+                                                   CaptionML=NOR=Kapasitetskladd mal - Indirekte tid }															   
+    { 2001;   ;Cap. Journal Name OPC;Code10       ;TableRelation="Item Journal Batch".Name WHERE (Template Type=FILTER(Capacity));
+                                                   CaptionML=NOR=Kapasitetskladd  - Indirekte tid }																					  
+    { 10010;  ;Work Center Prod time;Code10       ;TableRelation="Work Center".No.;
+                                                   CaptionML=[ENU=Macine. cent. Production;
+                                                              NOR=Arb. senter. Prod] }
+    { 10011;  ;Work Center Adm. time;Code10       ;TableRelation="Work Center".No.;
+                                                   CaptionML=[ENU=Macine. cent. Administration;
+                                                              NOR=Arb. senter. Adm.] }
+  }
+  KEYS
+  {
+    {    ;Primary Key                             ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      ----------------------------------------------
+      SI-DATA AS
+
+      OPC
+      ----------------------------------------------
+      No  Date      ID      Description
+      ----------------------------------------------
+      001 06.12.05  ASL     Tabell oppgrader 4.0SP1
+      002 29.03.06  ASL     Lagt til felt Document No. Ind.Time, brukes til tidsbokf›ring
+                            uten tilknyttning til Prod.Ordre.
+	  003 22.01.10  BVM     Nye (1000 og 1001) felt for kladdenavn ved korreksjon fra OPC kapasitetepost korreksjon
+      004 22.03.10  HHE     Nye felt: "Cap. Journal Batch Name OPC" og "Cap. Journal Name OPC"
+                            Disse feltene brukes n†r man m›nstrer-ut og skal bokf›re Indirekte tid.
+      005 17.08.10  HHE     Nytt felt:"Item Reclass. Journal (templ.)" (brukes i OPC - flytt komponent)
+                            Nytt felt:"Item Reclass. Journal (Name)"   (brukes i OPC - flytt komponent)
+      006 19.08.10  HHE     Nytt felt "OPC-Move Location Code". Brukes i OPC-flytt som "Fra lokasjon"
+    }
+    END.
+  }
+}
+

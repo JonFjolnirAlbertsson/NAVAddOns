@@ -1,0 +1,390 @@
+OBJECT MenuSuite 1054 Dept OPC
+{
+  OBJECT-PROPERTIES
+  {
+    Date=02.11.17;
+    Time=09:11:36;
+    Modified=Yes;
+    Version List=OPC6.01;
+  }
+  PROPERTIES
+  {
+  }
+  MENUNODES
+  {
+    {                ;[{8B53F309-FB1D-47BA-A2FE-1460E0D5ECDB}] ;NextNodeID=[{7D84E2C7-9D7A-4DA2-87C1-DDBB9435B63C}] }
+    { MenuItem       ;[{7D84E2C7-9D7A-4DA2-87C1-DDBB9435B63C}] ;Name=Item Tracking Codes;
+                                                                CaptionML=[ENU=Item Tracking Codes;
+                                                                           NOR=Varesporingskoder];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=6502;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{49448471-4DCE-4BAC-B6A9-BD8614D01A48}] ;Name=Transfer Routes;
+                                                                CaptionML=[ENU=Transfer Routes;
+                                                                           NOR=Overf›ringsruter];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=5747;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{81D2CE2C-6499-43ED-9A0B-398248B6B87B}] ;Name=Item Journal Templates;
+                                                                CaptionML=[ENU=Item Journal Templates;
+                                                                           NOR=Varekladdemaler];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=102;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{7CEA59FF-A695-44FD-A274-BF6178760FD7}] ;Name=Report Selections Inventory;
+                                                                CaptionML=[ENU=Report Selections Inventory;
+                                                                           NOR=Rapportvalg - beholdning];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=5754;
+                                                                Visible=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                DepartmentCategory=Tasks }
+    {                ;[{502E3FFC-A7CC-48F7-88A4-89A841F0C628}] ;NextNodeID=[{F17F96B7-D5DF-4C82-B90E-D172A36E4942}] }
+    { MenuItem       ;[{F17F96B7-D5DF-4C82-B90E-D172A36E4942}] ;Name=Incoming Documents Setup;
+                                                                CaptionML=[ENU=Incoming Documents Setup;
+                                                                           NOR=Oppsett for inng†ende dokumenter];
+                                                                ApplicationArea=#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=191;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    {                ;[{BAD8AF38-254A-4266-AF07-EDC55674B5FA}] ;NextNodeID=[{A2E2F2F9-5AB0-4C65-9A60-F9BAE2B24023}] }
+    { MenuItem       ;[{A2E2F2F9-5AB0-4C65-9A60-F9BAE2B24023}] ;Name=VAT Clauses;
+                                                                CaptionML=[ENU=VAT Clauses;
+                                                                           NOR=Mva-setninger];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=747;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    {                ;[{9474DF8C-B0E7-4FED-AF54-367E0639F7B0}] ;NextNodeID=[{C68C0462-288A-42CC-8BC7-6F224D8846CE}] }
+    { MenuItem       ;[{C68C0462-288A-42CC-8BC7-6F224D8846CE}] ;Name=VAT Clauses;
+                                                                CaptionML=[ENU=VAT Clauses;
+                                                                           NOR=Mva-setninger];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=747;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    {                ;[{44DC36A4-3D38-427C-B37D-02811193E52A}] ;NextNodeID=[{E0433AFB-5B38-4E2F-ADE7-0317B7ADE93D}] }
+    { MenuItem       ;[{E0433AFB-5B38-4E2F-ADE7-0317B7ADE93D}] ;Name=Application Area;
+                                                                CaptionML=[ENU=Application Area;
+                                                                           NOR=Modul];
+                                                                ApplicationArea=#All;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=9179;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{9CBA63AC-73D3-438F-818D-476B76D5DB75}] ;Name=Data Exchange Definition;
+                                                                CaptionML=[ENU=Data Exchange Definitions;
+                                                                           NOR=Datautvekslingsdefinisjoner];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1211;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{BB2D12FC-2EEB-4165-869B-098BBB42C6F6}] ;Name=Bank Export/Import Setup;
+                                                                CaptionML=[ENU=Bank Export/Import Setup;
+                                                                           NOR=Konfigurasjon av bankeksport/-import];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1200;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{C0BECAC0-F100-4C39-BBCA-714333A54406}] ;Name=SEPA Schema Viewer;
+                                                                CaptionML=[ENU=SEPA Schema Viewer;
+                                                                           NOR=Visningsprogram for SEPA-skjema];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=9610;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{7FD6154D-F047-4A31-B857-0DA1E0BA97D8}] ;Name=XML Schemas;
+                                                                CaptionML=[ENU=XML Schemas;
+                                                                           NOR=XML-skjemaer];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=9600;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{E55ED739-BBB9-4063-AF58-225E99C5FE72}] ;Name=Document Sending Profiles;
+                                                                CaptionML=[ENU=Document Sending Profiles;
+                                                                           NOR=Profiler for dokumentsending];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=359;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{379BBC3B-5EBB-4617-8419-8D76352F8337}] ;Name=Electronic Document Formats;
+                                                                CaptionML=[ENU=Electronic Document Formats;
+                                                                           NOR=Elektroniske dokumentformater];
+                                                                ApplicationArea=#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=363;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{8A3934DD-BE0A-4851-B8E0-50A64106B98A}] ;Name=Data Exchange Types;
+                                                                CaptionML=[ENU=Data Exchange Types;
+                                                                           NOR=Datautvekslingstyper];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1213;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{0D3D0EB4-59D7-4D3E-95AC-49CD269C6C04}] ;Name=Data Migration Settings;
+                                                                AccessByPermission=TableData 1806=R;
+                                                                CaptionML=[ENU=Data Migration Settings;
+                                                                           NOR=Innstillinger for datamigrering];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1807;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{00646221-3EEF-4883-8640-FECFD9BEC705}] ;Name=Report Configuration;
+                                                                AccessByPermission=TableData 2000000196=IMD;
+                                                                CaptionML=[ENU=Report Settings;
+                                                                           NOR=Rapportinnstillinger];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1560;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{A1E3A413-B0C4-4D20-8B1F-AFF7DFFDB43C}] ;Name=Setup and Help Resources;
+                                                                CaptionML=[ENU=Setup and Help Resources;
+                                                                           NOR=Ressurser for oppsett og hjelp];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1822;
+                                                                Visible=Yes;
+                                                                NextNodeID=[{4D3D68E9-6A4A-4F4A-8D33-747D76821EC8}];
+                                                                DepartmentCategory=Administration }
+    {                ;[{387B2D8D-4249-4D63-BE9C-850416EA6E81}] ;NextNodeID=[{34E4BEA4-29EB-4579-8568-973A8449A4A1}] }
+    { MenuItem       ;[{34E4BEA4-29EB-4579-8568-973A8449A4A1}] ;Name=Certificates of Supply;
+                                                                CaptionML=[ENU=Certificates of Supply;
+                                                                           NOR=Mottaksdeklarasjoner];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=780;
+                                                                Visible=Yes;
+                                                                NextNodeID=[{3E2FEC16-BE73-41A6-94E5-BAFFDE0CFB12}];
+                                                                DepartmentCategory=Lists }
+    {                ;[{A07A2127-D15F-4AF6-8301-EC0DA819FAE6}] ;NextNodeID=[{B0697E0F-6AD6-425A-9E5C-F0BD41F9BC72}] }
+    { MenuGroup      ;[{B0697E0F-6AD6-425A-9E5C-F0BD41F9BC72}] ;Name=New Group;
+                                                                CaptionML=[ENU=Employee Portal;
+                                                                           NOR=Employee Portal];
+                                                                Visible=Yes }
+    { Menu           ;[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}] ;Name=OPC;
+                                                                CaptionML=[ENU=Online Production Control;
+                                                                           NOR=Online produksjonskontroll];
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                ParentNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                Image=12;
+                                                                IsShortcut=No;
+                                                                Visible=Yes;
+                                                                Enabled=Yes;
+                                                                NextNodeID=[{7D7FE6BF-817A-4E6B-AB93-BEBEE1AA2C1C}];
+                                                                FirstChild=[{DB86519A-3B17-46EE-87CF-033D4EC9D288}] }
+    { MenuItem       ;[{0983E9E7-CD0C-4216-8ADC-CEE0B6FB86C2}] ;Name=OPC - informasjonssentral;
+                                                                CaptionML=[ENU=OPC Information Board;
+                                                                           NOR=OPC Informasjonssentral];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83001;
+                                                                ParentNodeID=[{DB86519A-3B17-46EE-87CF-033D4EC9D288}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{CCF7B636-C0E0-4C21-871A-7A78E2E832E8}];
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{4C955B3D-9D98-4D1F-A64C-5F05C16BF56E}] ;Name=OPC - ressursstatus;
+                                                                CaptionML=[ENU=OPC Resource Status;
+                                                                           NOR=OPC Produksjonsressursstatus];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83020;
+                                                                ParentNodeID=[{DB86519A-3B17-46EE-87CF-033D4EC9D288}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{2223B645-39D8-43D5-958A-349B46BFE9B9}];
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{2223B645-39D8-43D5-958A-349B46BFE9B9}] ;Name=OPC Frigitt produksjonsordre;
+                                                                CaptionML=[ENU=OPC Released Production Orders;
+                                                                           NOR=OPC Frigitte produksjonsordrer];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83043;
+                                                                ParentNodeID=[{DB86519A-3B17-46EE-87CF-033D4EC9D288}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{2E10244B-64EA-4054-95BF-2060226BF3E8}];
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{D5029A82-7436-42FC-B6AC-7A6C6A094315}] ;Name=Vareoversikt;
+                                                                CaptionML=[ENU=Item List;
+                                                                           NOR=Vareoversikt];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=31;
+                                                                ParentNodeID=[{DB86519A-3B17-46EE-87CF-033D4EC9D288}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{1DFFFF31-23F5-4194-A005-300E32167653}];
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{2E10244B-64EA-4054-95BF-2060226BF3E8}] ;Name=OPC M›nstringsliste;
+                                                                CaptionML=[ENU=OPC Time Register List;
+                                                                           NOR=M›nstringsliste];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83017;
+                                                                ParentNodeID=[{DB86519A-3B17-46EE-87CF-033D4EC9D288}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{D5029A82-7436-42FC-B6AC-7A6C6A094315}];
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{1DFFFF31-23F5-4194-A005-300E32167653}] ;Name=Forbrukskladd;
+                                                                CaptionML=[ENU=Consumption Journal;
+                                                                           NOR=Forbrukskladd];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=99000846;
+                                                                ParentNodeID=[{DB86519A-3B17-46EE-87CF-033D4EC9D288}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{E1F1A8E0-9757-4AF9-AA74-C14B9C2233FC}];
+                                                                DepartmentCategory=Tasks }
+    { MenuGroup      ;[{E1F1A8E0-9757-4AF9-AA74-C14B9C2233FC}] ;Name=Reports;
+                                                                CaptionML=[ENU=Reports;
+                                                                           NOR=Rapporter];
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                ParentNodeID=[{DB86519A-3B17-46EE-87CF-033D4EC9D288}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                FirstChild=[{C91F855A-33D1-4AEE-A741-1BBE88270DB9}];
+                                                                IsDepartmentPage=No }
+    { MenuItem       ;[{C91F855A-33D1-4AEE-A741-1BBE88270DB9}] ;Name=Indirekte tid;
+                                                                CaptionML=[ENU=OPC Indirect Time;
+                                                                           NOR=OPC Indirekte tid];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Report;
+                                                                RunObjectID=83001;
+                                                                ParentNodeID=[{E1F1A8E0-9757-4AF9-AA74-C14B9C2233FC}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                DepartmentCategory=Reports and Analysis }
+    {                ;[{4444D15F-6F71-4058-A823-C35BD171B04A}] ;NextNodeID=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}] }
+    { MenuItem       ;[{B27AA02A-A18D-49F8-ADDE-D8D290737593}] ;Name=OPC Oppsett;
+                                                                CaptionML=[ENU=OPC Setup;
+                                                                           NOR=OPC Oppsett];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83011;
+                                                                ParentNodeID=[{0DAD1316-1367-4BCD-B71C-9634353A0D29}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                DepartmentCategory=Administration }
+    { MenuGroup      ;[{0DAD1316-1367-4BCD-B71C-9634353A0D29}] ;Name=Setup;
+                                                                CaptionML=[ENU=Setup;
+                                                                           NOR=Oppsett];
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                ParentNodeID=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{4FD54D94-E35F-4502-ACBB-A94C6ABAD2A6}];
+                                                                FirstChild=[{B27AA02A-A18D-49F8-ADDE-D8D290737593}];
+                                                                IsDepartmentPage=No }
+    { MenuGroup      ;[{DB86519A-3B17-46EE-87CF-033D4EC9D288}] ;Name=Production;
+                                                                CaptionML=[ENU=Production;
+                                                                           NOR=Produksjon];
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                ParentNodeID=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{0DAD1316-1367-4BCD-B71C-9634353A0D29}];
+                                                                FirstChild=[{0983E9E7-CD0C-4216-8ADC-CEE0B6FB86C2}];
+                                                                IsDepartmentPage=Yes }
+    { MenuGroup      ;[{4FD54D94-E35F-4502-ACBB-A94C6ABAD2A6}] ;Name=Admin;
+                                                                CaptionML=[ENU=Admin;
+                                                                           NOR=Admin];
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                ParentNodeID=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                FirstChild=[{33BE73AD-BD7F-4450-9AC9-C7408A8D1CD9}];
+                                                                IsDepartmentPage=Yes }
+    { MenuGroup      ;[{33BE73AD-BD7F-4450-9AC9-C7408A8D1CD9}] ;Name=Time Registration;
+                                                                CaptionML=[ENU=Time Registration;
+                                                                           NOR=M›nstring];
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                ParentNodeID=[{4FD54D94-E35F-4502-ACBB-A94C6ABAD2A6}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{193DFC3E-3297-4541-B800-27B9562AE727}];
+                                                                FirstChild=[{F8776E2C-0F5D-40C5-8132-F093B2B7308A}];
+                                                                IsDepartmentPage=No }
+    { MenuItem       ;[{F8776E2C-0F5D-40C5-8132-F093B2B7308A}] ;Name=Registrert m›nstret tid;
+                                                                CaptionML=[ENU=OPC Time Registered;
+                                                                           NOR=Registrert m›nstret tid];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83013;
+                                                                ParentNodeID=[{33BE73AD-BD7F-4450-9AC9-C7408A8D1CD9}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{E3CCC9DD-0626-4B37-86AE-945C090D0046}];
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{E3CCC9DD-0626-4B37-86AE-945C090D0046}] ;Name=Stemplingsliste;
+                                                                CaptionML=[ENU=OPC Time Register List;
+                                                                           NOR=OPC Stemplingsliste];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Report;
+                                                                RunObjectID=58001;
+                                                                ParentNodeID=[{33BE73AD-BD7F-4450-9AC9-C7408A8D1CD9}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                DepartmentCategory=Reports and Analysis }
+    { MenuItem       ;[{193DFC3E-3297-4541-B800-27B9562AE727}] ;Name=[OPC - koder for Ikke produktiv tid ];
+                                                                CaptionML=[ENU=OPC Indirect Time Admin;
+                                                                           NOR=OPC Koder for indirekte  tid];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83027;
+                                                                ParentNodeID=[{4FD54D94-E35F-4502-ACBB-A94C6ABAD2A6}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{1E5F1A7F-F9B1-43E8-98DD-AE39CF42FDA7}];
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{1E5F1A7F-F9B1-43E8-98DD-AE39CF42FDA7}] ;Name=OPC Koder for ikke produktiv tid;
+                                                                CaptionML=[ENU=OPC Time Registration Deduction;
+                                                                           NOR=OPC Timeregistering fradrag];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83022;
+                                                                ParentNodeID=[{4FD54D94-E35F-4502-ACBB-A94C6ABAD2A6}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{01401CCA-3342-43D8-87B2-1C811D6A5156}];
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{01401CCA-3342-43D8-87B2-1C811D6A5156}] ;Name=OPC kapasitetsposter;
+                                                                CaptionML=[ENU=OPC Capacity Ledger Entry;
+                                                                           NOR=OPC kapasitetsposter];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83105;
+                                                                ParentNodeID=[{4FD54D94-E35F-4502-ACBB-A94C6ABAD2A6}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{CCF7B636-C0E0-4C21-871A-7A78E2E832E8}] ;Name=OPC Information Message;
+                                                                CaptionML=[ENU=OPC Information Message;
+                                                                           NOR=OPC Melding p† informasjonssentral];
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{6A1856B5-E3EC-406B-80EB-05C5EF4631BD}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=83003;
+                                                                ParentNodeID=[{DB86519A-3B17-46EE-87CF-033D4EC9D288}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{4C955B3D-9D98-4D1F-A64C-5F05C16BF56E}];
+                                                                DepartmentCategory=Tasks }
+  }
+}

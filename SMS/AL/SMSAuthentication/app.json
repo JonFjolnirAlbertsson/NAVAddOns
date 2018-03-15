@@ -1,0 +1,24 @@
+{
+  "id": "a3bce55a-ad63-4986-8049-c2926f6e7644",
+  "name": "SMS Authentication",
+  "publisher": "Incadea Norge aS",
+  "brief": "",
+  "description": "SMS two way authentication.",
+  "version": "1.0.0.6",
+  "compatibilityId": "1.0.0.6",
+  "privacyStatement": "",
+  "EULA": "",
+  "help": "",
+  "url": "",
+  "logo": "./Logo/icon.png",
+  "capabilities": [],
+  "dependencies": [],
+  "screenshots": [],
+  "platform": "11.0.0.0",
+  "application": "11.0.0.0",
+  "features": "TranslationFile",
+  "idRange": {
+    "from": 53100,
+    "to": 53110
+  }
+}

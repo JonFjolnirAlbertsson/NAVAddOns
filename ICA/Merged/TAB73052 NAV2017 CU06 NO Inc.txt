@@ -1,0 +1,213 @@
+OBJECT Table 73052 Item Calc. Line
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08.09.17;
+    Time=15:09:43;
+    Modified=Yes;
+    Version List=ICA2.01;
+  }
+  PROPERTIES
+  {
+    OnInsert=BEGIN
+               IF CalcHeaderG.GET("Calc. No.") THEN
+                 CalcHeaderG.IsLocked();
+             END;
+
+    CaptionML=[ENU=Item Calc. Line;
+               NOR=Kalkylelinjer];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Calc. No.           ;Code20        ;CaptionML=[ENU=Calc. No.;
+                                                              NOR=Kalkyle nr.] }
+    { 2   ;   ;Type                ;Option        ;CaptionML=[ENU=Type;
+                                                              NOR=Type];
+                                                   OptionCaptionML=[ENU=" ,Material,Capacity,Additional";
+                                                                    NOR=" ,Material,Rutelinjer,Diverse"];
+                                                   OptionString=[ ,Material,Capacity,Additional] }
+    { 3   ;   ;Sequence No.        ;Integer       ;CaptionML=[ENU=Sequence No.;
+                                                              NOR=Sekvens nr.] }
+    { 4   ;   ;No.                 ;Code20        ;TableRelation=IF (Type=CONST(Material)) Item.No.;
+                                                   OnValidate=BEGIN
+                                                                IF Type = Type::Material THEN
+                                                                  IF ItemG.GET("No.") THEN BEGIN
+                                                                    Description := ItemG.Description;
+                                                                    "Vendor No." := ItemG."Vendor No.";
+                                                                    "Unit of Measure" := ItemG."Base Unit of Measure";
+                                                                    "Unit Cost" := ItemG."Unit Cost";
+                                                                  END;
+                                                              END;
+
+                                                   CaptionML=[ENU=No.;
+                                                              NOR=Nr.] }
+    { 5   ;   ;Description         ;Text50        ;CaptionML=[ENU=Description;
+                                                              NOR=Beskrivelse] }
+    { 6   ;   ;Quantity            ;Decimal       ;OnValidate=BEGIN
+                                                                ReCalculate();
+                                                              END;
+
+                                                   CaptionML=[ENU=Quantity;
+                                                              NOR=Antall] }
+    { 7   ;   ;Unit of Measure     ;Code20        ;CaptionML=[ENU=Unit of Measure;
+                                                              NOR=Enhetskode] }
+    { 8   ;   ;Unit Cost           ;Decimal       ;OnValidate=BEGIN
+                                                                ReCalculate();
+                                                              END;
+
+                                                   CaptionML=[ENU=Unit Cost;
+                                                              NOR=Enhetskost] }
+    { 9   ;   ;Line Amount         ;Decimal       ;CaptionML=[ENU=Line Amount;
+                                                              NOR=Linje Bel›p] }
+    { 71  ;   ;Project Code        ;Code20        ;CaptionML=[ENU=Project Code;
+                                                              NOR=Prosjektkode] }
+    { 80  ;   ;Variant Code        ;Code10        ;TableRelation="Item Variant".Code WHERE (Item No.=FIELD(No.));
+                                                   CaptionML=[ENU=Variant code;
+                                                              NOR=Variant] }
+    { 100 ;   ;Vendor No.          ;Code20        ;TableRelation=Vendor;
+                                                   CaptionML=[ENU=Vendor No.;
+                                                              NOR=Leverand›r Nr.] }
+    { 101 ;   ;System Created      ;Boolean       ;CaptionML=[ENU=System Created;
+                                                              NOR=System opprettet] }
+    { 102 ;   ;Work Center         ;Code20        ;TableRelation="Work Center".No.;
+                                                   OnValidate=BEGIN
+                                                                 CLEAR(WorkCenter);
+                                                                   IF WorkCenter.GET("Work Center") THEN BEGIN
+                                                                     Description := WorkCenter.Name;
+                                                                     "Unit of Measure" := WorkCenter."Unit of Measure Code";
+                                                                     "Unit Cost" := WorkCenter."Unit Cost";
+                                                                   END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Work Center;
+                                                              NOR=Arbeidssenter] }
+    { 103 ;   ;Activity Type       ;Option        ;CaptionML=[ENU=Activity Type;
+                                                              NOR=Aktivitetstype];
+                                                   OptionString=[ ,Maskinering,Ultralyd,MPI/ MT,LPI/ PT,PMI,PTFE Coating,Pickling] }
+    { 5000;   ;Purchase Status     ;Option        ;OnValidate=BEGIN
+                                                                IF xRec."Purchase Status" > "Purchase Status"::"Req. to purch.dpt" THEN
+                                                                  ERROR(TEXT50001);
+
+                                                                IF xRec."Purchase Status" <> "Purchase Status" THEN
+                                                                  IF "Purchase Status" = "Purchase Status"::"Req. to purch.dpt" THEN
+                                                                    SendNotification(Rec);
+                                                              END;
+
+                                                   CaptionML=[ENU=Purchase Status;
+                                                              NOR=Bestillingsstatus];
+                                                   OptionCaptionML=[ENU=Inventory,Req. to purch.dpt,Req. created,Req. confirmed;
+                                                                    NOR=Tas fra lager,Foresp›r innkj.avd.,Foresp›rsel opprettet,Foresp›rsel besvart];
+                                                   OptionString=Inventory,Req. to purch.dpt,Req. created,Req. confirmed }
+    { 5001;   ;Purchase Document No.;Code20       ;TableRelation="Purchase Header".No.;
+                                                   CaptionML=[ENU=Purchase Document No.;
+                                                              NOR=Bestillingsdokumentnr.] }
+    { 5002;   ;Purchase Line No.   ;Integer       ;CaptionML=[ENU=Purchase Line No.;
+                                                              NOR=Bestillingslinjenr.] }
+    { 5003;   ;Purchase Price      ;Decimal       ;CaptionML=[ENU=Purchase Price;
+                                                              NOR=Bestillingspris] }
+  }
+  KEYS
+  {
+    {    ;Calc. No.,Type,Sequence No.             ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      CalcHeaderG@1101103005 : Record 73051;
+      ItemG@1101103004 : Record 27;
+      TotalCost@1101103003 : Decimal;
+      WorkCenter@1101103002 : Record 99000754;
+      KalkHode@1101103001 : Record 73051;
+      Ordersize@1101103000 : Text[10];
+      Text001@1101103007 : TextConst 'ENU=New cost is %1;NOR="Ny kost er "';
+      TEXT50001@1101103006 : TextConst 'ENU=You can not change from this status.;NOR=Du kan ikke endre etter fra gjeldene status.';
+
+    LOCAL PROCEDURE ReCalculate@1101103001();
+    BEGIN
+      "Line Amount" := Quantity * "Unit Cost";
+      UpdateCalulation("Line Amount" - xRec."Line Amount");
+    END;
+
+    PROCEDURE UpdateCalulation@1000000002(NetChangeP@1000000001 : Decimal);
+    VAR
+      CalcLinesL@1000000000 : Record 73052;
+    BEGIN
+      IF CalcHeaderG.GET("Calc. No.") THEN BEGIN
+        CalcHeaderG.IsLocked();
+
+        TotalCost := 0;
+        CalcLinesL.RESET;
+        CalcLinesL.SETRANGE("Calc. No.", "Calc. No.");
+        IF CalcLinesL.FINDFIRST THEN
+        REPEAT
+          TotalCost := TotalCost + CalcLinesL."Line Amount";
+        UNTIL CalcLinesL.NEXT = 0;
+        TotalCost := TotalCost + NetChangeP;
+
+        //MESSAGE(Text001,TotalCost);   //10.01.12 skrevet om til Text Constant grunnet VUS-demo
+        IF CalcHeaderG."Calculation Method" = 0 THEN BEGIN    // Salgspris = Kost * kalkylefaktor
+          IF CalcHeaderG."Calc. Factor" <> 0 THEN BEGIN
+            CalcHeaderG."Sales Price" := ROUND((TotalCost * CalcHeaderG."Calc. Factor"),0.01);
+          END;
+        END;
+        IF CalcHeaderG."Calculation Method" = 1 THEN BEGIN    // Kalkylefaktor= Salgspris/Kost
+          IF CalcHeaderG."Sales Price" <> 0 THEN BEGIN
+            CalcHeaderG."Calc. Factor" := (CalcHeaderG."Sales Price" / TotalCost);
+          END;
+        END;
+        CalcHeaderG.MODIFY;
+      END;
+    END;
+
+    PROCEDURE SendNotification@1101103000(CalcLine@1000000000 : Record 73052);
+    VAR
+      SMTPMail@1000000002 : Codeunit 400;
+      Emne@1000000003 : Text[100];
+      Beskrivelse@1000000004 : Text[100];
+      SMTPSetup@1000000005 : Record 409;
+      salesperson@1000000006 : Record 13;
+      VarselSendtAv@1000000007 : Text[100];
+      Beskrivelse2@1000000008 : Text[100];
+      Beskrivelse3@1000000009 : Text[100];
+      Calculation@1101103000 : Record 73051;
+      TilbudtPris@1101103001 : Text[30];
+      VarselSendtAvEpost@1101103002 : Text[100];
+      Ordreant@1101103003 : Text[5];
+    BEGIN
+      //SMTPMail.CreateMessage(SenderName,SenderAddress,Recipients,Subject,Body,HtmlFormatted)
+      //HHE 08.02.17 MTPSetup.GET;
+      //hhe 21.11.12->
+      KalkHode.GET("Calc. No.");
+      Ordersize:= FORMAT(KalkHode."Order Quantity");
+      //hhe 21.11.12<-
+      IF salesperson.GET(USERID) THEN BEGIN
+        VarselSendtAv       := salesperson.Name;
+        VarselSendtAvEpost :=  salesperson."E-Mail";
+      END ELSE BEGIN
+        VarselSendtAv := USERID;
+      END;
+
+      SMTPMail.CreateMessage
+        (VarselSendtAv,
+        VarselSendtAvEpost,'Purchasing.VNO@vectortg.com',  "Calc. No."+ ' '+
+        'Foresp›rsel om pris p† ' +Ordersize+ ' ',"No."+' '+Description,TRUE);
+        SMTPMail.Send;
+
+      MESSAGE('Varsel er sendt ut p† e-post til innkj›per.');
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Item Calculation (Kalkyle)
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,34 @@
+OBJECT Table 50024 Rutegruppe
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07.02.17;
+    Time=15.59.47;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+  }
+  FIELDS
+  {
+    { 1   ;   ;Routing group code  ;Code20        ;CaptionML=[ENU=Routing group code;
+                                                              NOR=Rutegruppekode] }
+    { 2   ;   ;Description         ;Text50        ;CaptionML=[ENU=Description;
+                                                              NOR=Beskrivelse] }
+  }
+  KEYS
+  {
+    {    ;Routing group code                      ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+

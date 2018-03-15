@@ -1,0 +1,88 @@
+OBJECT Page 73052 Item Calc. Subform
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08.09.17;
+    Time=15:10:30;
+    Modified=Yes;
+    Version List=ICA2.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Lines;
+               NOR=Kalkylelinjer];
+    MultipleNewLines=Yes;
+    SourceTable=Table73052;
+    DelayedInsert=Yes;
+    PageType=ListPart;
+    OnNewRecord=BEGIN
+                  "Calc. No." := xRec."Calc. No.";
+                  Type := xRec.Type;
+                  "Sequence No." := xRec."Sequence No." + 10;
+                END;
+
+  }
+  CONTROLS
+  {
+    { 1101103000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1101103001;1;Group  ;
+                Name=Group;
+                GroupType=Repeater }
+
+    { 1101103002;2;Field  ;
+                SourceExpr=Type }
+
+    { 1101103003;2;Field  ;
+                SourceExpr="No." }
+
+    { 1101103005;2;Field  ;
+                SourceExpr=Description }
+
+    { 1101103006;2;Field  ;
+                SourceExpr=Quantity;
+                OnValidate=BEGIN
+                             CurrPage.UPDATE();
+                           END;
+                            }
+
+    { 1101103007;2;Field  ;
+                SourceExpr="Unit of Measure" }
+
+    { 1101103008;2;Field  ;
+                SourceExpr="Unit Cost";
+                OnValidate=BEGIN
+                             CurrPage.UPDATE();
+                           END;
+                            }
+
+    { 1101103009;2;Field  ;
+                SourceExpr="Line Amount";
+                OnValidate=BEGIN
+                             CurrPage.UPDATE();
+                           END;
+                            }
+
+    { 1101103011;2;Field  ;
+                SourceExpr="Purchase Price" }
+
+    { 1101103012;2;Field  ;
+                SourceExpr="Vendor No." }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Item Calculation (Kalkyle)
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,402 @@
+OBJECT Codeunit 65000 Trade Doc. REP Events
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09.11.17;
+    Time=14:55:22;
+    Modified=Yes;
+    Version List=TRD1.00;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      C_INC_Total@1101103025 : TextConst 'ENU=Total %1;NOR=I alt %1';
+      C_INC_TotalIncludedVAT@1101103023 : TextConst 'ENU=Total %1 Incl. VAT;NOR=Totat %1 inkl. mva';
+      C_INC_TotalExcludedVAT@1101103024 : TextConst 'ENU=Total %1 Excl. VAT;NOR=Totalt %1 eks. mva';
+
+    LOCAL PROCEDURE GetUOMDescription@1101103014(UOMCodeP@1101103000 : Code[10];LanguageCodeP@1101103001 : Code[10];VAR UOMDescriptionG@1101103002 : Text[10]);
+    VAR
+      UnitofMeasureTranslationL@1101103006 : Record 5402;
+      UnitofMeasureL@1101103004 : Record 204;
+    BEGIN
+      UOMDescriptionG := '';
+      IF UOMCodeP = '' THEN
+        UnitofMeasureL.INIT
+      ELSE BEGIN
+        UnitofMeasureL.GET(UOMCodeP);
+        UOMDescriptionG := UnitofMeasureL.Code;
+        IF UnitofMeasureTranslationL.GET(UOMCodeP, LanguageCodeP) THEN
+          UOMDescriptionG := UnitofMeasureTranslationL.Description;
+      END;
+    END;
+
+    LOCAL PROCEDURE GetKID@1101103017(DocumentNoP@1101103013 : Code[20];CustomerNoP@1101103007 : Code[20];CurrencyCodeP@1101103000 : Code[10];VAR KIDP@1101103001 : Text[25]);
+    VAR
+      DocumentToolsL@1101103003 : Codeunit 10601;
+      PrinterSelectionL@1101103004 : Record 78;
+      GiroAmountL@1101103012 : Decimal;
+      GiroAmountNOKL@1101103011 : Text[30];
+      GiroAmountOuncesL@1101103010 : Text[30];
+      CheckDigitL@1101103009 : Text[1];
+      PrintGiroL@1101103008 : Boolean;
+      ReceiptAmountL@1101103006 : Decimal;
+      KIDErrorL@1101103005 : Boolean;
+    BEGIN
+      //KID
+      DocumentToolsL.SetupGiro(
+        TRUE,1,DocumentNoP,CustomerNoP,
+        GiroAmountL,CurrencyCodeP,GiroAmountNOKL,GiroAmountOuncesL,CheckDigitL,KIDP,KIDErrorL);
+
+      // IF DocumentToolsL.FindPrintingSetup(Sender.OBJECTID(FALSE),PrinterSelectionl) AND
+      //    PrintGirog AND (PrinterSelectionl."Giro Page - Tray Number" <> 0)
+      // THEN begin
+      //  sender.PAPERSOURCE(PrinterSelection."Giro Page - Tray Number");
+      //END;
+    END;
+
+    LOCAL PROCEDURE GetShippingAgent@1101103026(ShippingAgentCodeP@1101103000 : Code[10];ShippingAgentServiceCodeP@1101103001 : Code[10];VAR ShippingAgentNameP@1101103003 : Text[50];VAR ShippingAgentServiceDescriptionP@1101103002 : Text[50]);
+    VAR
+      ShippingAgentL@1101103005 : Record 291;
+      ShippingAgentServicesL@1101103004 : Record 5790;
+    BEGIN
+      //Shipping Agent
+      ShippingAgentNameP := '';
+      IF ShippingAgentCodeP <> '' THEN BEGIN
+        ShippingAgentL.GET(ShippingAgentCodeP);
+        ShippingAgentNameP := ShippingAgentL.Name;
+      END;
+      //Shipping Agent Services
+      ShippingAgentServiceDescriptionP := '';
+      IF ShippingAgentServiceCodeP <> '' THEN BEGIN
+        ShippingAgentServicesL.GET(ShippingAgentCodeP, ShippingAgentServiceCodeP);
+        ShippingAgentServiceDescriptionP := ShippingAgentServicesL.Description;
+      END;
+    END;
+
+    [EventSubscriber(Report,65000,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65000OnAfterInitReport@1101103000(VAR Sender@1101103000 : Report 65000;VAR CompanyInformationP@1101103001 : Record 79;VAR CompanyInfoCountryNameG@1101103003 : Text[30]);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      CompanyInformationP.CALCFIELDS(Picture);
+      IF  CountryRegionL.GET(CompanyInformationP."Country/Region Code") THEN BEGIN
+        CompanyInfoCountryNameG := CountryRegionL.Name;
+      END;
+    END;
+
+    [EventSubscriber(Report,65000,OnAfterGetSalesHeader)]
+    LOCAL PROCEDURE REP65000OnAfterGetSalesHeader@1101103002(VAR Sender@1101103000 : Report 65000;VAR SalesHeaderP@1101103001 : Record 36;VAR HeadingTxtG@1101103002 : Text[30];VAR ShippingAgentNameG@1101103006 : Text[50];VAR ShippingAgentServiceDescriptionG@1101103005 : Text[50]);
+    VAR
+      ShippingAgentL@1101103004 : Record 291;
+      ShippingAgentServicesL@1101103003 : Record 5790;
+    BEGIN
+      //HEI
+      HeadingTxtG := FORMAT(SalesHeaderP."Document Type");
+
+      //Shipping Agent and Shipping Agent Services
+      GetShippingAgent(SalesHeaderP."Shipping Agent Code", SalesHeaderP."Shipping Agent Service Code", ShippingAgentNameG, ShippingAgentServiceDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65000,OnAfterGetSalesLine)]
+    LOCAL PROCEDURE REP65000OnAfterGetSalesLine@1101103003(VAR Sender@1101103000 : Report 65000;VAR SalesHeaderP@1101103001 : Record 36;VAR SalesLineP@1101103002 : Record 37;VAR UOMDescriptionG@1101103003 : Text[10]);
+    BEGIN
+      // Unit Of Measure
+      GetUOMDescription(SalesLineP."Unit of Measure Code", SalesHeaderP."Language Code", UOMDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65001,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65001OnAfterInitReport@1101103001(VAR Sender@1101103000 : Report 65001;VAR CompanyInformationP@1101103001 : Record 79;VAR CompanyInfoCountryNameG@1101103003 : Text[50]);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      CompanyInformationP.CALCFIELDS(Picture);
+      IF  CountryRegionL.GET(CompanyInformationP."Country/Region Code") THEN BEGIN
+        CompanyInfoCountryNameG := CountryRegionL.Name;
+      END;
+    END;
+
+    [EventSubscriber(Report,65001,OnAfterGetSalesHeader)]
+    LOCAL PROCEDURE REP65001OnAfterGetSalesHeader@1101103004(VAR Sender@1101103000 : Report 65001;VAR SalesHeaderP@1101103001 : Record 36;VAR ShippingAgentNameG@1101103006 : Text[50];VAR ShippingAgentServiceDescriptionG@1101103005 : Text[50]);
+    VAR
+      SalespersonPurchaserL@1101103003 : Record 13;
+    BEGIN
+      //Shipping Agent and Shipping Agent Services
+      GetShippingAgent(SalesHeaderP."Shipping Agent Code", SalesHeaderP."Shipping Agent Service Code", ShippingAgentNameG, ShippingAgentServiceDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65001,OnAfterGetSalesLine)]
+    LOCAL PROCEDURE REP65001OnAfterGetSalesLine@1101103005(VAR Sender@1101103000 : Report 65001;VAR SalesHeaderP@1101103001 : Record 36;VAR SalesLineP@1101103004 : Record 37;VAR UOMDescriptionG@1101103005 : Text[100]);
+    VAR
+      UnitofMeasureL@1101103002 : Record 204;
+      UnitofMeasureTranslationL@1101103003 : Record 5402;
+    BEGIN
+      GetUOMDescription(SalesLineP."Unit of Measure Code", SalesHeaderP."Language Code", UOMDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65002,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65002OnAfterInitReport@1101103006(VAR Sender@1101103000 : Report 65002;VAR CompanyInformationP@1101103001 : Record 79);
+    BEGIN
+      CompanyInformationP.GET;
+      CompanyInformationP.CALCFIELDS(Picture);
+    END;
+
+    [EventSubscriber(Report,65002,OnAfterGetPurchaseHeader)]
+    LOCAL PROCEDURE REP65002OnAfterGetPurchaseHeader@1101103009(VAR Sender@1101103000 : Report 65002;VAR PurchaseHeaderP@1101103001 : Record 38;VAR PayTermsDescr@1101103004 : Text[50];VAR TotalText@1101103005 : Text;VAR TotalInclVATText@1101103006 : Text;VAR TotalExclVATText@1101103007 : Text);
+    VAR
+      PaymentTermsL@1101103002 : Record 3;
+      GeneralLedgerSetupL@1101103003 : Record 98;
+    BEGIN
+      //Payment terms
+      CLEAR(PayTermsDescr);
+      PaymentTermsL.SETRANGE(Code, PurchaseHeaderP."Payment Terms Code");
+      IF PaymentTermsL.FINDFIRST THEN BEGIN
+        PayTermsDescr := PaymentTermsL.Description;
+      END;
+
+      IF PurchaseHeaderP."Currency Code" = '' THEN BEGIN
+        GeneralLedgerSetupL.TESTFIELD("LCY Code");
+        TotalText := STRSUBSTNO(C_INC_Total,GeneralLedgerSetupL."LCY Code");
+        TotalInclVATText := STRSUBSTNO(C_INC_TotalIncludedVAT,GeneralLedgerSetupL."LCY Code");
+        TotalExclVATText := STRSUBSTNO(C_INC_TotalExcludedVAT,GeneralLedgerSetupL."LCY Code");
+      END ELSE BEGIN
+        TotalText := STRSUBSTNO(C_INC_Total,PurchaseHeaderP."Currency Code");
+        TotalInclVATText := STRSUBSTNO(C_INC_TotalIncludedVAT,PurchaseHeaderP."Currency Code");
+        TotalExclVATText := STRSUBSTNO(C_INC_TotalExcludedVAT,PurchaseHeaderP."Currency Code");
+      END;
+    END;
+
+    [EventSubscriber(Report,65002,OnAfterGetCopyLoop)]
+    LOCAL PROCEDURE REP65002OnAfterGetCopyLoop@1101103007(VAR Sender@1101103000 : Report 65002;VAR PurchaseHeaderP@1101103001 : Record 38;VAR PurchaseLineP@1101103002 : Record 39;VAR VATAmountLineP@1101103003 : Record 290;VAR VATAmount@1101103004 : Decimal);
+    BEGIN
+      VATAmountLineP.DELETEALL;
+
+      PurchaseLineP.CalcVATAmountLines(0,PurchaseHeaderP,PurchaseLineP,VATAmountLineP);
+      PurchaseLineP.UpdateVATOnLines(0,PurchaseHeaderP,PurchaseLineP,VATAmountLineP);
+      VATAmount := VATAmountLineP.GetTotalVATAmount;
+    END;
+
+    [EventSubscriber(Report,65002,OnAfterGetRoundLoop)]
+    LOCAL PROCEDURE REP65002OnAfterGetRoundLoop@1101103008(VAR Sender@1101103000 : Report 65002;VAR PurchaseHeaderP@1101103001 : Record 38;VAR PurchaseLineP@1101103002 : Record 39;VAR UOMDescriptionG@1101103003 : Text[30]);
+    VAR
+      UnitofMeasureTranslationL@1101103005 : Record 5402;
+      UnitOfMeasureL@1101103004 : Record 204;
+    BEGIN
+      GetUOMDescription(PurchaseLineP."Unit of Measure Code", PurchaseHeaderP."Language Code", UOMDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65003,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65003OnAfterInitReport@1101103010(VAR Sender@1101103000 : Report 65003;VAR CompanyInformationP@1101103001 : Record 79;VAR CompanyInfoCountryNameG@1101103003 : Text);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      CompanyInformationP.CALCFIELDS(Picture);
+      IF  CountryRegionL.GET(CompanyInformationP."Country/Region Code") THEN BEGIN
+        CompanyInfoCountryNameG := CountryRegionL.Name;
+      END;
+    END;
+
+    [EventSubscriber(Report,65003,OnAfterGetSalesInvoiceHeader)]
+    LOCAL PROCEDURE REP65003OnAfterGetSalesInvoiceHeader@1101103011(VAR Sender@1101103000 : Report 65003;VAR SalesInvoiceHeaderP@1101103001 : Record 112;VAR GiroKIDG@1101103007 : Text[25];VAR ShippingAddressCountryNameG@1101103013 : Text[50]);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      //KID
+      GetKID(SalesInvoiceHeaderP."No.", SalesInvoiceHeaderP."Bill-to Customer No.", SalesInvoiceHeaderP."Currency Code", GiroKIDG);
+
+      IF SalesInvoiceHeaderP."Ship-to Country/Region Code" <> '' THEN BEGIN
+        CountryRegionL.GET(SalesInvoiceHeaderP."Ship-to Country/Region Code");
+        ShippingAddressCountryNameG := CountryRegionL.Name;
+      END;
+    END;
+
+    [EventSubscriber(Report,65003,OnAfterGetSalesInvoiceLine)]
+    LOCAL PROCEDURE REP65003OnAfterGetSalesInvoiceLine@1101103012(VAR Sender@1101103000 : Report 65003;VAR SalesInvoiceHeaderP@1101103001 : Record 112;VAR SalesInvoiceLineP@1101103005 : Record 113;VAR UOMDescriptionG@1101103002 : Text[10]);
+    VAR
+      UnitofMeasureTranslationL@1101103006 : Record 5402;
+      UnitofMeasureL@1101103004 : Record 204;
+    BEGIN
+      GetUOMDescription(SalesInvoiceLineP."Unit of Measure Code", SalesInvoiceHeaderP."Language Code", UOMDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65005,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65005OnAfterInitReport@1101103016(VAR Sender@1101103000 : Report 65005;VAR CompanyInformationP@1101103001 : Record 79;VAR CompanyInfoCountryNameG@1101103003 : Text);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      CompanyInformationP.CALCFIELDS(Picture);
+      IF  CountryRegionL.GET(CompanyInformationP."Country/Region Code") THEN BEGIN
+        CompanyInfoCountryNameG := CountryRegionL.Name;
+      END;
+    END;
+
+    [EventSubscriber(Report,65005,OnAfterGetSalesCrMemoHeader)]
+    LOCAL PROCEDURE REP65005OnAfterGetSalesCrMemoHeader@1101103015(VAR Sender@1101103000 : Report 65005;VAR SalesCrMemoHeaderP@1101103001 : Record 114;VAR GiroKIDG@1101103007 : Text[25]);
+    BEGIN
+      //KID
+      GetKID(SalesCrMemoHeaderP."No.", SalesCrMemoHeaderP."Bill-to Customer No.", SalesCrMemoHeaderP."Currency Code", GiroKIDG);
+    END;
+
+    [EventSubscriber(Report,65005,OnAfterGetSalesCrMemoLine)]
+    LOCAL PROCEDURE REP65005OnAfterGetSalesCrMemoLine@1101103013(VAR Sender@1101103000 : Report 65005;VAR SalesCrMemoHeaderP@1101103001 : Record 114;VAR SalesCrMemoLineP@1101103002 : Record 115;VAR UOMDescriptionG@1101103003 : Text[10]);
+    VAR
+      UnitofMeasureTranslationL@1101103006 : Record 5402;
+      UnitofMeasureL@1101103004 : Record 204;
+    BEGIN
+      GetUOMDescription(SalesCrMemoLineP."Unit of Measure Code", SalesCrMemoHeaderP."Language Code", UOMDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65006,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65006OnAfterInitReport@1101103018(VAR Sender@1101103000 : Report 65006;VAR CompanyInformationP@1101103001 : Record 79;VAR CompanyInfoCountryNameG@1101103003 : Text[50]);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      CompanyInformationP.CALCFIELDS(Picture);
+      IF  CountryRegionL.GET(CompanyInformationP."Country/Region Code") THEN BEGIN
+        CompanyInfoCountryNameG := CountryRegionL.Name;
+      END;
+    END;
+
+    [EventSubscriber(Report,65006,OnAfterGetPurchaseHeader)]
+    LOCAL PROCEDURE REP65006OnAfterGetPurchaseHeader@1101103019(VAR Sender@1101103000 : Report 65006;VAR PurchaseHeaderP@1101103001 : Record 38);
+    BEGIN
+    END;
+
+    [EventSubscriber(Report,65006,OnAfterGetPurchaseLine)]
+    LOCAL PROCEDURE REP65006OnAfterGetPurchaseLine@1101103020(VAR Sender@1101103000 : Report 65006;VAR PurchaseHeaderP@1101103001 : Record 38;VAR PurchaseLineP@1101103003 : Record 39;VAR UOMDescriptionG@1101103002 : Text[10]);
+    BEGIN
+      GetUOMDescription(PurchaseLineP."Unit of Measure Code", PurchaseHeaderP."Language Code", UOMDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65007,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65007OnAfterInitReport@1101103023(VAR Sender@1101103000 : Report 65007;VAR CompanyInformationP@1101103001 : Record 79;VAR CompanyInfoCountryNameG@1101103003 : Text[50]);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      CompanyInformationP.CALCFIELDS(Picture);
+      IF  CountryRegionL.GET(CompanyInformationP."Country/Region Code") THEN BEGIN
+        CompanyInfoCountryNameG := CountryRegionL.Name;
+      END;
+    END;
+
+    [EventSubscriber(Report,65007,OnAfterGetSalesShipmentHeader)]
+    LOCAL PROCEDURE REP65007OnAfterGetSalesShipmentHeader@1101103022(VAR Sender@1101103000 : Report 65007;VAR SalesShipmentHeaderP@1101103001 : Record 110;VAR ShippingAgentNameG@1101103003 : Text[50];VAR ShippingAgentServiceDescriptionG@1101103002 : Text[50]);
+    VAR
+      ShippingAgentL@1101103005 : Record 291;
+      ShippingAgentServicesL@1101103004 : Record 5790;
+    BEGIN
+      //Shipping Agent and Shipping Agent Services
+      GetShippingAgent(SalesShipmentHeaderP."Shipping Agent Code", SalesShipmentHeaderP."Shipping Agent Service Code", ShippingAgentNameG, ShippingAgentServiceDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65007,OnAfterGetSalesShipmentLine)]
+    LOCAL PROCEDURE REP65007OnAfterGetSalesShipmentLine@1101103021(VAR Sender@1101103000 : Report 65007;VAR SalesShipmentHeaderP@1101103001 : Record 110;VAR SalesShipmentLineP@1101103002 : Record 111;VAR UOMDescriptionG@1101103003 : Text[10]);
+    BEGIN
+      GetUOMDescription(SalesShipmentLineP."Unit of Measure Code", SalesShipmentHeaderP."Language Code", UOMDescriptionG);
+    END;
+
+    [EventSubscriber(Report,65007,OnAfterFormatDocumentFields)]
+    LOCAL PROCEDURE REP65007OnAfterFormatDocumentFields@1101103024(VAR Sender@1101103000 : Report 65007;VAR SalesShipmentHeaderP@1101103001 : Record 110;VAR PaymentTermsG@1101103002 : Record 3;VAR ShipmentMethodG@1101103003 : Record 10);
+    VAR
+      FormatDocumentL@1101103004 : Codeunit 368;
+    BEGIN
+      FormatDocumentL.SetPaymentTerms(PaymentTermsG,SalesShipmentHeaderP."Payment Terms Code",SalesShipmentHeaderP."Language Code");
+      FormatDocumentL.SetShipmentMethod(ShipmentMethodG,SalesShipmentHeaderP."Shipment Method Code",SalesShipmentHeaderP."Language Code");
+    END;
+
+    [EventSubscriber(Report,65009,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65009OnAfterInitReport@1101103028(VAR Sender@1101103000 : Report 65009;VAR CompanyInformationP@1101103001 : Record 79;VAR CompanyInfoCountryNameG@1101103003 : Text[50]);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      CompanyInformationP.GET;
+      CompanyInformationP.CALCFIELDS(Picture);
+      IF  CountryRegionL.GET(CompanyInformationP."Country/Region Code") THEN BEGIN
+        CompanyInfoCountryNameG := CountryRegionL.Name;
+      END;
+    END;
+
+    [EventSubscriber(Report,65009,OnAfterGetIssuedReminderHeader)]
+    LOCAL PROCEDURE REP65009OnAfterGetIssuedReminderHeader@1101103027(VAR Sender@1101103000 : Report 65009;VAR IssuedReminderHeaderP@1101103001 : Record 297;VAR GiroKIDG@1101103003 : Text[25]);
+    VAR
+      SalesReceivablesSetupL@1101103002 : Record 311;
+    BEGIN
+      //KID
+      SalesReceivablesSetupL.GET;
+      IF SalesReceivablesSetupL."Use KID on Reminder" THEN
+        GetKID(IssuedReminderHeaderP."No.", IssuedReminderHeaderP."Customer No.", IssuedReminderHeaderP."Currency Code",GiroKIDG);
+    END;
+
+    [EventSubscriber(Report,65009,OnAfterGetIssuedReminderLine)]
+    LOCAL PROCEDURE REP65009OnAfterGetIssuedReminderLine@1101103025(VAR Sender@1101103000 : Report 65009;VAR IssuedReminderHeaderP@1101103001 : Record 297;VAR IssuedReminderLineP@1101103002 : Record 298);
+    BEGIN
+    END;
+
+    [EventSubscriber(Report,65010,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65010OnAfterInitReport@1101103031(VAR Sender@1101103000 : Report 65010;VAR CompanyInformationP@1101103001 : Record 79);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      CompanyInformationP.GET;
+      CompanyInformationP.CALCFIELDS(Picture);
+    END;
+
+    [EventSubscriber(Report,65010,OnAfterGetIssuedFinChargeMemoHeader)]
+    LOCAL PROCEDURE REP65010OnAfterGetIssuedFinChargeMemoHeader@1101103030(VAR Sender@1101103000 : Report 65010;VAR IssuedFinChargeMemoHeaderP@1101103001 : Record 304;VAR GiroKID@1101103003 : Text[25]);
+    VAR
+      SalesReceivablesSetupL@1101103002 : Record 311;
+    BEGIN
+      //KID
+      SalesReceivablesSetupL.GET;
+      IF SalesReceivablesSetupL."Use KID on Reminder" THEN
+        GetKID(IssuedFinChargeMemoHeaderP."No.", IssuedFinChargeMemoHeaderP."Customer No.", IssuedFinChargeMemoHeaderP."Currency Code",GiroKID);
+    END;
+
+    [EventSubscriber(Report,65010,OnAfterGetIssuedFinChargeMemoLine)]
+    LOCAL PROCEDURE REP65010OnAfterGetIssuedFinChargeMemoLine@1101103029(VAR Sender@1101103000 : Report 65010;VAR IssuedFinChargeMemoHeaderP@1101103001 : Record 304;VAR IssuedFinChargeMemoLineP@1101103002 : Record 305;VAR TypeG@1101103003 : Integer);
+    BEGIN
+      TypeG := IssuedFinChargeMemoLineP.Type;
+    END;
+
+    [EventSubscriber(Report,65011,OnAfterInitReport)]
+    LOCAL PROCEDURE REP65011OnAfterInitReport@1101103034(VAR Sender@1101103000 : Report 65011;VAR CompanyInformationP@1101103001 : Record 79;VAR CompanyInfoCountryNameG@1101103003 : Text[50]);
+    VAR
+      CountryRegionL@1101103002 : Record 9;
+    BEGIN
+      CompanyInformationP.GET;
+      CompanyInformationP.CALCFIELDS(Picture);
+      IF  CountryRegionL.GET(CompanyInformationP."Country/Region Code") THEN BEGIN
+        CompanyInfoCountryNameG := CountryRegionL.Name;
+      END;
+    END;
+
+    [EventSubscriber(Report,65011,OnAfterGetPurchaseHeader)]
+    LOCAL PROCEDURE REP65011OnAfterGetPurchaseHeader@1101103033(VAR Sender@1101103000 : Report 65011;VAR PurchaseHeaderP@1101103001 : Record 38);
+    VAR
+      SalesReceivablesSetupL@1101103002 : Record 311;
+    BEGIN
+    END;
+
+    [EventSubscriber(Report,65011,OnAfterGetPurchaseLine)]
+    LOCAL PROCEDURE REP65011OnAfterGetPurchaseLine@1101103032(VAR Sender@1101103000 : Report 65011;VAR PurchaseHeaderP@1101103001 : Record 38;VAR PurchaseLineP@1101103002 : Record 39;VAR PurchLineTypeG@1101103003 : Integer);
+    BEGIN
+      PurchLineTypeG := PurchaseLineP.Type;
+    END;
+
+    BEGIN
+    {
+      "+---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 25.05.17 JAL Event subscribers for Trade Documents reports.
+    }
+    END.
+  }
+}
+

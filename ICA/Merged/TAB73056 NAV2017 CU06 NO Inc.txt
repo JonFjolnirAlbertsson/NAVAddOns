@@ -1,0 +1,45 @@
+OBJECT Table 73056 Notification Types Address
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=16:11:16;
+    Modified=Yes;
+    Version List=ICA2.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Notification Types Address;
+               NOR=Varseltyper Adresse];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Notification Type   ;Option        ;CaptionML=NOR=Varslingstype;
+                                                   OptionCaptionML=NOR=Gjenbestill,Endring salgsordre-›k,Endring salgsordre-prod,Endring salgsordre-tekn,Endring salgsordre-innkj›p,Endring salgsordre-Adm.dir,Endring salgsordre-kval.leder,Bekreft bestilling,Tilbud utl›p;
+                                                   OptionString=Reorder,Sales Order Change-Finance,Sales Order Change-Prod,Sales Order Change-Tech,Sales Order Change-Purch,Sales Order Change-MD,Sales Order Change-QA,Purch Order Confirm, Sales Quote Expire }
+    { 2   ;   ;Send notification to ID;Code20     ;CaptionML=NOR=Send varsel til ID }
+    { 3   ;   ;Send notific. to E-mailaddr.;Text80;CaptionML=NOR=Send varsel til e-postadresse;
+                                                   Description=5.10.10: 30->80 tegn }
+  }
+  KEYS
+  {
+    {    ;Notification Type                       ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Item Calculation (Kalkyle)
+    }
+    END.
+  }
+}
+

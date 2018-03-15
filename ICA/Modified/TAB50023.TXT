@@ -1,0 +1,36 @@
+OBJECT Table 50023 Rutestyring e. ordreantall
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07.02.17;
+    Time=15.59.58;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+  }
+  FIELDS
+  {
+    { 1   ;   ;Routing group code  ;Code20        ;TableRelation=Rutegruppe."Routing group code";
+                                                   CaptionML=[ENU=Routing group code;
+                                                              NOR=Rutegruppekode] }
+    { 2   ;   ;Routing No.         ;Code20        ;TableRelation="Routing Header".No.;
+                                                   CaptionML=NOR=Rutenr. }
+    { 3   ;   ;Minimum orderqty.   ;Integer       ;CaptionML=NOR=Minste ordreantall }
+  }
+  KEYS
+  {
+    {    ;Routing group code                      ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+

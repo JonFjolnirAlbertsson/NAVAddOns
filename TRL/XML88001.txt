@@ -1,0 +1,88 @@
+OBJECT XMLport 88001 Translation Line Inc
+{
+  OBJECT-PROPERTIES
+  {
+    Date=24.08.17;
+    Time=09:26:23;
+    Modified=Yes;
+    Version List=TRL1.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Translation Line Inc;
+               NOR=Oversettelseslinje Inc];
+    DefaultFieldsValidation=No;
+    TextEncoding=WINDOWS;
+    Format=Variable Text;
+  }
+  ELEMENTS
+  {
+    { [{5FB37110-76DC-4C8D-AD00-4E2222F1050C}];  ;Root                ;Element ;Text     }
+
+    { [{1AA8CB77-B207-47B1-B46A-524D9E819AAE}];1 ;TranslationLineInc  ;Element ;Table   ;
+                                                  SourceTable=Table88001;
+                                                  MinOccurs=Zero }
+
+    { [{6EE1BFE2-5CAA-4B3F-82EC-B723B2781817}];2 ;EntryNo             ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Translation Line Inc.::Entry No. }
+
+    { [{0AE3E448-B273-46A7-9F9C-078C82DD08CE}];2 ;BaseText            ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Translation Line Inc.::Base Text }
+
+    { [{FAF662D1-7AB9-47A9-A936-1BB74DF46075}];2 ;Translation         ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Translation Line Inc.::Translation }
+
+    { [{43D2356A-3069-4B04-A127-2D37581E1FE5}];2 ;AutoIncrement       ;Element ;Field   ;
+                                                  DataType=Integer;
+                                                  SourceField=Translation Line Inc.::Auto Increment }
+
+    { [{7545FD48-3AAE-41B4-A798-108B1A952B43}];2 ;Translated          ;Element ;Field   ;
+                                                  DataType=Boolean;
+                                                  SourceField=Translation Line Inc.::Translated }
+
+    { [{569D6E2D-CD03-458E-BABD-B0C08E2C0861}];2 ;Length              ;Element ;Field   ;
+                                                  DataType=Integer;
+                                                  SourceField=Translation Line Inc.::Length }
+
+    { [{DBD62FDC-509C-4995-AC0D-D4760BEE425D}];2 ;Type                ;Element ;Field   ;
+                                                  DataType=Option;
+                                                  SourceField=Translation Line Inc.::Type }
+
+    { [{BBA7FCC8-D7FF-4D73-BFFB-39DFFBEA2F88}];2 ;ObjectType          ;Element ;Field   ;
+                                                  DataType=Option;
+                                                  SourceField=Translation Line Inc.::Object Type }
+
+    { [{68B536BE-928B-45C6-8E70-0074CECD498D}];2 ;ObjectNo            ;Element ;Field   ;
+                                                  DataType=Integer;
+                                                  SourceField=Translation Line Inc.::Object No. }
+
+    { [{698CF53E-3ABC-487B-8096-8C6AB0FDEDAC}];2 ;TranslateFileLine   ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Translation Line Inc.::Translate File Line }
+
+  }
+  EVENTS
+  {
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+    }
+    CONTROLS
+    {
+    }
+  }
+  CODE
+  {
+    VAR
+      ProgressBar@1000000000 : Codeunit 1017307;
+
+    BEGIN
+    END.
+  }
+}
+

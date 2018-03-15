@@ -1,0 +1,79 @@
+OBJECT Table 58005 Change Status Comment Line
+{
+  OBJECT-PROPERTIES
+  {
+    Date=20.10.09;
+    Time=[ 12:00:00];
+    Version List=OPC5.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Routing Comment Line;
+               NOR=Rutemerknadslinje];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Routing No.         ;Code20        ;TableRelation="Routing Header";
+                                                   CaptionML=[ENU=Routing No.;
+                                                              NOR=Rutenr.];
+                                                   NotBlank=Yes }
+    { 2   ;   ;Operation No.       ;Code10        ;CaptionML=[ENU=Operation No.;
+                                                              NOR=Operasjonsnr.];
+                                                   NotBlank=Yes }
+    { 3   ;   ;Prod. Order No.     ;Code20        ;CaptionML=[ENU=Line No.;
+                                                              NOR=Linjenr.] }
+    { 4   ;   ;Routing reference No.;Integer      ;TableRelation="Routing Version"."Version Code" WHERE (Routing No.=FIELD(Routing No.));
+                                                   CaptionML=[ENU=Version Code;
+                                                              NOR=Versjonskode] }
+    { 5   ;   ;Line No.            ;Integer        }
+    { 10  ;   ;Date                ;Date          ;CaptionML=[ENU=Date;
+                                                              NOR=Dato] }
+    { 12  ;   ;Comment             ;Text80        ;CaptionML=[ENU=Comment;
+                                                              NOR=Merknad] }
+    { 13  ;   ;Entry No.           ;Integer       ;CaptionML=NOR=l›penummer }
+  }
+  KEYS
+  {
+    {    ;Routing No.,Routing reference No.,Operation No.,Prod. Order No.,Line No.;
+                                                   Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    PROCEDURE SetUpNewLine@1();
+    VAR
+      RtngComment@1000 : Record 58005;
+    BEGIN
+      RtngComment.SETRANGE("Routing No.","Routing No.");
+      RtngComment.SETRANGE("Routing reference No.","Routing reference No.");
+      RtngComment.SETRANGE("Operation No.","Operation No.");
+      RtngComment.SETRANGE(Date,WORKDATE);
+      IF NOT RtngComment.FIND('-') THEN
+        Date := WORKDATE;
+    END;
+
+    PROCEDURE Caption@2() : Text[100];
+    VAR
+      RtngHeader@1000 : Record 99000763;
+    BEGIN
+      IF GETFILTERS = '' THEN
+        EXIT('');
+
+      IF "Routing No." = '' THEN
+        EXIT('');
+
+      RtngHeader.GET("Routing No.");
+
+      EXIT(
+        STRSUBSTNO('%1 %2 %3',
+          "Routing No.",RtngHeader.Description,"Operation No."));
+    END;
+
+    BEGIN
+    END.
+  }
+}
+

@@ -1,0 +1,463 @@
+OBJECT Codeunit 70001 Compello Integr. Export Mgt.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09.06.17;
+    Time=10:50:09;
+    Modified=Yes;
+    Version List=CMP2.04;
+  }
+  PROPERTIES
+  {
+    TableNo=70001;
+    OnRun=BEGIN
+            IF SyncOneRec(Rec) THEN BEGIN
+            END;
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      IntegrSetup@1000 : Record 70000;
+      CompelloIntegr@1002 : DotNet "'CompelloIntegration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=09a47ba60ac3be91'.Compello.IntegrationAPI.CompelloIntegration";
+      ImportDataG@1001 : DotNet "'CompelloIntegration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=09a47ba60ac3be91'.Compello.IntegrationAPI.ImportData";
+      Text001@1003 : TextConst 'ENU=Synchronization done. Updated: %1, New: %2';
+      SetupLoaded@1004 : Boolean;
+      Text002@1005 : TextConst 'ENU=Synchronization with Compello failed';
+      Window@1006 : Dialog;
+      Text003@1007 : TextConst 'ENU=Logging to Compello';
+      Text004@1008 : TextConst 'ENU=Sending data to Compello';
+      IsAccData@1101103000 : Boolean;
+      ErrorLogin@1101103001 : TextConst 'ENU=Unable to logon to Compello;NOR=Feil logging til Compello';
+
+    PROCEDURE SyncOneRec@4(IntegrLogEntry@1000 : Record 70001) : Boolean;
+    VAR
+      InsertedRec@1002 : Integer;
+      UpdatedRec@1001 : Integer;
+    BEGIN
+      IF NOT RecordShouldBeSync(IntegrLogEntry) THEN BEGIN
+        EXIT;
+      END;
+
+      IF GUIALLOWED THEN BEGIN
+        Window.OPEN('#1###################');
+        Window.UPDATE(1, Text003);
+      END;
+
+      IF StartIntegrSession THEN BEGIN
+        CompressOneRecord(IntegrLogEntry);
+        IF GUIALLOWED THEN BEGIN
+          Window.UPDATE(1, Text004);
+        END;
+        SendData(IntegrLogEntry, InsertedRec);
+        COMMIT;
+        EndIntegrSession(InsertedRec, UpdatedRec);
+        IF (InsertedRec + UpdatedRec) = 1 THEN BEGIN
+          ArchiveLog(IntegrLogEntry);
+        END;
+        IF GUIALLOWED THEN BEGIN
+          Window.CLOSE;
+        END;
+        EXIT(TRUE);
+      END;
+
+      AddNotificationsFromLog(IntegrLogEntry);
+      IF GUIALLOWED THEN BEGIN
+        Window.CLOSE;
+      END;
+
+      EXIT(FALSE);
+    END;
+
+    PROCEDURE SyncMultipleRecords@7(VAR IntegrLogEntry@1000 : Record 70001;ThroughNAS@1006 : Boolean) : Boolean;
+    VAR
+      IntegrLogEntry2@1001 : Record 70001;
+      IntegrLogEntryTmp@1002 : TEMPORARY Record 70001;
+      IntegrTable@1007 : Record 70003;
+      InsertedRec@1004 : Integer;
+      UpdatedRec@1003 : Integer;
+      UploadedNoOfRecs@1005 : Integer;
+    BEGIN
+      IntegrSetup.GET;
+      IF NOT IntegrLogEntry.FINDSET THEN BEGIN
+        EXIT(FALSE);
+      END;
+
+      IF GUIALLOWED THEN BEGIN
+        Window.OPEN('#1###################');
+        Window.UPDATE(1, Text003);
+      END;
+
+      //Compressing records
+      REPEAT
+        IntegrLogEntry2 := IntegrLogEntry;
+        CompressOneRecord(IntegrLogEntry2);
+      UNTIL IntegrLogEntry.NEXT = 0;
+      COMMIT;
+
+      IF NOT StartIntegrSession THEN BEGIN
+        AddNotificationsFromLog(IntegrLogEntry);
+        IF GUIALLOWED THEN BEGIN
+          Window.CLOSE;
+        END;
+        EXIT(FALSE);
+      END;
+
+      IF GUIALLOWED THEN BEGIN
+        Window.UPDATE(1, Text004);
+      END;
+      IntegrLogEntry.SETCURRENTKEY("Table ID", Date);
+      IntegrLogEntry.SETFILTER("No. of Tries", '<=%1', IntegrSetup."Max. No. of Tries");
+      IntegrLogEntry.FINDSET;
+      REPEAT
+        IntegrTable.GET(IntegrLogEntry."Table Code");
+        IF (IntegrTable.Synchronize = IntegrTable.Synchronize::NAS) OR (NOT ThroughNAS) THEN BEGIN
+          SendData(IntegrLogEntry, InsertedRec);
+          IntegrLogEntryTmp := IntegrLogEntry;
+          IntegrLogEntryTmp.INSERT;
+          UploadedNoOfRecs := UploadedNoOfRecs + 1;
+        END;
+      UNTIL (IntegrLogEntry.NEXT = 0) OR ((UploadedNoOfRecs >= IntegrSetup."Max No. of Rec. per Transact.") AND (IntegrSetup."Max No. of Rec. per Transact." <> 0));
+
+      IF UploadedNoOfRecs = 0 THEN BEGIN
+        CLEAR(CompelloIntegr);
+        CLEAR(ImportDataG);
+        IF GUIALLOWED THEN BEGIN
+          Window.CLOSE;
+        END;
+        EXIT(TRUE);
+      END;
+
+      EndIntegrSession(InsertedRec, UpdatedRec);
+
+      IF IntegrLogEntryTmp.FINDSET THEN
+        REPEAT
+          IF ((IntegrLogEntryTmp.Status = IntegrLogEntry.Status::"In progress") OR (IntegrLogEntryTmp.Status = IntegrLogEntry.Status::Sent)) THEN
+           IF IntegrLogEntry.GET(IntegrLogEntryTmp.GUID) THEN BEGIN
+              ArchiveLog(IntegrLogEntry);
+              IntegrLogEntryTmp.DELETE;
+           END;
+        UNTIL IntegrLogEntryTmp.NEXT = 0;
+
+      COMMIT;
+
+      IF GUIALLOWED THEN BEGIN
+        Window.CLOSE;
+      END;
+
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE StartIntegrSession@3() : Boolean;
+    VAR
+      Result@1000 : Text[250];
+    BEGIN
+      LoadSetup;
+      IntegrSetup.TESTFIELD("Web Service Address");
+      IntegrSetup.TESTFIELD("Customer ID");
+
+      CompelloIntegr := CompelloIntegr.CompelloIntegration;
+      Result := COPYSTR(CompelloIntegr.Logon(IntegrSetup."User Name", IntegrSetup.Password, IntegrSetup."Customer ID", IntegrSetup."Web Service Address"), 1, 250);
+
+      IF Result = '' THEN BEGIN
+        EXIT(TRUE);
+      END;
+
+      //Log error
+      EXIT(FALSE);
+    END;
+
+    LOCAL PROCEDURE EndIntegrSession@5(VAR InsertedRec@1004 : Integer;VAR UpdatedRec@1003 : Integer) : Text[250];
+    VAR
+      ImportResult@1001 : DotNet "'CompelloIntegration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=09a47ba60ac3be91'.Compello.IntegrationAPI.ImportResult";
+      ResultArray@1000 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      i@1002 : Integer;
+    BEGIN
+      IF IsAccData THEN BEGIN
+        ResultArray := CompelloIntegr.ImportRegisterData();
+        FOR i := 1 TO ResultArray.Length DO BEGIN
+          ImportResult := ResultArray.GetValue(i-1);
+          UpdatedRec := UpdatedRec + ImportResult.Updated;
+          InsertedRec := InsertedRec + ImportResult.New;
+          //Needs "Value" to mark successfull transaction
+        END;
+      END;
+      CLEAR(CompelloIntegr);
+      CLEAR(ImportDataG);
+      CLEAR(ImportResult);
+      CLEAR(ResultArray);
+
+      COMMIT;
+      AddExportLog(STRSUBSTNO(Text001, UpdatedRec, InsertedRec));
+      EXIT(STRSUBSTNO(Text001, UpdatedRec, InsertedRec));
+    END;
+
+    LOCAL PROCEDURE SendData@1(VAR IntegtEntry@1014 : Record 70001;VAR InsertedRec@1101103000 : Integer);
+    VAR
+      Result@1101103001 : Text[1000];
+    BEGIN
+      IsAccData := FALSE;
+      IF TableIsPOMatch(IntegtEntry."Table ID") THEN BEGIN
+        Result := SendPOFile(IntegtEntry);
+        IF Result = '' THEN BEGIN
+           InsertedRec := InsertedRec + 1;
+           IntegtEntry.Status := IntegtEntry.Status::Sent;
+        END
+        ELSE BEGIN
+          IntegtEntry.Status := IntegtEntry.Status::Error;
+          IntegtEntry."Error Message" := Result;
+          AddNotificationsFromLog(IntegtEntry); //02. 26.01.16 JAL
+        END;
+      END
+      ELSE BEGIN
+        ImportDataG := ImportDataG.ImportData;
+        ImportDataG.ClientId := IntegrSetup."Client ID";
+        ImportDataG.DataTypeInt := IntegtEntry.DataType;
+        ImportDataG.Value := IntegtEntry.Value;
+        ImportDataG.Desc := IntegtEntry.Description;
+        ImportDataG.Desc2 := IntegtEntry."Description 2";
+        ImportDataG.Desc3 := IntegtEntry."Description 3";
+        ImportDataG.Inactive := IntegtEntry.Inactive;
+
+        CompelloIntegr.ImportRegisterDataGeneral(ImportDataG);
+        IntegtEntry.Status := IntegtEntry.Status::"In progress";
+        IsAccData := TRUE;
+      END;
+
+      IntegtEntry."No. of Tries" := IntegtEntry."No. of Tries" + 1;
+      IntegtEntry.MODIFY;
+    END;
+
+    LOCAL PROCEDURE ArchiveLog@11(IntegrLogEntry@1000 : Record 70001);
+    VAR
+      IntegrLogEntryArchive@1001 : Record 70002;
+    BEGIN
+      IntegrLogEntryArchive.TRANSFERFIELDS(IntegrLogEntry, TRUE);
+      IntegrLogEntryArchive.Status := IntegrLogEntryArchive.Status::Sent;
+      IntegrLogEntryArchive."Transaction DateTime" := CURRENTDATETIME;
+      IntegrLogEntryArchive."Transaction Date" := DT2DATE(IntegrLogEntryArchive."Transaction DateTime");
+      IntegrLogEntryArchive.INSERT;
+      IntegrLogEntry.DELETE;
+    END;
+
+    LOCAL PROCEDURE CompressOneRecord@2(VAR IntegrLogEntry@1001 : Record 70001);
+    VAR
+      IntegrLogEntry2@1000 : Record 70001;
+    BEGIN
+      IntegrLogEntry2.SETRANGE("Table ID", IntegrLogEntry."Table ID");
+      IntegrLogEntry2.SETRANGE("Record ID", IntegrLogEntry."Record ID");
+      IntegrLogEntry2.SETRANGE("User Action", IntegrLogEntry."User Action");
+      IntegrLogEntry2.SETCURRENTKEY("Table ID",Date);
+      IF IntegrLogEntry2.COUNT > 1 THEN BEGIN
+        IntegrLogEntry2.FINDLAST;
+        IntegrLogEntry.GET(IntegrLogEntry2.GUID);
+        IntegrLogEntry2.SETFILTER(GUID, '<>%1', IntegrLogEntry2.GUID);
+        IntegrLogEntry2.DELETEALL;
+      END;
+
+      IF IntegrLogEntry."User Action" = IntegrLogEntry."User Action"::Delete THEN BEGIN
+        IntegrLogEntry2.SETFILTER("User Action", '<>%1', IntegrLogEntry."User Action"::Delete);
+        IntegrLogEntry2.SETFILTER(Date, '<%1', IntegrLogEntry.Date);
+        IntegrLogEntry2.DELETEALL;
+      END;
+    END;
+
+    LOCAL PROCEDURE RecordShouldBeSync@9(IntegrLogEntry@1000 : Record 70001) : Boolean;
+    BEGIN
+      LoadSetup;
+      IF IntegrSetup."Max. No. of Tries" > 0 THEN BEGIN
+        EXIT(IntegrLogEntry."No. of Tries" < IntegrSetup."Max. No. of Tries");
+      END;
+
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE LoadSetup@10();
+    BEGIN
+      IF NOT SetupLoaded THEN BEGIN
+        IntegrSetup.GET;
+        SetupLoaded := TRUE;
+      END;
+    END;
+
+    LOCAL PROCEDURE AddNotificationsFromLog@8(IntegrLogEntry@1000 : Record 70001);
+    VAR
+      UserNotification@1002 : Record 70007;
+      MyRec@1001 : RecordRef;
+    BEGIN
+      UserNotification.SETRANGE("Table Code", IntegrLogEntry."Table Code");
+      IF NOT UserNotification.FINDSET THEN BEGIN
+        EXIT;
+      END;
+
+      MyRec.GETTABLE(IntegrLogEntry);
+      REPEAT
+        IF UserNotification."User ID" <> '' THEN BEGIN
+          AddNotification(MyRec, Text002, UserNotification."User ID");
+        END;
+      UNTIL UserNotification.NEXT = 0;
+      AddExportLog(Text002);
+    END;
+
+    LOCAL PROCEDURE AddNotification@6(VAR RecRefToAdd@1001 : RecordRef;MyText@1005 : Text[250];NotifyUser@1006 : Code[50]);
+    VAR
+      RecordLink@1000 : Record 2000000068;
+      ListPage@1004 : Page 70001;
+      MyOutStream@1002 : OutStream;
+      MyChar@1003 : Char;
+    BEGIN
+      LoadSetup;
+
+      RecordLink.INIT;
+      RecordLink.URL1 := IntegrSetup."URL for Export Log";
+      RecordLink."Record ID" := RecRefToAdd.RECORDID;
+      RecordLink.Type := RecordLink.Type::Note;
+      RecordLink.Description := ListPage.CAPTION;
+      RecordLink.Created := CURRENTDATETIME;
+      RecordLink."User ID" := USERID;
+      RecordLink.Company := COMPANYNAME;
+      RecordLink.Notify := TRUE;
+      RecordLink."To User ID" := NotifyUser;
+      RecordLink.Note.CREATEOUTSTREAM(MyOutStream);
+      MyChar := STRLEN(MyText);
+      MyOutStream.WRITETEXT := FORMAT(MyChar) + MyText;
+      RecordLink.INSERT;
+    END;
+
+    LOCAL PROCEDURE AddExportLog@12(MyText@1001 : Text[250]);
+    VAR
+      ExportLog@1000 : Record 70006;
+    BEGIN
+      ExportLog.INIT;
+      ExportLog.GUID := CREATEGUID;
+      ExportLog."Export date" := CURRENTDATETIME;
+      ExportLog.Result := MyText;
+      ExportLog.INSERT;
+    END;
+
+    PROCEDURE CleanExportLog@1101103002();
+    VAR
+      CompelloSetup@1101103007 : Record 70000;
+      ChangeLogArchive@1101103000 : Record 70002;
+      ExportLog@1101103005 : Record 70006;
+      EndDate@1101103001 : Date;
+      CurrYear@1101103002 : Integer;
+      CurrMonth@1101103003 : Integer;
+      ConfirmTxt@1101103004 : TextConst 'ENU=Do you want to delete all posts before the date %1?;NOR=Vil du slette alle poster f›r datoen %1?';
+      MsgTxt@1101103006 : TextConst 'ENU=All record before %1 deleted.;NOR=Alle poster f›r %1 er slettet.';
+      MonthsToKeep@1101103008 : Integer;
+    BEGIN
+      CompelloSetup.GET;
+
+      IF CompelloSetup."Keep Export Log" < 1 THEN
+        MonthsToKeep := 1
+      ELSE
+        MonthsToKeep := CompelloSetup."Keep Export Log";
+
+      CurrYear := DATE2DMY(TODAY,3);
+      CurrMonth := DATE2DMY(TODAY,2);
+      EndDate   := DMY2DATE(1, (CurrMonth - MonthsToKeep), CurrYear);
+
+      ChangeLogArchive.SETFILTER("Table ID", '<>120');
+      ChangeLogArchive.SETFILTER(Date, '..%1', CREATEDATETIME(EndDate,235900T));
+
+      ExportLog.SETFILTER("Export date", '..%1', CREATEDATETIME(EndDate,235900T));
+
+      IF ChangeLogArchive.FINDSET THEN BEGIN
+        IF GUIALLOWED THEN BEGIN
+          IF CONFIRM(ConfirmTxt, FALSE, EndDate) THEN BEGIN
+            ChangeLogArchive.DELETEALL;
+            ExportLog.DELETEALL;
+            MESSAGE(MsgTxt, EndDate);
+          END;
+        END ELSE BEGIN
+          ChangeLogArchive.DELETEALL;
+          ExportLog.DELETEALL;
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE SendPOFile@1101103012(VAR IntegtEntry@1101103000 : Record 70001) : Text[1000];
+    VAR
+      CompelloDocImport@1101103002 : DotNet "'Compello.Integration.DocumentImport, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b68c3ee786d7f8a3'.Compello.Integration.DocumentImport.DocumentImport";
+      Result@1101103007 : Text[1000];
+      XLSFilePath@1101103008 : Text;
+      XSLTFilePath@1101103009 : Text;
+      ImageFilePath@1101103010 : Text;
+      XMLFileName@1101103011 : Text;
+    BEGIN
+      LoadSetup;
+      IF IntegtEntry."User Action" = IntegtEntry."User Action"::Insert THEN BEGIN //03. 09.06.17 JAL
+        XMLFileName := CreatePOXML(IntegtEntry);
+        CompelloDocImport := CompelloDocImport.DocumentImport;
+        Result := COPYSTR(CompelloDocImport.Logon(IntegrSetup."User Name", IntegrSetup.Password, IntegrSetup."Customer ID", IntegrSetup."Web Service Address"), 1, 250);
+        IF Result <> '' THEN BEGIN
+          MESSAGE(ErrorLogin);
+        END;
+
+        Result := COPYSTR(CompelloDocImport.UploadInvoiceAfterConversion(XMLFileName, IntegrSetup."XLS File Path", XMLFileName, IntegrSetup."Image File Stylesheet",IntegrSetup."XML Folder Archive"), 1, 250);
+
+        CLEAR(CompelloDocImport);
+      END;
+      EXIT(Result);
+    END;
+
+    LOCAL PROCEDURE CreatePOXML@1101103001(VAR IntegtEntry@1101103000 : Record 70001) : Text[1000];
+    VAR
+      ReceiptHeader@1101103002 : Record 120;
+      XMLFileName@1101103001 : Text[1000];
+    BEGIN
+      ReceiptHeader.GET(IntegtEntry."Record ID");
+
+      XMLFileName := CreatePOXMLFromPurchaseHeader(ReceiptHeader);
+
+      EXIT(XMLFileName);
+    END;
+
+    PROCEDURE CreatePOXMLFromPurchaseHeader@1101103000(VAR ReceiptHeader@1101103000 : Record 120) : Text[1000];
+    VAR
+      XMLPortPO@1101103004 : XMLport 70002;
+      POXMLFile@1101103003 : File;
+      XMLOutStream@1101103002 : OutStream;
+      XMLFileName@1101103001 : Text[1000];
+    BEGIN
+      XMLFileName := IntegrSetup."XML Folder" + ReceiptHeader."No." + '.xml';
+
+      POXMLFile.CREATE(XMLFileName);
+      POXMLFile.CREATEOUTSTREAM(XMLOutStream);
+
+      XMLPortPO.SetTableFilters(ReceiptHeader);
+      XMLPortPO.SETDESTINATION(XMLOutStream);
+      XMLPortPO.EXPORT;
+
+      POXMLFile.CLOSE;
+
+      CLEAR(POXMLFile);
+      CLEAR(XMLPortPO);
+
+      EXIT(XMLFileName);
+    END;
+
+    PROCEDURE TableIsPOMatch@1101103003(TableID@1101103000 : Integer) : Boolean;
+    BEGIN
+      IF (TableID = DATABASE::"Purch. Rcpt. Header") OR (TableID= DATABASE::"Return Receipt Header") THEN
+        EXIT(TRUE)
+      ELSE
+        EXIT(FALSE);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 24.04.15 JAL Added functions to upload xml file for Purchase Order Receipt lines.
+      02. 26.01.16 JAL Added AddNotificationsFromLog when uploading failes.
+      03. 09.06.17 JAL Only send Purchase Order Receipt once and not on modify.
+    }
+    END.
+  }
+}
+

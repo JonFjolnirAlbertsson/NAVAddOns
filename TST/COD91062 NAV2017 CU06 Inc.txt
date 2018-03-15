@@ -1,0 +1,455 @@
+OBJECT Codeunit 91062 Library - Production Inc.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=13.09.17;
+    Time=12:26:58;
+    Modified=Yes;
+    Version List=TST1.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      LibraryUtilityG@1101103000 : Codeunit 131000;
+      LibraryWarehouseG@1101103001 : Codeunit 132204;
+      LibraryInventoryG@1101103002 : Codeunit 132201;
+      LibraryManufacturingG@1101103004 : Codeunit 132202;
+      LibrarySalesG@1101103006 : Codeunit 130509;
+      LibraryRandomG@1101103005 : Codeunit 130440;
+      LibraryPurchaseG@1101103008 : Codeunit 130512;
+      AssertG@1101103009 : Codeunit 130000;
+      LibraryUtilityIncG@1101103003 : Codeunit 91001;
+      LibraryItemIncG@1101103007 : Codeunit 91008;
+
+    PROCEDURE CreateItemInBOM@1101103002(VAR ItemP@1001 : Record 27) : Code[20];
+    VAR
+      InventorySetupL@1101103001 : Record 313;
+      LocationL@1101103003 : Record 14;
+    BEGIN
+      InventorySetupL.GET();
+      // Create BOM with component item on line.
+      // Component item with costing method Average.
+      LibraryItemIncG.CreateItemByCostingAndReplenishment(ItemP,ItemP."Costing Method"::Average,ItemP."Replenishment System"::Purchase);
+
+      EXIT(ItemP."No.");
+    END;
+
+    PROCEDURE CreateProdItemAndBOM@1101103000(VAR ItemP@1001 : Record 27) : Code[20];
+    VAR
+      ProductionBOMHeaderL@1101103000 : Record 99000771;
+      ItemInBomL@1101103002 : Record 27;
+      LocationL@1101103003 : Record 14;
+      RoutingHeaderL@1101103004 : Record 99000763;
+    BEGIN
+      // Create Item to be used in BOM
+      CreateItemInBOM(ItemInBomL);
+      // Create Location
+      LibraryWarehouseG.CreateLocationWithInventoryPostingSetup(LocationL);
+      // Create BOM with component item on line.
+      CreateSingleLineBOM(ProductionBOMHeaderL, ItemInBomL);
+      // Create Routing
+      CreateSingleLineRouting(RoutingHeaderL);
+
+      // Create Parent item with costing method Average.
+      LibraryItemIncG.CreateItemByCostingAndReplenishment(ItemP, ItemP."Costing Method"::Average, ItemP."Replenishment System"::"Prod. Order");
+      // Routing and BOM assigned to parent item.
+      ItemP.VALIDATE("Routing No.",RoutingHeaderL."No.");
+      ItemP.VALIDATE("Production BOM No.",ProductionBOMHeaderL."No.");
+      ItemP.VALIDATE("Flushing Method",ItemP."Flushing Method"::Manual);
+      ItemP.MODIFY(TRUE);
+      ///Verify that Unit Cost is not 0.
+      AssertG.AreNotEqual(ItemP."Unit Cost", 0, '');
+
+      EXIT(ItemP."No.");
+    END;
+
+    PROCEDURE CreateLocationSetup@26();
+    VAR
+      LocationL@1101103000 : Record 14;
+    BEGIN
+      // Create Blue Location.
+      LibraryWarehouseG.CreateLocation(LocationL);
+
+      // Create White Location.
+      LibraryWarehouseG.CreateFullWMSLocation(LocationL,2);  // Value used for number of bin per zone.
+
+      // Create Green Location.
+      LibraryWarehouseG.CreateLocationWithInventoryPostingSetup(LocationL);
+      LocationL.VALIDATE("Require Put-away",TRUE);
+      LocationL.VALIDATE("Require Pick",TRUE);
+      LocationL.VALIDATE("Require Receive",TRUE);
+      LocationL.VALIDATE("Require Shipment",TRUE);
+      LocationL.MODIFY(TRUE);
+
+      // Create Silver Location.
+      LibraryWarehouseG.CreateLocationWithInventoryPostingSetup(LocationL);
+      LocationL."Bin Mandatory" := TRUE;  // Skip Validate to improve performance.
+      LocationL.MODIFY(TRUE);
+    END;
+
+    PROCEDURE CreateLocationWithProductionAndPick@235(VAR Location@1000 : Record 14);
+    VAR
+      Bin@1001 : Record 7354;
+    BEGIN
+      LibraryWarehouseG.CreateLocationWithInventoryPostingSetup(Location);
+      Location.VALIDATE("Require Pick",TRUE);
+      Location.VALIDATE("Bin Mandatory",TRUE);
+      Location.MODIFY(TRUE);
+
+      LibraryWarehouseG.CreateBin(Bin,Location.Code,LibraryUtilityG.GenerateRandomCode(Bin.FIELDNO(Code),DATABASE::Bin),'','');
+
+      Location.VALIDATE("From-Production Bin Code",Bin.Code);
+      Location.MODIFY(TRUE);
+    END;
+
+    PROCEDURE CreateItemJournalTemplate@68(VAR ItemJournalTemplateP@1000 : Record 82;NameP@1101103000 : Code[10]);
+    BEGIN
+      IF NameP <> '' THEN BEGIN
+        ItemJournalTemplateP.INIT;
+        ItemJournalTemplateP.VALIDATE(Name, NameP);
+        ItemJournalTemplateP.VALIDATE(Description, NameP);
+        // Validating Name as Description because value is not important.
+        ItemJournalTemplateP.INSERT(TRUE);
+      END
+      ELSE
+        LibraryInventoryG.CreateItemJournalTemplate(ItemJournalTemplateP);
+    END;
+
+    PROCEDURE CreateItemJournalBatch@52(VAR ItemJournalBatchP@1000 : Record 233;ItemJournalTemplateNameP@1001 : Code[10];NameP@1101103000 : Code[10]);
+    BEGIN
+      IF NameP <> '' THEN BEGIN
+        // Create Item Journal Batch with the parameter NameP.
+        ItemJournalBatchP.INIT;
+        ItemJournalBatchP.VALIDATE("Journal Template Name", ItemJournalTemplateNameP);
+        ItemJournalBatchP.VALIDATE(Name, NameP);
+        ItemJournalBatchP.INSERT(TRUE);
+      END
+      ELSE
+        LibraryInventoryG.CreateItemJournalBatch(ItemJournalBatchP, ItemJournalTemplateNameP);
+    END;
+
+    PROCEDURE CreateSingleLineBOM@8(VAR ProductionBOMHeader@1002 : Record 99000771;Item@1000 : Record 27) : Code[20];
+    VAR
+      ProductionBOMLine@1003 : Record 99000772;
+    BEGIN
+      LibraryManufacturingG.CreateProductionBOMHeader(ProductionBOMHeader,Item."Base Unit of Measure");
+      LibraryManufacturingG.CreateProductionBOMLine(ProductionBOMHeader,ProductionBOMLine,'',ProductionBOMLine.Type::Item,Item."No.",1);
+
+      ProductionBOMHeader.VALIDATE(Status,ProductionBOMHeader.Status::Certified);
+      ProductionBOMHeader.MODIFY(TRUE);
+      EXIT(ProductionBOMHeader."No.");
+    END;
+
+    PROCEDURE CreateMultiLineBOM@1101103001(VAR ProductionBOMHeaderP@1002 : Record 99000771;UnitOfMeasureCodeP@1101103003 : Code[10];NumberOfLinesP@1101103000 : Integer) : Code[20];
+    VAR
+      ProductionBOMLineL@1003 : Record 99000772;
+      ItemL@1101103002 : Record 27;
+      iL@1101103001 : Integer;
+    BEGIN
+      LibraryManufacturingG.CreateProductionBOMHeader(ProductionBOMHeaderP, UnitOfMeasureCodeP);
+      FOR iL := 1 TO NumberOfLinesP DO BEGIN
+        CreateItemInBOM(ItemL);
+        LibraryManufacturingG.CreateProductionBOMLine(ProductionBOMHeaderP, ProductionBOMLineL, '', ProductionBOMLineL.Type::Item, ItemL."No.", 1);
+      END;
+      ProductionBOMHeaderP.VALIDATE(Status,ProductionBOMHeaderP.Status::Certified);
+      ProductionBOMHeaderP.MODIFY(TRUE);
+      EXIT(ProductionBOMHeaderP."No.");
+    END;
+
+    PROCEDURE CreateSingleLineRouting@11(VAR RoutingHeader@1000 : Record 99000763) : Code[20];
+    VAR
+      RoutingLine@1001 : Record 99000764;
+      WorkCenter@1002 : Record 99000754;
+      MachineCenterL@1101103000 : Record 99000758;
+    BEGIN
+      LibraryManufacturingG.CreateWorkCenterWithCalendar(WorkCenter);
+      WorkCenter.VALIDATE("Flushing Method",WorkCenter."Flushing Method"::Manual);
+      WorkCenter.MODIFY(TRUE);
+      //LibraryManufacturingg.CreateMachineCenter(MachineCenterL, WorkCenter."No.");
+
+      LibraryManufacturingG.CreateRoutingHeader(RoutingHeader,RoutingHeader.Type::Serial);
+      LibraryManufacturingG.CreateRoutingLine(RoutingHeader, RoutingLine, '', '100', RoutingLine.Type::"Work Center", WorkCenter."No.");
+
+      RoutingLine.VALIDATE("Run Time",LibraryRandomG.RandInt(100));
+      RoutingLine.MODIFY(TRUE);
+
+      RoutingHeader.VALIDATE(Status,RoutingHeader.Status::Certified);
+      RoutingHeader.MODIFY(TRUE);
+      EXIT(RoutingHeader."No.");
+    END;
+
+    PROCEDURE CreateWorkCenterWithGroup@1101103012(VAR WorkCenterP@1101103000 : Record 99000754;VAR WorkCenterGroupP@1101103001 : Record 99000756);
+    BEGIN
+      IF WorkCenterGroupP.Code = '' THEN
+        LibraryManufacturingG.CreateWorkCenterGroup(WorkCenterGroupP);
+      LibraryManufacturingG.CreateWorkCenterWithCalendar(WorkCenterP);
+      WorkCenterP.Name := LibraryUtilityG.GenerateRandomText(MAXSTRLEN(WorkCenterP.Name));;
+      WorkCenterP.VALIDATE("Work Center Group Code", WorkCenterGroupP.Code);
+      WorkCenterP.VALIDATE("Specific Unit Cost", TRUE);
+      WorkCenterP.VALIDATE("Subcontractor No.", LibraryPurchaseG.CreateVendorNo());
+      WorkCenterP.MODIFY(TRUE);
+    END;
+
+    PROCEDURE CreateRoutings@1101103029(VAR RoutingHeaderP@1101103001 : Record 99000763;VAR RoutingLineP@1101103000 : Record 99000764);
+    VAR
+      WorkCenterGroupL@1101103003 : Record 99000756;
+      WorkCenterL@1101103004 : Record 99000754;
+      TypeL@1101103002 : 'Serial,Parallel';
+    BEGIN
+      CreateWorkCenterWithGroup(WorkCenterL, WorkCenterGroupL);
+      LibraryManufacturingG.CreateRoutingHeader(RoutingHeaderP, TypeL::Serial);
+      LibraryManufacturingG.CreateRoutingLine(RoutingHeaderP, RoutingLineP, '', '', RoutingLineP.Type::"Work Center", WorkCenterL."No.");
+      RoutingHeaderP.VALIDATE(Status, RoutingHeaderP.Status::Certified);
+      RoutingHeaderP.MODIFY(TRUE);
+    END;
+
+    PROCEDURE LocationSetup@1101103007(CodeP@1101103000 : Code[10]);
+    VAR
+      LocationL@1101103001 : Record 14;
+    BEGIN
+      IF NOT LocationL.GET(CodeP) THEN BEGIN
+        LibraryWarehouseG.CreateLocation(LocationL);
+        LocationL.VALIDATE(Code, CodeP);
+        LocationL.MODIFY(TRUE);
+      END;
+    END;
+
+    PROCEDURE ItemJournalSetup@50(NameP@1101103001 : Code[10];BatchNameP@1101103000 : Code[10]);
+    VAR
+      ItemJournalTemplateL@1101103003 : Record 82;
+      ItemJournalBatchL@1101103002 : Record 233;
+    BEGIN
+      ItemJournalTemplateL.INIT;
+      SelectItemJournalTemplateName(ItemJournalTemplateL, ItemJournalTemplateL.Type::Item, NameP);
+      IF NameP = '' THEN BEGIN
+       ItemJournalTemplateL.VALIDATE("No. Series", LibraryUtilityG.GetGlobalNoSeriesCode());
+       ItemJournalTemplateL.MODIFY(TRUE);
+      END;
+
+      ItemJournalBatchL.INIT;
+      SelectItemJournalBatchName(ItemJournalBatchL, ItemJournalTemplateL.Type, ItemJournalTemplateL.Name, BatchNameP);
+      IF NameP = '' THEN
+        UpdateNoSeriesOnItemJournalBatch(ItemJournalBatchL,LibraryUtilityG.GetGlobalNoSeriesCode);
+    END;
+
+    PROCEDURE ConsumptionJournalSetup@138(NameP@1101103000 : Code[10];BatchNameP@1101103001 : Code[10]);
+    VAR
+      ItemJournalTemplateL@1101103006 : Record 82;
+      ItemJournalBatchL@1101103002 : Record 233;
+    BEGIN
+      ItemJournalTemplateL.INIT;
+      SelectItemJournalTemplateName(ItemJournalTemplateL, ItemJournalTemplateL.Type::Consumption, NameP);
+      ItemJournalBatchL.INIT;
+      SelectItemJournalBatchName(ItemJournalBatchL, ItemJournalTemplateL.Type, ItemJournalTemplateL.Name, BatchNameP);
+    END;
+
+    PROCEDURE OutputJournalSetup@59(NameP@1101103000 : Code[10];BatchNameP@1101103001 : Code[10]);
+    VAR
+      ItemJournalTemplateL@1101103003 : Record 82;
+      ItemJournalBatchL@1101103002 : Record 233;
+    BEGIN
+      SelectItemJournalTemplateName(ItemJournalTemplateL, ItemJournalTemplateL.Type::Output, NameP);
+      ItemJournalBatchL.INIT;
+      SelectItemJournalBatchName(ItemJournalBatchL, ItemJournalTemplateL.Type, ItemJournalTemplateL.Name, BatchNameP);
+    END;
+
+    PROCEDURE CapacityJournalSetup@1101103028(NameP@1101103000 : Code[10];BatchNameP@1101103001 : Code[10]);
+    VAR
+      ItemJournalTemplateL@1101103003 : Record 82;
+      ItemJournalBatchL@1101103002 : Record 233;
+    BEGIN
+      SelectItemJournalTemplateName(ItemJournalTemplateL, ItemJournalTemplateL.Type::Capacity, NameP);
+      ItemJournalBatchL.INIT;
+      SelectItemJournalBatchName(ItemJournalBatchL, ItemJournalTemplateL.Type, ItemJournalTemplateL.Name, BatchNameP);
+    END;
+
+    PROCEDURE SelectItemJournalTemplateName@54(VAR ItemJournalTemplateP@1000 : Record 82;ItemJournalTemplateTypeP@1001 : Option;NameP@1101103000 : Code[10]);
+    BEGIN
+      // Find Item Journal Template for the given Template Type.
+      ItemJournalTemplateP.SETRANGE(Type, ItemJournalTemplateTypeP);
+      ItemJournalTemplateP.SETRANGE(Name, NameP);
+      ItemJournalTemplateP.SETRANGE(Recurring,FALSE);
+      IF NOT ItemJournalTemplateP.FINDFIRST THEN
+        CreateItemJournalTemplate(ItemJournalTemplateP, NameP);
+    END;
+
+    PROCEDURE SelectItemJournalBatchName@53(VAR ItemJournalBatchP@1000 : Record 233;ItemJournalBatchTemplateTypeP@1001 : Option;ItemJournalTemplateNameP@1002 : Code[10];NameP@1101103000 : Code[10]);
+    BEGIN
+      // Find Name for Batch Name.
+      ItemJournalBatchP.SETRANGE("Template Type", ItemJournalBatchTemplateTypeP);
+      ItemJournalBatchP.SETRANGE("Journal Template Name", ItemJournalTemplateNameP);
+      ItemJournalBatchP.SETRANGE(Name, NameP);
+      // If Item Journal Batch not found then create it.
+      IF NOT ItemJournalBatchP.FINDFIRST THEN
+        CreateItemJournalBatch(ItemJournalBatchP, ItemJournalTemplateNameP, NameP);
+    END;
+
+    PROCEDURE NoSeriesSetupManufacturing@1101103003();
+    VAR
+      ManufacturingSetupL@1101103000 : Record 99000765;
+    BEGIN
+      //Validates Number Series with Incadea codes. Creates the number serie if it does not exists
+      ManufacturingSetupL.GET;
+      IF ManufacturingSetupL."Simulated Order Nos." = '' THEN
+        ManufacturingSetupL.VALIDATE("Simulated Order Nos.", LibraryUtilityIncG.GetNoSeriesCode('SIM-P.O.')); //'SIM-P.O.'
+      IF ManufacturingSetupL."Planned Order Nos." = '' THEN
+        ManufacturingSetupL.VALIDATE("Planned Order Nos.", LibraryUtilityIncG.GetNoSeriesCode('PLAN-P.O'));//'PLAN-P.O'
+      IF ManufacturingSetupL."Firm Planned Order Nos." = '' THEN
+        ManufacturingSetupL.VALIDATE("Firm Planned Order Nos.", LibraryUtilityIncG.GetNoSeriesCode('PROD-O'));//'PROD-O'
+      IF ManufacturingSetupL."Released Order Nos." = '' THEN
+        ManufacturingSetupL.VALIDATE("Released Order Nos.", LibraryUtilityIncG.GetNoSeriesCode('PROD-O'));//'PROD-O'
+      IF ManufacturingSetupL."Work Center Nos." = '' THEN
+        ManufacturingSetupL.VALIDATE("Work Center Nos.", LibraryUtilityIncG.GetNoSeriesCode('SENTER'));//'SENTER'
+      IF ManufacturingSetupL."Machine Center Nos." = '' THEN
+        ManufacturingSetupL.VALIDATE("Machine Center Nos.", LibraryUtilityIncG.GetNoSeriesCode('P-RESSURS'));//'P-RESSURS'
+      IF ManufacturingSetupL."Production BOM Nos." = '' THEN
+        ManufacturingSetupL.VALIDATE("Production BOM Nos.", LibraryUtilityIncG.GetNoSeriesCode('PROD-S'));//PROD-S
+      IF ManufacturingSetupL."Routing Nos." = '' THEN
+        ManufacturingSetupL.VALIDATE("Routing Nos.", LibraryUtilityIncG.GetNoSeriesCode('RUTE'));//'RUTE'
+
+      ManufacturingSetupL.MODIFY(TRUE);
+    END;
+
+    PROCEDURE UpdateNoSeriesOnItemJournalBatch@124(VAR ItemJournalBatch@1000 : Record 233;NoSeries@1001 : Code[10]);
+    BEGIN
+      ItemJournalBatch.VALIDATE("No. Series", NoSeries);
+      ItemJournalBatch.MODIFY(TRUE);
+    END;
+
+    [Normal]
+    PROCEDURE ManufacturingSetup@14();
+    VAR
+      ManufacturingSetupL@1101103001 : Record 99000765;
+      DateFormulaL@1101103000 : DateFormula;
+    BEGIN
+      //Numbering
+      NoSeriesSetupManufacturing();
+
+      ManufacturingSetupL.GET;
+      //General
+      // Values used are important for test.
+      ManufacturingSetupL.VALIDATE("Normal Starting Time",070000T);
+      ManufacturingSetupL.VALIDATE("Normal Ending Time",153000T);
+      ManufacturingSetupL.VALIDATE("Preset Output Quantity", ManufacturingSetupL."Preset Output Quantity"::"Zero on All Operations");
+      ManufacturingSetupL.VALIDATE("Planning Warning", TRUE);
+      ManufacturingSetupL.VALIDATE("Doc. No. Is Prod. Order No.", TRUE);
+      ManufacturingSetupL.VALIDATE("Dynamic Low-Level Code", TRUE);
+      ManufacturingSetupL.VALIDATE("Cost Incl. Setup", TRUE);
+      //Planning
+      ManufacturingSetupL.VALIDATE("Use Forecast on Locations", TRUE);
+      EVALUATE(DateFormulaL, '<3D>');
+      ManufacturingSetupL.VALIDATE("Default Safety Lead Time", DateFormulaL);
+      LocationSetup('001');
+      ManufacturingSetupL.VALIDATE("Components at Location", '001');
+
+      ManufacturingSetupL.MODIFY(TRUE);
+    END;
+
+    PROCEDURE SetupParameters@1102(AutCostAdjustment@1001 : Option;CalcType@1002 : Option);
+    VAR
+      PurchasesPayablesSetup@1003 : Record 312;
+      ManufacturingSetup@1000 : Record 99000765;
+      InventorySetup@1005 : Record 313;
+    BEGIN
+      // Setup Sales and Purchases.
+      LibrarySalesG.SetCreditWarningsToNoWarnings;
+      PurchasesPayablesSetup.GET;
+      PurchasesPayablesSetup.VALIDATE("Ext. Doc. No. Mandatory",FALSE);
+      PurchasesPayablesSetup.VALIDATE("Exact Cost Reversing Mandatory",FALSE);
+      PurchasesPayablesSetup.MODIFY(TRUE);
+
+      // Setup Inventory.
+      LibraryInventoryG.UpdateInventorySetup(
+        InventorySetup,TRUE,TRUE,AutCostAdjustment,CalcType,InventorySetup."Average Cost Period"::Day);
+
+      // Setup Manufacturing.
+      LibraryManufacturingG.UpdateManufacturingSetup(
+        ManufacturingSetup,ManufacturingSetup."Show Capacity In",'',TRUE,TRUE,TRUE);
+    END;
+
+    PROCEDURE FindProductionOrderLine@39(VAR ProdOrderLine@1000 : Record 5406;Status@1001 : Option;ProdOrderNo@1002 : Code[20]);
+    BEGIN
+      ProdOrderLine.SETRANGE(Status,Status);
+      ProdOrderLine.SETRANGE("Prod. Order No.",ProdOrderNo);
+      ProdOrderLine.FINDFIRST;
+    END;
+
+    PROCEDURE VerifyProductionOrderLine@78(Status@1001 : Option;ProductionOrderNo@1002 : Code[20];ItemNo@1003 : Code[20];Quantity@1004 : Decimal;LocationCode@1005 : Code[10]);
+    VAR
+      ProdOrderLine@1000 : Record 5406;
+    BEGIN
+      FindProductionOrderLine(ProdOrderLine,Status,ProductionOrderNo);
+      ProdOrderLine.TESTFIELD("Item No.",ItemNo);
+      ProdOrderLine.TESTFIELD(Quantity,Quantity);
+      ProdOrderLine.TESTFIELD("Location Code",LocationCode);
+    END;
+
+    PROCEDURE VerifyProdOrderLineFromSalesLine@208(SalesLine@1000 : Record 37);
+    VAR
+      ProdOrder@1001 : Record 5405;
+    BEGIN
+      FindProdOrderBySourceNo(ProdOrder,SalesLine."Document No.");
+      VerifyProductionOrderLine(
+        ProdOrder.Status,ProdOrder."No.",SalesLine."No.",SalesLine.Quantity,SalesLine."Location Code");
+    END;
+
+    PROCEDURE FindProdOrderBySourceNo@205(VAR ProdOrder@1000 : Record 5405;SalesLineDocumentNo@1001 : Code[20]);
+    BEGIN
+      WITH ProdOrder DO BEGIN
+        SETCURRENTKEY("Source No.");
+        SETRANGE("Source No.",SalesLineDocumentNo);
+        FINDFIRST;
+      END;
+    END;
+
+    PROCEDURE VerifyBOMLinesForItem@1101103004(VAR ItemP@1101103000 : Record 27) : Integer;
+    VAR
+      ProductionBOMHeaderL@1101103002 : Record 99000771;
+      ProductionBOMLineL@1101103001 : Record 99000772;
+      ProductionBOMVersionL@1101103003 : Record 99000779;
+      RecordCountL@1101103004 : Integer;
+    BEGIN
+      RecordCountL := 0;
+      ProductionBOMHeaderL.GET(ItemP."Production BOM No.");
+      ProductionBOMLineL.SETRANGE("Production BOM No." ,ProductionBOMHeaderL."No.");
+      FindLastCertifiedBOMHeaderVersion(ProductionBOMHeaderL, ProductionBOMVersionL);
+      IF (NOT ProductionBOMVersionL.ISEMPTY) AND  (ProductionBOMVersionL."Version Code" <> '') THEN
+        ProductionBOMLineL.SETRANGE("Version Code" , ProductionBOMVersionL."Version Code");
+      IF ProductionBOMLineL.FINDFIRST THEN
+        REPEAT
+          RecordCountL += 1;
+        UNTIL ProductionBOMLineL.NEXT = 0;
+
+      EXIT(RecordCountL);
+    END;
+
+    PROCEDURE FindLastCertifiedBOMHeaderVersion@1101103005(VAR ProductionBOMHeaderP@1101103000 : Record 99000771;VAR ProductionBOMVersionP@1101103001 : Record 99000779) : Code[20];
+    BEGIN
+      ProductionBOMVersionP.SETRANGE("Production BOM No.", ProductionBOMHeaderP."No.");
+      ProductionBOMVersionP.SETRANGE(Status, ProductionBOMVersionP.Status::Certified);
+      IF ProductionBOMVersionP.FINDLAST() THEN
+        EXIT(ProductionBOMVersionP."Version Code")
+      ELSE
+        EXIT('');
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 18.08.17 JAL Common Incadea functions for testing
+                       Overrides standard functions to be able to create setup parameters.
+                       Hard coded text should be replaced with variables or config file.
+    }
+    END.
+  }
+}
+

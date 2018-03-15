@@ -1,0 +1,366 @@
+OBJECT Codeunit 50000 NOBI Events
+{
+  OBJECT-PROPERTIES
+  {
+    Date=02.02.17;
+    Time=14.53.49;
+    Modified=Yes;
+    Version List=SID.14;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+
+    [EventSubscriber(Codeunit,80,OnBeforePostSalesDoc)]
+    LOCAL PROCEDURE COD80OnBeforePostSalesDoc@1101103000(VAR SalesHeader@1101103000 : Record 36);
+    BEGIN
+      //SID.01-->
+      IF ((SalesHeader.Invoice) OR (SalesHeader."Document Type" = SalesHeader."Document Type"::Invoice) OR (SalesHeader."Document Type" = SalesHeader."Document Type"::"Credit Memo")) THEN
+        SalesHeader.TESTFIELD("Ready to post");
+      //SID.01<--
+    END;
+
+    [EventSubscriber(Codeunit,260,OnBeforeSend)]
+    LOCAL PROCEDURE COD260OnBeforeSend@1101103019(DocumentTypeP@1101103000 : Text[150];PostedDocNoP@1101103001 : Code[20];VAR ToEmailAddressP@1101103003 : Text[250];VAR TempEmailItemP@1101103005 : TEMPORARY Record 9500);
+    VAR
+      CustomerL@1101103002 : Record 18;
+      SalesHeaderL@1101103004 : Record 36;
+      SalesInvoiceHeaderL@1101103009 : Record 112;
+      PurchaseHeaderL@1101103006 : Record 38;
+      VendorL@1101103010 : Record 23;
+      SentToL@1101103007 : Text[250];
+      CCToL@1101103008 : Text[250];
+    BEGIN
+      //Default is to expect the CustomerNoP to be customer number, it could be vendor number.
+      CASE DocumentTypeP OF
+        FORMAT(SalesHeaderL."Document Type"::Quote):
+          BEGIN
+            IF SalesHeaderL.GET(SalesHeaderL."Document Type"::Quote, PostedDocNoP) THEN BEGIN
+              CustomerL.GET(SalesHeaderL."Sell-to Customer No.");
+              SentToL := GetContactEmailAddress(SalesHeaderL."Sell-to Contact No.");
+              IF SentToL = '' THEN
+                SentToL := CustomerL."E-Mail";
+              TempEmailItemP.VALIDATE("Send to", SentToL);
+            END;
+          END;
+        FORMAT(SalesHeaderL."Document Type"::Order):
+          BEGIN
+            IF SalesHeaderL.GET(SalesHeaderL."Document Type"::Order, PostedDocNoP) THEN BEGIN
+              CustomerL.GET(SalesHeaderL."Sell-to Customer No.");
+              SentToL := GetContactEmailAddress(SalesHeaderL."Sell-to Contact No.");
+              IF SentToL = '' THEN
+                SentToL := CustomerL."E-Mail";
+              TempEmailItemP.VALIDATE("Send to", SentToL);
+            END;
+          END;
+        FORMAT(PurchaseHeaderL."Document Type"::Order):
+          BEGIN
+            IF PurchaseHeaderL.GET(PurchaseHeaderL."Document Type"::Order, PostedDocNoP) THEN
+              IF VendorL.GET(PurchaseHeaderL."Pay-to Vendor No.") THEN BEGIN
+                SentToL := GetContactEmailAddress(PurchaseHeaderL."Buy-from Contact No.");
+              IF SentToL = '' THEN
+                SentToL := VendorL."E-Mail";
+              TempEmailItemP.VALIDATE("Send to", SentToL);
+              END;
+          END;
+      END;
+    END;
+
+    LOCAL PROCEDURE GetContactEmailAddress@1101103001(ContactNoP@1101103000 : Code[20]) : Text[80];
+    VAR
+      ContactL@1101103001 : Record 5050;
+    BEGIN
+      //If contact is used, try to find this E-mail
+      IF ContactNoP <> '' THEN BEGIN
+        ContactL.RESET;
+        ContactL.SETRANGE("No.", ContactNoP);
+        IF ((ContactL.FINDFIRST) AND (ContactL."E-Mail" <> '')) THEN
+          EXIT(ContactL."E-Mail");
+      END;
+      EXIT('');
+    END;
+
+    [EventSubscriber(Table,36,OnAfterInsertEvent)]
+    LOCAL PROCEDURE TAB36OnAfterInsertEvent@1101103003(VAR Rec@1101103000 : Record 36;RunTrigger@1101103001 : Boolean);
+    BEGIN
+      //SID.04-->
+      Rec."Ready to post" := TRUE;
+      Rec.MODIFY;
+      //SID.04<--
+
+      //SID.02-->
+      GetLocationAndSalesPerson(Rec);
+      Rec.MODIFY;
+      //SID.02<--
+    END;
+
+    [EventSubscriber(Table,36,OnAfterValidateEvent,"Sell-to Customer Name")]
+    LOCAL PROCEDURE TAB36OnAfterValidateEventSelltoCustomerName@1101103018(VAR Rec@1101103000 : Record 36;VAR xRec@1101103001 : Record 36;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.02-->
+      GetLocationAndSalesPerson(Rec);
+      //SID.02<--
+    END;
+
+    [EventSubscriber(Table,36,OnAfterValidateEvent,"Sell-to Customer No.")]
+    LOCAL PROCEDURE TAB36OnAfterValidateEventSelltoCustomerNo@1101103005(VAR Rec@1101103000 : Record 36;VAR xRec@1101103001 : Record 36;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.02-->
+      GetLocationAndSalesPerson(Rec);
+      //SID.02<--
+    END;
+
+    [EventSubscriber(Table,36,OnAfterValidateEvent,"Bill-to Customer No.")]
+    LOCAL PROCEDURE TAB36OnAfterValidateEventBilltoCustomerNo@1101103009(VAR Rec@1101103000 : Record 36;VAR xRec@1101103001 : Record 36;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.02-->
+      GetLocationAndSalesPerson(Rec);
+      //SID.02<--
+    END;
+
+    [EventSubscriber(Table,36,OnAfterValidateEvent,"Ship-to Customer No.")]
+    LOCAL PROCEDURE TAB36OnAfterValidateEventShiptoCustomerNo@1101103010(VAR Rec@1101103000 : Record 36;VAR xRec@1101103001 : Record 36;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.02-->
+      GetLocationAndSalesPerson(Rec);
+      //SID.02<--
+    END;
+
+    [EventSubscriber(Table,36,OnAfterValidateEvent,"Sell-to Contact")]
+    LOCAL PROCEDURE TAB36OnAfterValidateEventSelltoContact@1101103012(VAR Rec@1101103000 : Record 36;VAR xRec@1101103001 : Record 36;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.02-->
+      GetLocationAndSalesPerson(Rec);
+      //SID.02<--
+    END;
+
+    [EventSubscriber(Table,36,OnAfterValidateEvent,"Bill-to Contact")]
+    LOCAL PROCEDURE TAB36OnAfterValidateEventBilltoContact@1101103014(VAR Rec@1101103000 : Record 36;VAR xRec@1101103001 : Record 36;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.02-->
+      GetLocationAndSalesPerson(Rec);
+      //SID.02<--
+    END;
+
+    [EventSubscriber(Table,36,OnAfterValidateEvent,"Ship-to Contact")]
+    LOCAL PROCEDURE TAB36OnAfterValidateEventShiptoContact@1101103013(VAR Rec@1101103000 : Record 36;VAR xRec@1101103001 : Record 36;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.02-->
+      GetLocationAndSalesPerson(Rec);
+      //SID.02<--
+    END;
+
+    [EventSubscriber(Table,37,OnAfterValidateEvent,"No.")]
+    LOCAL PROCEDURE TAB37OnAfterValidateEventNo@1101103011(VAR Rec@1101103000 : Record 37;VAR xRec@1101103001 : Record 37;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.06-->
+      CalcEmployeePrice(Rec);
+      //SID.06<--
+    END;
+
+    [EventSubscriber(Table,37,OnAfterValidateEvent,Quantity)]
+    LOCAL PROCEDURE TAB37OnAfterValidateEventQuantity@1101103004(VAR Rec@1101103000 : Record 37;VAR xRec@1101103001 : Record 37;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.06-->
+      CalcEmployeePrice(Rec);
+      //SID.06<--
+    END;
+
+    [EventSubscriber(Table,37,OnAfterValidateEvent,"Unit of Measure Code")]
+    LOCAL PROCEDURE TAB37OnAfterValidateEventUnitOfMeasureCode@1101103007(VAR Rec@1101103000 : Record 37;VAR xRec@1101103001 : Record 37;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.06-->
+      CalcEmployeePrice(Rec);
+      //SID.06<--
+    END;
+
+    [EventSubscriber(Table,37,OnAfterValidateEvent,"Location Code")]
+    LOCAL PROCEDURE TAB37OnAfterValidateEventLocationCode@1101103008(VAR Rec@1101103000 : Record 37;VAR xRec@1101103001 : Record 37;CurrFieldNo@1101103002 : Integer);
+    BEGIN
+      //SID.06-->
+      CalcEmployeePrice(Rec);
+      //SID.06<--
+    END;
+
+    LOCAL PROCEDURE GetLocationAndSalesPerson@1101103002(VAR Rec@1101103000 : Record 36);
+    VAR
+      UserL@1101103001 : Record 2000000120;
+    BEGIN
+      //SID.01-->
+      UserL.RESET;
+      UserL.SETRANGE("User Name",USERID);
+      IF UserL.FINDFIRST THEN BEGIN
+        IF UserL."User Location" <> '' THEN
+          Rec.VALIDATE("Location Code", UserL."User Location");
+        IF UserL."User Salesperson" <> '' THEN
+          Rec.VALIDATE("Salesperson Code", UserL."User Salesperson");
+      END;
+      //SID.01<--
+    END;
+
+    LOCAL PROCEDURE CalcEmployeePrice@1101103006(VAR Rec@1101103000 : Record 37);
+    VAR
+      SID001@1101103001 : TextConst 'ENU=The customer has an employee price but the item has zero i unit cost. Sales price cannot be calculated.;NOR=Kunden har ansattpris, men varen mangler kostpris for at den skal kunne beregnes.';
+      NewPrice@1101103002 : Decimal;
+      Cust@1101103003 : Record 18;
+      HasBeenShown@1101103004 : Boolean;
+    BEGIN
+      //SID.06 -->
+      IF ((Rec.Type = Rec.Type::Item) AND (Rec."No." <> '') AND (Cust.GET(Rec."Sell-to Customer No.")) AND (Cust."Employee Price" > 0)) THEN BEGIN
+        NewPrice := Rec."Unit Cost" * (1 + (Cust."Employee Price"/100));
+        Rec.VALIDATE(Rec."Unit Price", ROUND(NewPrice,0.01));
+        Rec.VALIDATE("Line Discount %",0);
+        Rec.VALIDATE("Inv. Discount Amount",0);
+      END;
+      //SID.06 <--
+    END;
+
+    [EventSubscriber(Page,143,OnAfterActionEvent,"Bulk Send")]
+    LOCAL PROCEDURE PAG143OnActionBulkSend@1101103024(VAR Rec@1101103000 : Record 112);
+    VAR
+      SalesInvoiceHeaderL@1101103001 : Record 112;
+      SalesInvoiceHeaderSendL@1101103002 : Record 112;
+      TXT01L@1101103003 : TextConst 'ENU=Do you want to send %1 posted invoices via printer, mail or EHF? The documents will be sent based on the sending profile on the customer or vendor.;NOR=Vil du masseutsende %1 bokf›rte salgsfaktura via printer, e-post eller EHF? Dokumentene blir sendt ut basert p† profil for dokumentsending for kunde eller leverand›r.';
+      ProgressWindowL@1101103004 : Dialog;
+      TXT02L@1101103005 : TextConst 'ENU=Processing #1#######;NOR=Behandler #1#######';
+      RecordCountL@1101103006 : Integer;
+      TXT03L@1101103007 : TextConst 'ENU=%1 lines have been processed.;NOR=%1 linjer har blitt behandlet.';
+      SendEInvoiceL@1101103008 : Boolean;
+    BEGIN
+      SalesInvoiceHeaderL.COPYFILTERS(Rec);
+      RecordCountL := 0;
+      IF (SalesInvoiceHeaderL.FINDFIRST) AND CONFIRM(TXT01L, TRUE, SalesInvoiceHeaderL.COUNT) THEN BEGIN
+        ProgressWindowL.OPEN(TXT02L);
+        REPEAT
+          SalesInvoiceHeaderSendL.RESET();
+          SalesInvoiceHeaderSendL.SETRANGE("No.", SalesInvoiceHeaderL."No.");
+          SalesInvoiceHeaderSendL.FINDFIRST();
+          ProgressWindowL.UPDATE(1,SalesInvoiceHeaderL."No.");
+          //Write EHF files to file
+          IF SalesInvoiceHeaderSendL."E-Invoice" THEN BEGIN
+            SalesInvoiceHeaderSendL.SETRECFILTER;
+            REPORT.RUNMODAL(REPORT::"Create Electronic Invoices", FALSE, FALSE, SalesInvoiceHeaderSendL);
+          END
+          ELSE
+            SalesInvoiceHeaderSendL.SendRecords();
+          RecordCountL := RecordCountL + 1;
+        UNTIL SalesInvoiceHeaderL.NEXT = 0;
+        ProgressWindowL.CLOSE;
+        MESSAGE(TXT03L, RecordCountL);
+      END;
+    END;
+
+    [EventSubscriber(Table,77,OnBeforeSend)]
+    LOCAL PROCEDURE TAB77OnBeforeSend@1101103023(VAR ReportIDP@1101103000 : Integer);
+    BEGIN
+      UpdateUserReportSetup(ReportIDP, TRUE);
+    END;
+
+    [EventSubscriber(Table,77,OnAfterSend)]
+    LOCAL PROCEDURE TAB77OnAfterSend@1101103022(VAR ReportIDP@1101103000 : Integer);
+    BEGIN
+      UpdateUserReportSetup(ReportIDP, FALSE);
+    END;
+
+    LOCAL PROCEDURE UpdateUserReportSetup@1101103021(VAR ReportIDP@1101103000 : Integer;IsPrintingStarted@1101103001 : Boolean);
+    VAR
+      UserReportSetupL@1101103002 : Record 50001;
+    BEGIN
+      UserReportSetupL.SETRANGE("User ID", USERID);
+      UserReportSetupL.SETRANGE("Report ID", ReportIDP);
+      IF IsPrintingStarted THEN BEGIN
+        IF UserReportSetupL.FINDFIRST THEN
+        BEGIN
+          UserReportSetupL.VALIDATE("Is Printing Started", IsPrintingStarted);
+          UserReportSetupL.MODIFY(TRUE);
+        END;
+      END ELSE BEGIN
+        //Uncheck all lines for user
+        UserReportSetupL.RESET;
+        UserReportSetupL.SETRANGE("User ID", USERID);
+        IF UserReportSetupL.FINDSET THEN
+          UserReportSetupL.MODIFYALL("Is Printing Started", IsPrintingStarted);
+      END;
+    END;
+
+    LOCAL PROCEDURE IsUserReportPrintingStarted@1101103020() : Boolean;
+    VAR
+      UserReportSetupL@1101103000 : Record 50001;
+    BEGIN
+      UserReportSetupL.SETRANGE("User ID", USERID);
+      UserReportSetupL.SETRANGE("Is Printing Started", TRUE);
+      EXIT (UserReportSetupL.FINDFIRST);
+    END;
+
+    LOCAL PROCEDURE UserReportSetupHideEmailDialog@1101103017() : Boolean;
+    VAR
+      UserReportSetupL@1101103000 : Record 50001;
+    BEGIN
+      UserReportSetupL.SETRANGE("User ID", USERID);
+      UserReportSetupL.SETRANGE("Is Printing Started", TRUE);
+      IF UserReportSetupL.FINDFIRST THEN
+        EXIT(UserReportSetupL."Hide Email Dialog")
+      ELSE
+        EXIT (FALSE); //FALSE is standard behaviour
+    END;
+
+    LOCAL PROCEDURE UserReportSetupSendEmailAutomatic@1101103016() : Boolean;
+    VAR
+      UserReportSetupL@1101103000 : Record 50001;
+    BEGIN
+      UserReportSetupL.SETRANGE("User ID", USERID);
+      UserReportSetupL.SETRANGE("Is Printing Started", TRUE);
+      IF UserReportSetupL.FINDFIRST THEN
+        EXIT(UserReportSetupL."Send Email Automatic")
+      ELSE
+        EXIT (FALSE); //false is standard behaviour
+    END;
+
+    [EventSubscriber(Codeunit,9520,OnBeforeRunEmailDialog)]
+    LOCAL PROCEDURE COD9520OnBeforeRunEmailDialog@1101103015(VAR HidePopupEmailDialogP@1101103000 : Boolean;VAR HideMailDialogP@1101103001 : Boolean;VAR DoEditP@1101103002 : Boolean);
+    BEGIN
+      HidePopupEmailDialogP := UserReportSetupHideEmailDialog;
+      IF UserReportSetupSendEmailAutomatic THEN BEGIN
+        HideMailDialogP := TRUE; //Send email without showing the email form in Outlook.
+      END;
+      //DoEdit must be true to trigger send mail via Outlook
+      DoEditP := TRUE;
+    END;
+
+    BEGIN
+    {
+      Incadea Norge AS
+
+      COD80
+        SID.01 :: Code to test field : "Ready to post"
+        SID.02 :: Code to set field "Ready to post" to FALSE
+
+      TAB36
+            SID.01 :: Funskjon for ¹ hente Lokasjon og Selger fra User tabell
+            SID.02 :: Kaller funksjon og validerer Lokasjon og Selger
+            SID.03 :: New field : Ready to post
+            SID.04 :: Setter "Ready to post" ved insert
+            SID.05 :: New field : Delivery in week no.
+
+      TAB37
+            SID.06 :: Code to calculate employee prices
+
+      New Mail functions
+            SID.07 :: PAG143OnActionBulkSend
+            SID.08 :: TAB77OnBeforeSend
+            SID.09 :: TAB77OnAfterSend
+            SID.10 :: UpdateUserReportSetup
+            SID.11 :: IsUserReportPrintingStarted
+            SID.12 :: UserReportSetupHideEmailDialog
+            SID.13 :: UserReportSetupSendEmailAutomatic
+            SID.14 :: COD9520OnBeforeRunEmailDialog
+    }
+    END.
+  }
+}
+

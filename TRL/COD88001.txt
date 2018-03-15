@@ -1,0 +1,309 @@
+OBJECT Codeunit 88001 Translation Mgt.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=13:06:03;
+    Modified=Yes;
+    Version List=TRL1.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      C_INC_ChooseObjectType@1000000000 : TextConst 'ENU=Choose Object Type;NOR=Velg Objekt Type';
+      C_INC_ErrorChooseObjectType@1000000001 : TextConst 'ENU=You have to set filter for object type.;NOR=Du m† sette filter for Objekt Type.';
+      C_INC_ConfirmReplace@1000000002 : TextConst 'ENU=The following text: %1\ will be replaced with %2 if you Confirm;NOR=F›lgende tekste: %1\ blir erstattet med %2 hvis du Confirm';
+
+    PROCEDURE GetType@1000000000();
+    VAR
+      TranslationLineIncL@1000000003 : Record 88001;
+      TranslationToolLineL@1000000002 : Record 11102068;
+    BEGIN
+      TranslationLineIncL.INIT;
+      IF TranslationLineIncL.FINDSET THEN
+        REPEAT
+          TranslationToolLineL.INIT;
+          TranslationToolLineL.SETRANGE("Translate File Line",TranslationLineIncL."Translate File Line");
+          IF TranslationToolLineL.FINDSET THEN BEGIN
+              TranslationLineIncL."Object Type" := TranslationToolLineL."Object Type";
+              TranslationLineIncL."Object No."  := TranslationToolLineL."Object No.";
+              TranslationLineIncL.MODIFY(TRUE);
+            END;
+        UNTIL TranslationLineIncL.NEXT = 0;
+    END;
+
+    PROCEDURE AutoIncrement@1000000001();
+    VAR
+      TranslationLineIncL@1000000003 : Record 88001;
+      TranslationToolLineL@1000000002 : Record 11102068;
+      DummyIntL@1000000001 : Integer;
+      iL@1000000000 : Integer;
+    BEGIN
+      TranslationLineIncL.INIT;
+      iL := 1;
+      IF TranslationLineIncL.FINDSET THEN
+        REPEAT
+          TranslationLineIncL."Auto Increment" := iL;
+          iL += 1;
+          TranslationLineIncL.MODIFY;
+        UNTIL TranslationLineIncL.NEXT = 0;
+    END;
+
+    PROCEDURE CopyNumbers@1000000002();
+    VAR
+      TranslationLineIncL@1000000004 : Record 88001;
+      iL@1000000000 : Integer;
+      DummyIntL@1000000001 : Integer;
+    BEGIN
+      TranslationLineIncL.INIT;
+      iL := 1;
+      IF TranslationLineIncL.FINDSET THEN
+        REPEAT
+          iL += 1;
+          IF NOT TranslationLineIncL.Translated THEN
+            IF EVALUATE(DummyIntL,TranslationLineIncL."Base Text") THEN BEGIN
+              TranslationLineIncL.Translation := TranslationLineIncL."Base Text";
+              TranslationLineIncL.Translated := TRUE;
+              TranslationLineIncL.MODIFY;
+          END;
+        UNTIL TranslationLineIncL.NEXT = 0;
+    END;
+
+    PROCEDURE UpdateTranslationTable@1000000003(VAR TranslationLineIncP@1000000005 : Record 88001);
+    VAR
+      TranslationLineIncL@1000000004 : Record 88001;
+      TempTableFindL@1000000003 : Record 88001;
+      TranslationToolLineL@1000000002 : Record 11102068;
+      DummyIntL@1000000001 : Integer;
+      iL@1000000000 : Integer;
+    BEGIN
+      TranslationLineIncL.COPYFILTERS(TranslationLineIncP);
+      iL := 1;
+      IF TranslationLineIncL.FINDSET THEN
+        REPEAT
+          iL += 1;
+          IF NOT TranslationLineIncL.Translated THEN BEGIN
+            TempTableFindL.INIT;
+            TempTableFindL.SETRANGE(Translated,TRUE);
+            TempTableFindL.SETRANGE(TempTableFindL."Base Text", TranslationLineIncL."Base Text");
+            IF TempTableFindL.FINDFIRST THEN BEGIN
+                TranslationLineIncL.Translation := TempTableFindL.Translation;
+                TranslationLineIncL.Translated := TRUE;
+                TranslationLineIncL.MODIFY;
+            END;
+          END;
+        UNTIL TranslationLineIncL.NEXT = 0;
+    END;
+
+    PROCEDURE UpdateOMATranslationToolLine@1000000004(VAR TranslationLineIncP@1000000000 : Record 88001);
+    VAR
+      TranslationLineIncL@1000000002 : Record 88001;
+      TranslationToolLineL@1000000001 : Record 11102068;
+    BEGIN
+      TranslationLineIncL.COPYFILTERS(TranslationLineIncP);
+      TranslationLineIncL.SETRANGE(Translated, TRUE);
+      IF TranslationLineIncL.FINDSET THEN
+        REPEAT
+            TranslationToolLineL.INIT;
+            TranslationToolLineL.SETRANGE("Translate File Line",TranslationLineIncL."Translate File Line");
+            TranslationToolLineL.SETRANGE("Language Id",1044);
+            IF TranslationToolLineL.FINDSET THEN BEGIN
+              IF TranslationToolLineL."Caption 1" <> TranslationLineIncL.Translation THEN BEGIN
+                TranslationToolLineL.ValidateCaption(TranslationLineIncL.Translation);
+                TranslationToolLineL.MODIFY(TRUE);
+              END;
+            END;
+        UNTIL TranslationLineIncL.NEXT = 0;
+    END;
+
+    PROCEDURE ImportTranslationLinesFromOMA@1000000005();
+    VAR
+      OMTranslationToolLineL@1000000008 : Record 11102068;
+      OMTranslationToolLine2L@1000000007 : Record 11102068;
+      TranslationLineIncL@1000000006 : Record 88001;
+      iL@1000000005 : Integer;
+      i2L@1000000004 : Integer;
+      HighetsAoutoincL@1000000003 : Integer;
+      HighestEntryNo@1000000002 : Integer;
+      ObjectTypeL@1000000001 : Integer;
+      PrefixL@1000000000 : Text;
+    BEGIN
+      PrefixL := '';
+      ObjectTypeL := 0;
+      ObjectTypeL := DIALOG.STRMENU('Table,Page,Report,Codeunit,Query,XMLport,MenuSuite', ObjectTypeL, C_INC_ChooseObjectType);
+      IF ObjectTypeL = 0 THEN
+        ERROR(C_INC_ErrorChooseObjectType);
+
+      CASE ObjectTypeL OF
+        1: BEGIN
+              OMTranslationToolLineL.SETRANGE("Object Type", OMTranslationToolLineL."Object Type"::Table);
+          PrefixL := 'T'
+            END;
+        2: BEGIN
+              OMTranslationToolLineL.SETRANGE("Object Type", OMTranslationToolLineL."Object Type"::Page);
+          PrefixL := 'P'
+            END;
+        3: BEGIN
+              OMTranslationToolLineL.SETRANGE("Object Type", OMTranslationToolLineL."Object Type"::Report);
+          PrefixL := 'R'
+            END;
+        4: BEGIN
+              OMTranslationToolLineL.SETRANGE("Object Type", OMTranslationToolLineL."Object Type"::Codeunit);
+          PrefixL := 'C'
+            END;
+        5: BEGIN
+              OMTranslationToolLineL.SETRANGE("Object Type", OMTranslationToolLineL."Object Type"::Query);
+          PrefixL := 'Q'
+            END;
+        6: BEGIN
+              OMTranslationToolLineL.SETRANGE("Object Type", OMTranslationToolLineL."Object Type"::XMLport);
+          PrefixL := 'X'
+            END;
+        7: BEGIN
+              OMTranslationToolLineL.SETRANGE("Object Type", OMTranslationToolLineL."Object Type"::MenuSuite);
+          PrefixL := 'M'
+            END;
+      END;
+
+      WITH OMTranslationToolLineL DO BEGIN
+        SETRANGE(Captions,TRUE);
+        SETRANGE("Language Id", 1044);
+        TranslationLineIncL.INIT;
+        HighetsAoutoincL := 0;
+        REPEAT
+          IF TranslationLineIncL."Auto Increment" > HighetsAoutoincL THEN
+            HighetsAoutoincL := TranslationLineIncL."Auto Increment";
+        UNTIL TranslationLineIncL.NEXT = 0;
+        iL := HighetsAoutoincL +1;
+        i2L := 1;
+        IF FINDSET THEN BEGIN
+          REPEAT
+            OMTranslationToolLine2L.INIT;
+            OMTranslationToolLine2L.SETRANGE("Translate File Line","Translate File Line");
+            OMTranslationToolLine2L.SETRANGE("Language Id",1033);
+            IF OMTranslationToolLine2L.FINDFIRST THEN;
+            TranslationLineIncL.INIT;
+            TranslationLineIncL."Entry No."           := PrefixL + FORMAT("Entry No.");
+            TranslationLineIncL."Base Text"                 := OMTranslationToolLine2L."Caption 1";
+            IF "Caption 1" <> '' THEN BEGIN
+              TranslationLineIncL.Translation := "Caption 1";
+              TranslationLineIncL.Translated    := TRUE;
+            END ELSE
+               TranslationLineIncL.Translation         := OMTranslationToolLine2L."Caption 1";
+            TranslationLineIncL.Length                := STRLEN(Name);
+            TranslationLineIncL."Object Type"         := OMTranslationToolLineL."Object Type";
+            TranslationLineIncL.Type                  := Type;
+            TranslationLineIncL."Object No."          := "Object No.";
+            TranslationLineIncL."Translate File Line" := "Translate File Line";
+            TranslationLineIncL."Auto Increment" := iL;
+            iL  += 1;
+            i2L += 1;
+            IF TranslationLineIncL.INSERT THEN;
+          UNTIL (NEXT = 0) OR (i2L > 1000000);
+        END;
+
+      END;
+    END;
+
+    PROCEDURE UpdateLength@1000000006();
+    VAR
+      TranslationLineIncL@1000000000 : Record 88001;
+    BEGIN
+      TranslationLineIncL.INIT;
+      IF TranslationLineIncL.FINDSET THEN
+        REPEAT
+          TranslationLineIncL.Length := STRLEN(TranslationLineIncL."Base Text");
+          TranslationLineIncL.MODIFY;
+        UNTIL TranslationLineIncL.NEXT = 0;
+    END;
+
+    PROCEDURE UpdateNTCount@1000000007();
+    VAR
+      TranslationLineIncL@1000000000 : Record 88001;
+      TranslationLineInc2L@1000000001 : Record 88001;
+    BEGIN
+      TranslationLineIncL.INIT;
+      TranslationLineIncL.SETRANGE(Translated,FALSE);
+      IF TranslationLineIncL.FINDSET THEN
+        REPEAT
+          TranslationLineInc2L.RESET;
+          TranslationLineInc2L.SETRANGE("Base Text",TranslationLineIncL."Base Text");
+          TranslationLineIncL.QuantityNottranslated := TranslationLineInc2L.COUNT;
+          TranslationLineIncL.MODIFY;
+        UNTIL TranslationLineIncL.NEXT = 0;
+    END;
+
+    PROCEDURE ReplaceWordInFilter@1000000008(VAR TranslationLineIncP@1000000003 : Record 88001;TextToFindP@1000000000 : Text;ReplaceTextP@1000000001 : Text;CaseSensitiveP@1000000004 : Boolean);
+    VAR
+      TranslationLineIncL@1000000002 : Record 88001;
+      TempTextL@1000000006 : Text;
+      StrPositionL@1000000005 : Integer;
+      TempStrLengthL@1000000007 : Integer;
+    BEGIN
+      IF DIALOG.CONFIRM(C_INC_ConfirmReplace, FALSE, TextToFindP, ReplaceTextP) THEN BEGIN
+        TranslationLineIncL.INIT;
+        TranslationLineIncL.COPYFILTERS(TranslationLineIncP);
+        IF STRLEN(TextToFindP) > 1 THEN BEGIN
+          IF TranslationLineIncL.FINDSET THEN
+            REPEAT
+              IF CaseSensitiveP THEN
+                StrPositionL := STRPOS(TranslationLineIncL.Translation, TextToFindP)
+              ELSE
+                StrPositionL := STRPOS(UPPERCASE(TranslationLineIncL.Translation), UPPERCASE(TextToFindP));
+              WHILE StrPositionL <> 0 DO BEGIN
+                TempTextL := TranslationLineIncL.Translation;
+                TranslationLineIncL.Translation := COPYSTR(TempTextL, 1, StrPositionL - 1) + ReplaceTextP;
+                TempStrLengthL := STRLEN(TranslationLineIncL.Translation) - STRLEN(ReplaceTextP) + STRLEN(TextToFindP);
+                TranslationLineIncL.Translation := TranslationLineIncL.Translation + COPYSTR(TempTextL, TempStrLengthL + 1);
+                TranslationLineIncL.MODIFY;
+                IF CaseSensitiveP THEN
+                  StrPositionL := STRPOS(TranslationLineIncL.Translation, TextToFindP)
+                ELSE
+                  StrPositionL := STRPOS(UPPERCASE(TranslationLineIncL.Translation), UPPERCASE(TextToFindP));
+              END;
+            UNTIL (TranslationLineIncL.NEXT = 0);
+        END;
+      END;
+    END;
+
+    PROCEDURE RecordCount@1000000011(VAR TempTable2P@1000000001 : Record 88001);
+    VAR
+      TranslationLineIncL@1000000000 : Record 88001;
+    BEGIN
+      TranslationLineIncL.INIT;
+      TranslationLineIncL.COPYFILTERS(TempTable2P);
+      MESSAGE(FORMAT(TranslationLineIncL.COUNT));
+    END;
+
+    PROCEDURE ChangeMenuObjectInOMATranslationLine@1000000009(MenuIDP@1000000001 : Integer;ChangedP@1000000002 : Boolean);
+    VAR
+      OMTranslationToolLineL@1000000000 : Record 11102068;
+    BEGIN
+      OMTranslationToolLineL.SETRANGE("Object Type", OMTranslationToolLineL."Object Type"::MenuSuite);
+      //Fastfit menu
+      OMTranslationToolLineL.SETRANGE("Object No.", MenuIDP);
+      IF OMTranslationToolLineL.FINDFIRST THEN
+      REPEAT
+        OMTranslationToolLineL.VALIDATE("Caption Changed", ChangedP);
+        OMTranslationToolLineL.MODIFY(TRUE);
+      UNTIL OMTranslationToolLineL.NEXT = 0;
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 18.08.17 JAL Function for managing translation
+    }
+    END.
+  }
+}
+

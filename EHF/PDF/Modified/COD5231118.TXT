@@ -1,0 +1,967 @@
+OBJECT Codeunit 5231118 E-Invoice Exit Point Handling
+{
+  OBJECT-PROPERTIES
+  {
+    Date=29.01.16;
+    Time=14:00:22;
+    Modified=Yes;
+    Version List=TFS101644,SID.01,#GS#;
+  }
+  PROPERTIES
+  {
+    TableNo=5207300;
+    OnRun=BEGIN
+            // Function to handleExit Point based on the Trigger, Type and the parameters
+            EPSetupG := Rec;
+            EPUnitG.GetParams(CurrentRecRefG, PrevRecRefG, CurrFieldNameG, ParameterRecG, FALSE);
+            IF CurrFieldNameG > '' THEN
+              CurrFieldNoG := EPUnitG.GetFieldNo(CurrentRecRefG);
+
+            CASE TRUE OF
+              // Triggered due to "Sales Header" Validate "Bill-to Customer No."
+              ( CurrFieldNameG = 'Bill-to Customer No.' ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Sales Header" ) :
+                BEGIN
+                  EhfFieldsAdd2SalesHdrRec(CurrentRecRefG);
+                END;
+
+              // Triggered due to "Servicer Header" Validate "Bill-to Customer No."
+              ( CurrFieldNameG = 'Bill-to Customer No.' ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Service Header" ) :
+                BEGIN
+                  EhfFieldsAdd2ServiceHdrRec(CurrentRecRefG);
+                END;
+
+
+              // Triggered due to "Reminder Header" Validate "Customer No."
+              ( CurrFieldNameG = 'Customer No.' ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Reminder Header" ) :
+                BEGIN
+                  EhfFieldsAdd2ReminderHdrRec(CurrentRecRefG);
+                END;
+
+              // Triggered due to "Finance Charge Memo Header" Validate "Customer No."
+              ( CurrFieldNameG = 'Customer No.' ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Finance Charge Memo Header" ) :
+                BEGIN
+                  EhfFieldsAdd2FinanceChargeMemoHdrRec(CurrentRecRefG);
+                END;
+
+
+              // Triggered due to Posting of Service Order
+              (EPSetupG.Trigger = EPSetupG.Trigger::"Function") AND ( CurrentRecRefG.NUMBER = DATABASE::"Service Header" ) AND
+              (EPSetupG.Type = EPSetupG.Type::Pre):
+                BEGIN
+                  EhfCheckServiceOrder(CurrentRecRefG);
+                END;
+
+              // Triggered due to Posting of "Sales Invoice" & "Sales Credit Memo"
+              // Check that EHF Prerequisite fields are not empty
+              (EPSetupG.Trigger IN [ EPSetupG.Trigger::"Function"] ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Sales Header" ) AND
+              (EPSetupG.Type = EPSetupG.Type::Pre):
+                BEGIN
+                  EhfCheckSalesHeader(CurrentRecRefG);
+                END;
+
+              // Triggered due to Posting of "Sales Invoice" & "Sales Credit Memo"
+              // Create E-Invoice Document
+              (EPSetupG.Trigger IN [ EPSetupG.Trigger::"Function" ] ) AND ( CurrentRecRefG.NUMBER = DATABASE::"Sales Header" ) AND
+              (EPSetupG.Type = EPSetupG.Type::Post):
+                BEGIN
+                  EhfCreateDocument(CurrentRecRefG);
+                END;
+            END;
+
+            EPUnitG.SetParams(CurrentRecRefG, PrevRecRefG, ParameterRecG, CurrFieldNameG, FALSE);
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      EPSetupG@1101297640 : Record 5207300;
+      ParameterRecG@1101297644 : Record 5207301;
+      EPUnitG@1101297639 : Codeunit 5207300;
+      CurrentRecRefG@1101297641 : RecordRef;
+      PrevRecRefG@1101297642 : RecordRef;
+      CurrFieldNameG@1101297643 : Text[50];
+      CurrFieldNoG@1101297645 : Integer;
+      ReportNotCreatedtxtG@1101103000 : TextConst 'ENU=For some reason Invoice %1 Pdf could not be created with report %2;NOR=For noen grunn Faktura %1 Pdf ikke kunne opprettes med rapport %2';
+      FileNoteFoundG@1101103001 : TextConst 'ENU=Attachment could not be perfrom with the file \%1';
+
+    PROCEDURE EhfFieldsAdd2SalesHdrRec@1101103001(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      SalesHeaderL@1101103003 : Record 36;
+      CustomerL@1101103000 : Record 18;
+      CompanyInfoL@1101103001 : Record 79;
+    BEGIN
+      // EHF Fields from Customer Table add "Bill-to Customer No." EHF Fields to Sales Header
+      CurrentRecRefG.SETTABLE(SalesHeaderL);
+      WITH SalesHeaderL DO BEGIN
+        IF NOT CustomerL.GET("Bill-to Customer No.") THEN
+          EXIT;
+        "E-Invoice" := CustomerL."E-Invoice";
+        "GLN No." := CustomerL."GLN No.";
+        "Include PDF Copy" := CustomerL."Include PDF Copy";
+        "Account Code" := CustomerL."Account Code";
+        CompanyInfoL.GET;
+        CASE "Document Type" OF
+          "Document Type"::"Credit Memo":
+            BEGIN
+              "VAT Registration No." :=  CustomerL."VAT Registration No.";
+            END ELSE BEGIN
+              "VAT Registration No." :=  CustomerL."VAT Registration No.";
+              "External Document No." := "No.";
+            END;
+        END;
+      END;
+      CurrentRecRefG.GETTABLE(SalesHeaderL);
+    END;
+
+    PROCEDURE EhfFieldsAdd2ServiceHdrRec@1101103000(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      ServiceHeaderL@1101103003 : Record 5025624;
+      CustomerL@1101103000 : Record 18;
+      CompanyInfoL@1101103001 : Record 79;
+    BEGIN
+      // EHF Fields from Customer Table add "Bill-to Customer No." EHF Fields to Service Header
+      CurrentRecRefG.SETTABLE(ServiceHeaderL);
+      WITH ServiceHeaderL DO BEGIN
+        IF NOT CustomerL.GET("Bill-to Customer No.") THEN
+          EXIT;
+        "E-Invoice" := CustomerL."E-Invoice";
+        "GLN No." := CustomerL."GLN No.";
+        "Include PDF Copy" := CustomerL."Include PDF Copy";
+        "Account Code" := CustomerL."Account Code";
+        CompanyInfoL.GET;
+        CASE "Document Type" OF
+          //"Document Type"::"Credit Memo":
+          //  BEGIN
+          //    "VAT Registration No." :=  CustomerL."VAT Registration No.";
+          //  END;
+          "Document Type"::Quote, "Document Type"::Order, "Document Type"::Scheduling :
+            BEGIN
+              "VAT Registration No." :=  CustomerL."VAT Registration No.";
+              "External Document No." := "No.";
+            END;
+        END;
+      END;
+      CurrentRecRefG.GETTABLE(ServiceHeaderL);
+    END;
+
+    PROCEDURE EhfFieldsAdd2ReminderHdrRec@1101103014(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      ReminderHeaderL@1101103003 : Record 295;
+      CustomerL@1101103000 : Record 18;
+    BEGIN
+      // EHF Fields from Customer Table add "Bill-to Customer No." EHF Fields to Reminder Header
+      CurrentRecRefG.SETTABLE(ReminderHeaderL);
+
+      IF NOT CustomerL.GET(ReminderHeaderL."Customer No.") THEN
+        EXIT;
+      ReminderHeaderL."E-Invoice" := CustomerL."E-Invoice";
+      ReminderHeaderL."GLN No." := CustomerL."GLN No.";
+      ReminderHeaderL."Include PDF Copy" := CustomerL."Include PDF Copy";
+      ReminderHeaderL."Account Code" := CustomerL."Account Code";
+      ReminderHeaderL."VAT Registration No." :=  CustomerL."VAT Registration No.";
+
+      CurrentRecRefG.GETTABLE(ReminderHeaderL);
+    END;
+
+    PROCEDURE EhfFieldsAdd2FinanceChargeMemoHdrRec@1101103018(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      FinanceChargeMemoHdrL@1101103003 : Record 302;
+      CustomerL@1101103000 : Record 18;
+    BEGIN
+      // EHF Fields from Customer Table add "Customer No." EHF Fields to "Finance Charge Memo Header"
+      CurrentRecRefG.SETTABLE(FinanceChargeMemoHdrL);
+
+      IF NOT CustomerL.GET(FinanceChargeMemoHdrL."Customer No.") THEN
+        EXIT;
+      FinanceChargeMemoHdrL."E-Invoice" := CustomerL."E-Invoice";
+      FinanceChargeMemoHdrL."GLN No." := CustomerL."GLN No.";
+      FinanceChargeMemoHdrL."Include PDF Copy" := CustomerL."Include PDF Copy";
+      FinanceChargeMemoHdrL."Account Code" := CustomerL."Account Code";
+      FinanceChargeMemoHdrL."VAT Registration No." :=  CustomerL."VAT Registration No.";
+
+      CurrentRecRefG.GETTABLE(FinanceChargeMemoHdrL);
+    END;
+
+    PROCEDURE EhfCheckServiceOrder@1101103004(CurrentRecRefP@1101103000 : RecordRef);
+    VAR
+      ServiceHeaderL@1101103006 : Record 5025624;
+      ServiceLineL@1101103012 : Record 5025625;
+      ResponsibilityCenterL@1101103008 : Record 5714;
+      CustomerL@1101103011 : Record 18;
+      EInvoiceDocumentEncodeL@1101103002 : Codeunit 10610;
+      EInvoiceCheckalesDocumentL@1101103001 : Codeunit 10612;
+      Need2CheckServiceHdrL@1101103014 : Boolean;
+      Text007@1101103013 : TextConst 'ENU="You must specify an External document number in document type  = %1.  If you use E-Invoice, this field is required regardless of the value in the External Document No. field of the Sales & Receivables Setup table.";NOR="Du mÜ angi et eksterndokumentnummer i dokumenttype = %1. Hvis du bruker e-faktura, er dette feltet obligatorisk, uansett verdi i feltet Eksterndokumentnr. i tabellen Salgsoppsett."';
+    BEGIN
+      // Validate Service Order ready for EHF creation
+      CurrentRecRefP.SETTABLE(ServiceHeaderL);
+
+      // If a  »Bill-to Customer No.… on the »Service Line… has been setup for E-Invoice creation.
+      // Then check that the Bill-to Customer No. Has a valid »VAT No.…. Also check that the »Service Header… »Your Referance… is filled in.
+
+      Need2CheckServiceHdrL := FALSE;
+      ServiceLineL.SETRANGE("Document Type",ServiceHeaderL."Document Type");
+      ServiceLineL.SETRANGE("Document No.",ServiceHeaderL."No.");
+      IF ServiceLineL.FINDSET THEN
+      REPEAT
+        // If we are to create EHF-Invoice then
+        // If "Bill-to Customer No." used on the "Service lines" then check that "VAT Registration No." is valid in the Customer Table
+        IF ( ServiceLineL."Bill-to Customer No." <> '' ) AND ( ServiceLineL."Bill-to Customer No." <> ServiceHeaderL."Bill-to Customer No." ) THEN BEGIN
+          CustomerL.GET(ServiceLineL."Bill-to Customer No.");
+          CustomerL.TESTFIELD(Name);
+          CustomerL.TESTFIELD(Address);
+          CustomerL.TESTFIELD(City);
+          CustomerL.TESTFIELD("Post Code");
+          CustomerL."Country/Region Code" := EInvoiceDocumentEncodeL.GetEInvoiceCountryRegionCode(CustomerL."Country/Region Code");
+          CustomerL.TESTFIELD("Country/Region Code");
+          CustomerL.TESTFIELD("VAT Registration No.");
+          Need2CheckServiceHdrL := TRUE;
+        END;
+
+      UNTIL ( ServiceLineL.NEXT = 0 );
+
+      WITH ServiceHeaderL DO BEGIN
+        IF "E-Invoice" OR Need2CheckServiceHdrL THEN BEGIN
+
+          EhfCheckCompanySetup;
+
+          EInvoiceDocumentEncodeL.GetEInvoiceCurrencyCode("Currency Code");
+          IF "Responsibility Center" <> '' THEN BEGIN
+            ResponsibilityCenterL.GET("Responsibility Center");
+            ResponsibilityCenterL.TESTFIELD(Name);
+            ResponsibilityCenterL.TESTFIELD(Address);
+            ResponsibilityCenterL.TESTFIELD(City);
+            ResponsibilityCenterL.TESTFIELD("Post Code");
+            ResponsibilityCenterL.TESTFIELD("Country/Region Code");
+          END;
+
+          TESTFIELD("Bill-to Name");
+          TESTFIELD("Bill-to Address");
+          TESTFIELD("Bill-to City");
+          TESTFIELD("Bill-to Post Code");
+
+          "Bill-to Country Code" := EInvoiceDocumentEncodeL.GetEInvoiceCountryRegionCode("Bill-to Country Code");
+          TESTFIELD("Bill-to Country Code");
+          "Ship-to Country Code" := EInvoiceDocumentEncodeL.GetEInvoiceCountryRegionCode("Ship-to Country Code");
+          TESTFIELD("Ship-to Country Code");
+
+          TESTFIELD("Your Reference");
+          TESTFIELD("Due Date");
+        END;
+      END;
+    END;
+
+    PROCEDURE EhfCheckCompanySetup@1101103011();
+    VAR
+      CompanyInfoL@1101103005 : Record 79;
+      Text007@1101103013 : TextConst 'ENU="You must specify an External document number in document type  = %1.  If you use E-Invoice, this field is required regardless of the value in the External Document No. field of the Sales & Receivables Setup table.";NOR="Du mÜ angi et eksterndokumentnummer i dokumenttype = %1. Hvis du bruker e-faktura, er dette feltet obligatorisk, uansett verdi i feltet Eksterndokumentnr. i tabellen Salgsoppsett."';
+    BEGIN
+      // Check that Company setup is ready for EHF Invoice creation
+      CompanyInfoL.GET;
+      CompanyInfoL.TESTFIELD("VAT Registration No.");
+      CompanyInfoL.TESTFIELD(Name);
+      CompanyInfoL.TESTFIELD(Address);
+      CompanyInfoL.TESTFIELD(City);
+      CompanyInfoL.TESTFIELD("Post Code");
+
+      CompanyInfoL.TESTFIELD("Country/Region Code");
+
+      IF CompanyInfoL.IBAN = '' THEN BEGIN
+        CompanyInfoL.TESTFIELD("Bank Account No.");
+        CompanyInfoL.TESTFIELD("Bank Branch No.");
+      END;
+    END;
+
+    PROCEDURE EhfCheckSalesHeader@1101103002(CurrentRecRefP@1101103000 : RecordRef);
+    VAR
+      SalesHeaderL@1101103006 : Record 36;
+      Text007@1101103013 : TextConst 'ENU="You must specify an External document number in document type  = %1.  If you use E-Invoice, this field is required regardless of the value in the External Document No. field of the Sales & Receivables Setup table.";NOR="Du mÜ angi et eksterndokumentnummer i dokumenttype = %1. Hvis du bruker e-faktura, er dette feltet obligatorisk, uansett verdi i feltet Eksterndokumentnr. i tabellen Salgsoppsett."';
+    BEGIN
+      // Validate Sales Order Heade& Sales Credit Memo ready for EHF-Invoice creation
+      CurrentRecRefG.SETTABLE(SalesHeaderL);
+
+      IF SalesHeaderL."E-Invoice" THEN
+        CODEUNIT.RUN(CODEUNIT::"E-Invoice Check Sales Document", SalesHeaderL);
+    END;
+
+    PROCEDURE PrintInvoiceRecordMgt@1101103006(SalesInvHeaderP@1101103000 : Record 112);
+    VAR
+      EInvoiceAttachmentL@1101103001 : Record 5231118;
+    BEGIN
+      // Printing of "Sales Invoice Records" Which Type of Invoice to Print? "Parts Sales Invoice" or "Service Sales Invoice" or even "Vehicle Sales Invoice"
+
+      // Delete all old attachemnts for this Invoice
+      EInvoiceAttachmentL.RESET;
+      EInvoiceAttachmentL.SETRANGE("Document No.", SalesInvHeaderP."No.");
+      EInvoiceAttachmentL.DELETEALL;
+
+      // When printing the records Setup the Report filter just to print 1 Document No.
+      SalesInvHeaderP.SETRANGE("No.", SalesInvHeaderP."No.");
+      IF NOT SalesInvHeaderP.FINDFIRST THEN
+        SalesInvHeaderP.INIT;
+
+      CASE TRUE OF
+        SalesInvHeaderP."Include PDF Copy" AND ( SalesInvHeaderP."Order Type" = SalesInvHeaderP."Order Type"::Service ) :
+          BEGIN
+            PrintServiceRecords(SalesInvHeaderP);
+          END;
+        SalesInvHeaderP."Include PDF Copy" AND ( SalesInvHeaderP."Order Type" = SalesInvHeaderP."Order Type"::"Vehicle Sales & Purchases" ) :
+          BEGIN
+            PrintVehInvRecords(SalesInvHeaderP);
+          END;
+        ELSE BEGIN
+          IF SalesInvHeaderP."Include PDF Copy" THEN
+            PrintSalesPartsRecords(SalesInvHeaderP);
+        END;
+      END;
+
+      CopyInvoiceLinksRecords2Attachment(SalesInvHeaderP);
+    END;
+
+    PROCEDURE PrintServiceRecords@5025352(VAR SalesInvHeaderP@1101103000 : Record 112);
+    VAR
+      ServiceReportSelectionL@1109400001 : Record 5045389;
+      ServHeaderL@1109400002 : Record 5025624;
+      CustomerL@1101103001 : Record 18;
+      PrintAsPDFL@1109400004 : Boolean;
+      PathL@1109400003 : Text[1024];
+      RecordRefL@1109400005 : RecordRef;
+    BEGIN
+      // Get "Report ID"  and print records. This function has been copyed form PrintServiceRecords from T112::"Sales Invoice Header"
+
+      IF ServHeaderL.IsInternalCustomer(SalesInvHeaderP."Bill-to Customer No.") THEN BEGIN
+        IF SalesInvHeaderP.Prepayment THEN
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Prepmt. Invoice")
+        ELSE
+        ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Posted Internal Invoice");
+      END ELSE BEGIN
+        IF SalesInvHeaderP.Prepayment THEN
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Prepmt. Invoice")
+        ELSE
+        ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Posted Invoice");
+      END;
+
+      IF SalesInvHeaderP.Prepayment THEN
+        ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Prepmt. Invoice");
+
+      ServiceReportSelectionL.GetReportSelection(ServiceReportSelectionL, SalesInvHeaderP."Shortcut Dimension 2 Code", SalesInvHeaderP."Location Code");
+
+      REPEAT
+        PrintRecordsSavePdf(SalesInvHeaderP, ServiceReportSelectionL."Report ID", ServiceReportSelectionL.Sequence);
+      UNTIL ServiceReportSelectionL.NEXT = 0;
+
+      IF CustomerL.GET(SalesInvHeaderP."Bill-to Customer No.") THEN
+        IF CustomerL.Type = CustomerL.Type::"Service Contract" THEN BEGIN
+           ServiceReportSelectionL.RESET;
+           ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Service Contract Inclusive");
+
+          ServiceReportSelectionL.GetReportSelection(ServiceReportSelectionL, SalesInvHeaderP."Shortcut Dimension 2 Code",
+            SalesInvHeaderP."Location Code");
+
+           REPEAT
+             PrintRecordsSavePdf(SalesInvHeaderP, ServiceReportSelectionL."Report ID", ServiceReportSelectionL.Sequence);
+           UNTIL ServiceReportSelectionL.NEXT = 0;
+         END;
+    END;
+
+    PROCEDURE PrintSalesPartsRecords@1(VAR SalesInvHeaderP@1101103000 : Record 112);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      EInvoicePdfExportL@1101103001 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103005 : TEMPORARY Record 10606;
+      SalesSetupL@1101103006 : Record 311;
+      FileMgtL@1101103002 : Codeunit 419;
+      DocumentPathFileNameL@1101103003 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+    BEGIN
+      // Get "Report ID"  and print records. This function has been copyed form PrintRecords from T112::"Sales Invoice Header"
+
+      ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"S.Inv.");
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesInvHeaderP."Shortcut Dimension 2 Code", SalesInvHeaderP."Location Code");
+
+      REPEAT
+        PrintRecordsSavePdf(SalesInvHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE PrintVehInvRecords@1101103013(VAR SalesInvHeaderP@1101103003 : Record 112);
+    VAR
+      ReportSelectionL@1101103002 : Record 5025576;
+      PathL@1101103001 : Text[1024];
+      RecordRefL@1101103000 : RecordRef;
+    BEGIN
+      // Get "Report ID"  and print records. This function has been copyed form PrintVehicleRecords from T112::"Sales Invoice Header"
+
+      IF SalesInvHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Prepmt. Invoice")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Invoice");
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesInvHeaderP."Shortcut Dimension 2 Code", SalesInvHeaderP."Location Code");
+
+      REPEAT
+        PrintRecordsSavePdf(SalesInvHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE CopyInvoiceLinksRecords2Attachment@1101103021(SalesInvoiceHeaderP@1101103008 : Record 112);
+    VAR
+      SalesInvoiceHeaderL@1101103006 : Record 112;
+      SalesHeaderL@1101103005 : Record 36;
+      RecordLinkL@1101103004 : Record 2000000068;
+      ArchivedSalesHeaderL@1101103003 : Record 5046905;
+      ArchivedServiceHeaderL@1101103002 : Record 5025636;
+      ServiceHeaderL@1101103001 : Record 5025624;
+      EInvoiceAttachmentL@1101103009 : Record 5231118;
+      RecordLinkRecordRefL@1101103007 : RecordRef;
+    BEGIN
+      CASE SalesInvoiceHeaderP."Order Type" OF
+        SalesInvoiceHeaderP."Order Type"::"Parts Sales & Purchases",  SalesInvoiceHeaderP."Order Type"::"Vehicle Sales & Purchases" :
+          BEGIN
+            // Posted Part/Vehicle Order
+            IF SalesHeaderL.GET(SalesHeaderL."Document Type"::Order, SalesInvoiceHeaderP."Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(SalesHeaderL)
+            ELSE IF ArchivedSalesHeaderL.GET(ArchivedSalesHeaderL."Document Type"::Order, SalesInvoiceHeaderP."Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ArchivedSalesHeaderL)
+            ELSE
+              CLEAR(RecordLinkRecordRefL);
+          END;
+        SalesInvoiceHeaderP."Order Type"::Service :
+          BEGIN
+            // Posted Service Order
+            IF ServiceHeaderL.GET(ServiceHeaderL."Document Type"::Order, SalesInvoiceHeaderP."Service Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ServiceHeaderL)
+            ELSE IF ArchivedServiceHeaderL.GET(ArchivedServiceHeaderL."Document Type"::Order, SalesInvoiceHeaderP."Service Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ArchivedSalesHeaderL)
+            ELSE
+              CLEAR(RecordLinkRecordRefL);
+          END;
+      END;
+
+      CLEAR(EInvoiceAttachmentL);
+      EInvoiceAttachmentL."Schema Name" := 'Invoice';
+      EInvoiceAttachmentL."Document Type" := EInvoiceAttachmentL."Document Type"::Attachment;
+      EInvoiceAttachmentL."Document No." := SalesInvoiceHeaderP."No.";
+
+      AddLinksRecords2Attachment(RecordLinkRecordRefL, EInvoiceAttachmentL);
+    END;
+
+    PROCEDURE PrintCrMemoRecordMgt@1101103009(SalesCrMemoHeaderP@1101103001 : Record 114);
+    VAR
+      EInvoiceAttachmentl@1101103000 : Record 5231118;
+    BEGIN
+      // Sales Credit Memo Header : Which Type of Credit Memo to Print? Parts Sales, Service Sales or even Vehicle Sales
+
+      // Delete all old attachemnts for this CrMemo
+      EInvoiceAttachmentl.RESET;
+      EInvoiceAttachmentl.SETRANGE("Document No.", SalesCrMemoHeaderP."No.");
+      EInvoiceAttachmentl.DELETEALL;
+
+
+      // When printing the records Setup the Report filter just to print 1 Document No.
+      SalesCrMemoHeaderP.SETRANGE("No.", SalesCrMemoHeaderP."No.");
+      IF NOT SalesCrMemoHeaderP.FINDFIRST THEN
+        SalesCrMemoHeaderP.INIT;
+
+      CASE TRUE OF
+        SalesCrMemoHeaderP."Include PDF Copy" AND ( SalesCrMemoHeaderP."Order Type"= SalesCrMemoHeaderP."Order Type"::Service ) :
+          BEGIN
+            PrintCrMemoServiceRecords(SalesCrMemoHeaderP);
+          END;
+        SalesCrMemoHeaderP."Include PDF Copy" AND ( SalesCrMemoHeaderP."Order Type" = SalesCrMemoHeaderP."Order Type"::"Vehicle Sales & Purchases" ) :
+          BEGIN
+            PrintCrMemoVehRecords(SalesCrMemoHeaderP);
+          END
+        ELSE BEGIN
+            IF SalesCrMemoHeaderP."Include PDF Copy" THEN
+              PrintCrMemoSalesPartsRecords(SalesCrMemoHeaderP);
+          END;
+      END;
+
+      CopyCrMemoLinksRecords2Attachment(SalesCrMemoHeaderP);
+    END;
+
+    PROCEDURE PrintCrMemoServiceRecords@1101103010(VAR SalesCrMemoHeaderP@1101103000 : Record 114);
+    VAR
+      ReportSelectionL@1101103002 : Record 5045389;
+      ServHeaderL@1101103001 : Record 5025624;
+    BEGIN
+      // Get "Report ID"  and print records. This function has been copyed form PrintServiceRecords from T114::"Sales Credit Memo Header"
+
+      IF ServHeaderL.IsInternalCustomer(SalesCrMemoHeaderP."Bill-to Customer No.") THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Internal Cr. Memo")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Cr. Memo");
+
+      IF SalesCrMemoHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Prepmt. Cr. Memo");
+
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesCrMemoHeaderP."Shortcut Dimension 2 Code", SalesCrMemoHeaderP."Location Code");
+
+      REPEAT
+        PrintCrMemoRecordsSavePdf(SalesCrMemoHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE PrintCrMemoSalesPartsRecords@1101103012(VAR SalesCrMemoHeaderP@1101103000 : Record 114);
+    VAR
+      ReportSelectionL@1101103002 : Record 77;
+    BEGIN
+      // Get "Report Id" and print records. This function has been copyed form PrintRecords from T114::"Sales Credit Memo Header"
+
+      IF SalesCrMemoHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Prepmt. Cr. Memo")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"S.Cr.Memo");
+
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesCrMemoHeaderP."Shortcut Dimension 2 Code", SalesCrMemoHeaderP."Location Code");
+      REPEAT
+        PrintCrMemoRecordsSavePdf(SalesCrMemoHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE PrintCrMemoVehRecords@5025351(VAR SalesCrMemoHeaderP@1101103000 : Record 114);
+    VAR
+      ReportSelectionL@1109400001 : Record 5025576;
+    BEGIN
+      // Get "Report Id" and print records. This function has been copyed form PrintVehicleRecords from T114::"Sales Credit Memo Header"
+
+      IF SalesCrMemoHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Prepmt. Cr. Memo")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Cr. Memo");
+
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesCrMemoHeaderP."Shortcut Dimension 2 Code", SalesCrMemoHeaderP."Location Code");
+      REPEAT
+        PrintCrMemoRecordsSavePdf(SalesCrMemoHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+      UNTIL ReportSelectionL.NEXT = 0;
+    END;
+
+    PROCEDURE PrintCrMemoRecordsSavePdf@1101103005(VAR SalesCrMemoHeaderP@1101103000 : Record 114;ReportIdP@1101103008 : Integer;SequenceP@1101103007 : Code[10]);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      EInvoicePdfExportL@1101103001 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103005 : TEMPORARY Record 10606;
+      SalesSetupL@1101103006 : Record 311;
+      FileMgtL@1101103002 : Codeunit 419;
+      DocumentPathFileNameL@1101103003 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+    BEGIN
+      // Used when we have a Credit Memo Invoice that needs printing as pdf.
+      // Prints the Credit Memo invoice document as pdf then imports is as Blob into Table ready for embadding into EHF-CreditMemo
+
+      EInvoicePdfExportL.INIT;
+      EInvoicePdfExportL."Document No." := SalesCrMemoHeaderP."No.";
+      EInvoicePdfExportL."Document Type" := EInvoicePdfExportL."Document Type"::"Cr.Memo";
+      EInvoicePdfExportL.Sequence := SequenceP;
+      EInvoicePdfExportL."Schema Name" := 'CreditNote';
+      IF NOT EInvoicePdfExportL.INSERT THEN ;
+
+      DocumentPathFileNameL := FileMgtL.ServerTempFileName(ReportSelectionL.Sequence);
+
+      REPORT.SAVEASPDF(ReportIdP, DocumentPathFileNameL , SalesCrMemoHeaderP);
+
+      // Check that Pdf Document exists before importing to table as a Blog
+      IF NOT Wait4Report(DocumentPathFileNameL) THEN
+        ERROR(ReportNotCreatedtxtG, SalesCrMemoHeaderP."No.", ReportSelectionL."Report ID");
+
+      IF  EXISTS( DocumentPathFileNameL) THEN
+        EInvoicePdfExportL."Document Blob".IMPORT(DocumentPathFileNameL);
+      EInvoicePdfExportL."File Name" := STRSUBSTNO('%1.pdf', SalesCrMemoHeaderP."No.");
+      EInvoicePdfExportL.MODIFY;
+
+      // Testing Start
+      // Copyies Pdf Document to User's Local Path
+      SalesSetupL.GET;
+      TempEInvoiceTransferFileL."Server Temp File Name" := DocumentPathFileNameL;
+      TempEInvoiceTransferFileL."Local Path" := DELCHR(SalesSetupL."E-Invoice Sales Cr. Memo Path",'>','\');
+      TempEInvoiceTransferFileL."Local File Name" := STRSUBSTNO('%1.pdf', SalesCrMemoHeaderP."No.");
+      PdfDownloadPdfFile(TempEInvoiceTransferFileL);
+      // Testing Stop
+    END;
+
+    PROCEDURE CopyCrMemoLinksRecords2Attachment@1101103022(SalesCrMemoHeaderP@1101103008 : Record 114);
+    VAR
+      ArchivedSalesHeaderL@1101103003 : Record 5046905;
+      ArchivedServiceHeaderL@1101103002 : Record 5025636;
+      ServiceHeaderL@1101103001 : Record 5025624;
+      SalesHeaderL@1101103000 : Record 36;
+      EInvoiceAttachmentL@1101103009 : Record 5231118;
+      RecordLinkRecordRefL@1101103007 : RecordRef;
+    BEGIN
+      CASE SalesCrMemoHeaderP."Order Type" OF
+        SalesCrMemoHeaderP."Order Type"::"Parts Sales & Purchases",  SalesCrMemoHeaderP."Order Type"::"Vehicle Sales & Purchases" :
+          BEGIN
+            // Posted Part/Vehicle Order
+
+            IF SalesHeaderL.GET(SalesHeaderL."Document Type"::Order, SalesCrMemoHeaderP."Prepayment Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(SalesHeaderL)
+            ELSE IF ArchivedSalesHeaderL.GET(ArchivedSalesHeaderL."Document Type"::Order, SalesCrMemoHeaderP."Prepayment Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ArchivedSalesHeaderL)
+            ELSE
+              CLEAR(RecordLinkRecordRefL);
+
+          END;
+        SalesCrMemoHeaderP."Order Type"::Service :
+          BEGIN
+            // Posted Service Order
+            IF ServiceHeaderL.GET(ServiceHeaderL."Document Type"::Order, SalesCrMemoHeaderP."Service Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ServiceHeaderL)
+            ELSE IF ArchivedServiceHeaderL.GET(ArchivedServiceHeaderL."Document Type"::Order, SalesCrMemoHeaderP."Service Order No.") THEN
+              RecordLinkRecordRefL.GETTABLE(ArchivedSalesHeaderL)
+            ELSE
+              CLEAR(RecordLinkRecordRefL);
+          END;
+      END;
+
+      CLEAR(EInvoiceAttachmentL);
+      EInvoiceAttachmentL."Schema Name" := 'CreditNote';
+      EInvoiceAttachmentL."Document Type" := EInvoiceAttachmentL."Document Type"::Attachment;
+      EInvoiceAttachmentL."Document No." := SalesCrMemoHeaderP."No.";
+
+      AddLinksRecords2Attachment(RecordLinkRecordRefL, EInvoiceAttachmentL);
+    END;
+
+    PROCEDURE PrintRemindersRecordMgt@1101103015(CurrentRecRefP@1101103002 : RecordRef);
+    VAR
+      IssuedReminderHeaderL@1101103000 : Record 297;
+      IssuedFinChargeMemoHdrL@1101103001 : Record 304;
+      EInvoiceAttachmentL@1101103004 : Record 5231118;
+      FieldRefL@1101103003 : FieldRef;
+      IncludePDFCopyL@1101103005 : Boolean;
+    BEGIN
+      // Reminders Header : Which Type of Reminders to Print? Reminders or Issued Reminders
+
+      // Delete all old attachemnts for this CrMemo
+      EInvoiceAttachmentL.RESET;
+      FieldRefL := CurrentRecRefP.FIELD(GetFieldNo(CurrentRecRefP, 'No.'));
+      IssuedReminderHeaderL."No." := FieldRefL.VALUE;
+      IF IssuedReminderHeaderL."No." <> '' THEN BEGIN
+        EInvoiceAttachmentL.SETRANGE("Document No.", IssuedReminderHeaderL."No.");
+        EInvoiceAttachmentL.DELETEALL;
+      END;
+
+      CLEAR(EInvoiceAttachmentL);
+      EInvoiceAttachmentL."Schema Name" := 'Reminder';
+      EInvoiceAttachmentL."Document Type" := EInvoiceAttachmentL."Document Type"::Attachment;
+
+      FieldRefL := CurrentRecRefP.FIELD(GetFieldNo(CurrentRecRefP, 'Include PDF Copy')); // "Include PDF Copy"
+      IncludePDFCopyL := ( UPPERCASE(FORMAT(FieldRefL.VALUE)) = 'YES' );
+
+      CASE TRUE OF
+        IncludePDFCopyL AND ( CurrentRecRefP.NUMBER = DATABASE::"Issued Reminder Header" ) :
+          BEGIN
+            CurrentRecRefP.SETTABLE(IssuedReminderHeaderL);
+            IssuedReminderHeaderL.SETRANGE("No.", IssuedReminderHeaderL."No.");
+            IF NOT IssuedReminderHeaderL.FINDFIRST THEN
+              IssuedReminderHeaderL.INIT;
+            PrintIssueRemindersRecords(IssuedReminderHeaderL);
+            EInvoiceAttachmentL."Document No." := IssuedReminderHeaderL."No.";
+          END;
+        IncludePDFCopyL AND ( CurrentRecRefP.NUMBER = DATABASE::"Issued Fin. Charge Memo Header" ) :
+          BEGIN
+            CurrentRecRefP.SETTABLE(IssuedFinChargeMemoHdrL);
+            IssuedReminderHeaderL.SETRANGE("No.", IssuedFinChargeMemoHdrL."No.");
+            IF NOT IssuedFinChargeMemoHdrL.FINDFIRST THEN
+              IssuedFinChargeMemoHdrL.INIT;
+            PrintIssueFinChangeMemoRecords(IssuedFinChargeMemoHdrL);
+            EInvoiceAttachmentL."Document No." := IssuedFinChargeMemoHdrL."No.";
+          END;
+      END;
+
+      AddLinksRecords2Attachment(CurrentRecRefP, EInvoiceAttachmentL);
+    END;
+
+    PROCEDURE PrintIssueRemindersRecords@1101103016(VAR IssuedReminderHeaderP@1101103000 : Record 297);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      UserSessionL@1109400002 : Record 5028686;
+    BEGIN
+      WITH IssuedReminderHeaderP DO BEGIN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::Reminder);
+        ReportSelectionL.GetReportSelection(ReportSelectionL, "Shortcut Dimension 2 Code", UserSessionL.GetLocation);
+        ReportSelectionL.ASCENDING := FALSE;
+        ReportSelectionL.FINDFIRST;
+        REPEAT
+          PrintIssueRemindersRecordsSavePdf(IssuedReminderHeaderP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+        UNTIL ReportSelectionL.NEXT = 0;
+      END;
+    END;
+
+    PROCEDURE PrintIssueRemindersRecordsSavePdf@1101103017(VAR IssuedReminderHeaderP@1101103003 : Record 297;ReportIdP@1101103000 : Integer;SequenceP@1101103001 : Code[10]);
+    VAR
+      EInvoicePdfExportL@1101103002 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103008 : TEMPORARY Record 10606;
+      FileMgtL@1101103006 : Codeunit 419;
+      DocumentPathFileNameL@1101103005 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+      SalesSetupL@1101103007 : Record 311;
+    BEGIN
+      // Prints the invoice document as pdf then imports its as Blob into Table ready for embadding into EHF-Invoice
+      EInvoicePdfExportL.INIT;
+      EInvoicePdfExportL."Document No." := IssuedReminderHeaderP."No.";
+      EInvoicePdfExportL."Document Type" := EInvoicePdfExportL."Document Type"::Reminder;
+      EInvoicePdfExportL.Sequence := SequenceP;
+      EInvoicePdfExportL."Schema Name" := 'Reminder';
+      IF NOT EInvoicePdfExportL.INSERT THEN ;
+
+      DocumentPathFileNameL := FileMgtL.ServerTempFileName(SequenceP);
+
+      REPORT.SAVEASPDF(ReportIdP, DocumentPathFileNameL , IssuedReminderHeaderP);
+
+      IF NOT Wait4Report(DocumentPathFileNameL) THEN
+        ERROR(ReportNotCreatedtxtG, IssuedReminderHeaderP."No.", ReportIdP);
+
+      IF  EXISTS( DocumentPathFileNameL) THEN
+        EInvoicePdfExportL."Document Blob".IMPORT(DocumentPathFileNameL);
+      EInvoicePdfExportL."File Name" := STRSUBSTNO('%1.pdf', IssuedReminderHeaderP."No.");
+      EInvoicePdfExportL.MODIFY;
+
+      // Testing Start
+      // Copyies Pdf Document to User's Local Path
+      SalesSetupL.GET;
+      TempEInvoiceTransferFileL."Server Temp File Name" := DocumentPathFileNameL;
+      TempEInvoiceTransferFileL."Local Path" := DELCHR(SalesSetupL."E-Invoice Reminder Path",'>','\');
+      TempEInvoiceTransferFileL."Local File Name" := STRSUBSTNO('%1.pdf', IssuedReminderHeaderP."No.");
+      PdfDownloadPdfFile(TempEInvoiceTransferFileL);
+      // Testing Stop
+    END;
+
+    PROCEDURE PrintIssueFinChangeMemoRecords@1101103019(VAR IssueFinChangeMemoHdrP@1101103000 : Record 304);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      UserSessionL@1109400002 : Record 5028686;
+    BEGIN
+      WITH IssueFinChangeMemoHdrP DO BEGIN
+        ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Fin.Charge");
+        ReportSelectionL.GetReportSelection(ReportSelectionL, "Shortcut Dimension 2 Code", UserSessionL.GetLocation);
+        ReportSelectionL.ASCENDING := FALSE;
+        ReportSelectionL.FINDFIRST;
+        REPEAT
+          PrintIssueFinChangeMemoRecordsSavePdf(IssueFinChangeMemoHdrP, ReportSelectionL."Report ID", ReportSelectionL.Sequence);
+        UNTIL ReportSelectionL.NEXT = 0;
+      END;
+    END;
+
+    PROCEDURE PrintIssueFinChangeMemoRecordsSavePdf@1101103020(VAR IssueFinChangeMemoHdrP@1101103003 : Record 304;ReportIdP@1101103000 : Integer;SequenceP@1101103001 : Code[10]);
+    VAR
+      EInvoicePdfExportL@1101103002 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103008 : TEMPORARY Record 10606;
+      FileMgtL@1101103006 : Codeunit 419;
+      DocumentPathFileNameL@1101103005 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+      SalesSetupL@1101103007 : Record 311;
+    BEGIN
+      // Prints the invoice document as pdf then imports its as Blob into Table ready for embadding into EHF-Invoice
+      EInvoicePdfExportL.INIT;
+      EInvoicePdfExportL."Document No." := IssueFinChangeMemoHdrP."No.";
+      EInvoicePdfExportL."Document Type" := EInvoicePdfExportL."Document Type"::Reminder;
+      EInvoicePdfExportL.Sequence := SequenceP;
+      EInvoicePdfExportL."Schema Name" := 'Reminder';
+      IF NOT EInvoicePdfExportL.INSERT THEN ;
+
+      DocumentPathFileNameL := FileMgtL.ServerTempFileName(SequenceP);
+
+      REPORT.SAVEASPDF(ReportIdP, DocumentPathFileNameL , IssueFinChangeMemoHdrP);
+
+      IF NOT Wait4Report(DocumentPathFileNameL) THEN
+        ERROR(ReportNotCreatedtxtG, IssueFinChangeMemoHdrP."No.", ReportIdP);
+
+      IF  EXISTS( DocumentPathFileNameL) THEN
+        EInvoicePdfExportL."Document Blob".IMPORT(DocumentPathFileNameL);
+      EInvoicePdfExportL."File Name" := STRSUBSTNO('%1.pdf', IssueFinChangeMemoHdrP."No.");
+      EInvoicePdfExportL.MODIFY;
+
+      // Testing Start
+      // Copyies Pdf Document to User's Local Path
+      SalesSetupL.GET;
+      TempEInvoiceTransferFileL."Server Temp File Name" := DocumentPathFileNameL;
+      TempEInvoiceTransferFileL."Local Path" := DELCHR(SalesSetupL."E-Invoice Fin. Charge Path",'>','\');
+      TempEInvoiceTransferFileL."Local File Name" := STRSUBSTNO('%1.pdf', IssueFinChangeMemoHdrP."No.");
+      PdfDownloadPdfFile(TempEInvoiceTransferFileL);
+      // Testing Stop
+    END;
+
+    PROCEDURE AddLinksRecords2Attachment@1101103023(RecordLinkRecordRefP@1101103014 : RecordRef;EInvoiceAttachmentP@1101103001 : Record 5231118);
+    VAR
+      RecordLinkL@1101103004 : Record 2000000068;
+      EInvoiceAttachmentL@1101103009 : Record 5231118;
+      CurrentRecordRefL@1101103000 : RecordRef;
+      RecordLinkRecordRefL@1101103007 : RecordRef;
+      InStreamL@1101103010 : InStream;
+      OutStreamL@1101103011 : OutStream;
+      FileManagement@1101103012 : Codeunit 419;
+      ServTempFileNameL@1101103013 : Text[1024];
+    BEGIN
+      // Add attachments records to attachment table for importing into EHF-Invoice
+
+      IF RecordLinkRecordRefP.HASLINKS THEN BEGIN
+        RecordLinkL.SETCURRENTKEY("Record ID");
+        RecordLinkL.SETRANGE("Record ID", RecordLinkRecordRefP.RECORDID);
+        RecordLinkL.SETRANGE(Type, RecordLinkL.Type::Link);
+        IF RecordLinkL.FINDSET THEN BEGIN
+          REPEAT
+            IF NOT EXISTS(RecordLinkL.URL1) THEN
+              MESSAGE(FileNoteFoundG,  CONVERTSTR(RecordLinkL.URL1,'\','/'))
+            ELSE BEGIN
+              EInvoiceAttachmentL.INIT;
+              EInvoiceAttachmentL."Document No." := EInvoiceAttachmentP."Document No.";
+              EInvoiceAttachmentL."Document Type" := EInvoiceAttachmentP."Document Type";
+              EInvoiceAttachmentL.Sequence := STRSUBSTNO('%1', RecordLinkL."Link ID");
+              EInvoiceAttachmentL."Schema Name" :=EInvoiceAttachmentP."Schema Name";
+              EInvoiceAttachmentL."File Name" := RecordLinkL.Description;
+
+              ServTempFileNameL := FileManagement.UploadFileSilent(RecordLinkL.URL1);
+              EInvoiceAttachmentL."Document Blob".IMPORT(ServTempFileNameL);
+
+              IF NOT EInvoiceAttachmentL.INSERT THEN ;
+
+              MESSAGE(STRSUBSTNO(' Create xml %1 %2 Hash=%3 Schema=%4', RecordLinkL.Description
+                                                                      , CONVERTSTR(RecordLinkL.URL1,'\','/')
+                                                                      , EInvoiceAttachmentL."Document Blob".HASVALUE)
+                                                                      ,EInvoiceAttachmentL."Schema Name");
+            END;
+          UNTIL RecordLinkL.NEXT = 0;
+        END;
+      END;
+    END;
+
+    PROCEDURE PrintRecordsSavePdf@1101103007(VAR SalesInvHeaderP@1101103003 : Record 112;ReportIdP@1101103000 : Integer;SequenceP@1101103001 : Code[10]);
+    VAR
+      EInvoicePdfExportL@1101103002 : Record 5231118;
+      TempEInvoiceTransferFileL@1101103008 : TEMPORARY Record 10606;
+      FileMgtL@1101103006 : Codeunit 419;
+      DocumentPathFileNameL@1101103005 : Text[1024];
+      NoTime2WaitL@1101103004 : Integer;
+      SalesSetupL@1101103007 : Record 311;
+    BEGIN
+      // Prints the invoice document as pdf then imports its as Blob into Table ready for embadding into EHF-Invoice
+      EInvoicePdfExportL.INIT;
+      EInvoicePdfExportL."Document No." := SalesInvHeaderP."No.";
+      EInvoicePdfExportL."Document Type" := EInvoicePdfExportL."Document Type"::Invoice;
+      EInvoicePdfExportL.Sequence := SequenceP;
+      EInvoicePdfExportL."Schema Name" := 'Invoice';
+      IF NOT EInvoicePdfExportL.INSERT THEN ;
+
+      DocumentPathFileNameL := FileMgtL.ServerTempFileName(SequenceP);
+
+      REPORT.SAVEASPDF(ReportIdP, DocumentPathFileNameL , SalesInvHeaderP);
+
+      IF NOT Wait4Report(DocumentPathFileNameL) THEN
+        ERROR(ReportNotCreatedtxtG, SalesInvHeaderP."No.", ReportIdP);
+
+      IF  EXISTS( DocumentPathFileNameL) THEN
+        EInvoicePdfExportL."Document Blob".IMPORT(DocumentPathFileNameL);
+      EInvoicePdfExportL."File Name" := STRSUBSTNO('%1.pdf', SalesInvHeaderP."No.");
+      EInvoicePdfExportL.MODIFY;
+
+      // Testing Start
+      // Copyies Pdf Document to User's Local Path
+      SalesSetupL.GET;
+      TempEInvoiceTransferFileL."Server Temp File Name" := DocumentPathFileNameL;
+      TempEInvoiceTransferFileL."Local Path" := DELCHR(SalesSetupL."E-Invoice Sales Invoice Path",'>','\');
+      TempEInvoiceTransferFileL."Local File Name" := STRSUBSTNO('%1.pdf', SalesInvHeaderP."No.");
+      PdfDownloadPdfFile(TempEInvoiceTransferFileL);
+      // Testing Stop
+    END;
+
+    PROCEDURE Wait4Report@1101103008(DocumentPathFileNameP@1101103000 : Text[250]) : Boolean;
+    VAR
+      NoTime2WaitL@1101103001 : Integer;
+    BEGIN
+      // Check that Pdf Document exists before importing to table as a Blog
+      NoTime2WaitL := 50;
+      WHILE ( ( NOT EXISTS( DocumentPathFileNameP ) ) AND ( NoTime2WaitL <= 0 ) ) DO BEGIN
+        SLEEP(1000);
+        NoTime2WaitL -=1;
+      END;
+      EXIT(EXISTS( DocumentPathFileNameP ) );
+    END;
+
+    PROCEDURE PdfDownloadPdfFile@1080033(VAR TempEInvoiceTransferFile@1080000 : TEMPORARY Record 10606);
+    VAR
+      FileManagement@1080001 : Codeunit 419;
+      ZipFileName@1080002 : Text;
+      EInvoiceDocumentsTxt@1101103000 : TextConst 'ENU=Documents;NOR=Dokumenter';
+    BEGIN
+      IF NOT FileManagement.CanRunDotNetOnClient THEN BEGIN
+        ZipFileName := FileManagement.CreateZipArchiveObject;
+        REPEAT
+          FileManagement.AddFileToZipArchive(TempEInvoiceTransferFile."Server Temp File Name",
+            TempEInvoiceTransferFile."Local File Name");
+        UNTIL TempEInvoiceTransferFile.NEXT = 0;
+        FileManagement.CloseZipArchive;
+        FileManagement.DownloadHandler(ZipFileName,'','','',STRSUBSTNO('%1.zip',EInvoiceDocumentsTxt));
+      END ELSE
+        REPEAT
+          FileManagement.DownloadToFile(
+            TempEInvoiceTransferFile."Server Temp File Name",
+            STRSUBSTNO('%1\%2',TempEInvoiceTransferFile."Local Path",TempEInvoiceTransferFile."Local File Name"));
+        UNTIL TempEInvoiceTransferFile.NEXT = 0;
+    END;
+
+    PROCEDURE EhfCreateDocument@1101103003(CurrentRecRefP@1101103000 : RecordRef);
+    VAR
+      SalesHeaderL@1101103006 : Record 36;
+      Text007@1101103013 : TextConst 'ENU="You must specify an External document number in document type  = %1.  If you use E-Invoice, this field is required regardless of the value in the External Document No. field of the Sales & Receivables Setup table.";NOR="Du mÜ angi et eksterndokumentnummer i dokumenttype = %1. Hvis du bruker e-faktura, er dette feltet obligatorisk, uansett verdi i feltet Eksterndokumentnr. i tabellen Salgsoppsett."';
+      SalesInvHeaderL@1101103001 : Record 112;
+      SalesCreMemoHeaderL@1101103002 : Record 114;
+    BEGIN
+      // "Parts Sales Order" or "Parts Credit Memo" now posted do we need to create an E-Invoice?
+
+      CurrentRecRefG.SETTABLE(SalesHeaderL);
+
+      IF NOT SalesHeaderL."E-Invoice" THEN
+        EXIT;
+
+      CASE SalesHeaderL."Document Type" OF
+        SalesHeaderL."Document Type"::"Credit Memo" :
+          BEGIN
+            SalesCreMemoHeaderL.RESET;
+            SalesCreMemoHeaderL.SETRANGE("No.", SalesHeaderL."Last Posting No.");
+            COMMIT; // Fix write transaction Problem
+      //SID.02 START
+            //REPORT.RUNMODAL(REPORT::"Create Electronic Credit Memos",TRUE,FALSE,SalesCreMemoHeaderL);
+            REPORT.RUNMODAL(REPORT::"Create Electronic Credit Memos",FALSE,FALSE,SalesCreMemoHeaderL);
+      //SID.02 STOP
+          END ELSE BEGIN;
+            SalesInvHeaderL.RESET;
+            SalesInvHeaderL.SETRANGE("No.", SalesHeaderL."Last Posting No.");
+            COMMIT; // Fix write transaction Problem
+      //SID.02 START
+            // REPORT.RUNMODAL(REPORT::"Create Electronic Invoices",TRUE,FALSE,SalesInvHeaderL);
+            REPORT.RUNMODAL(REPORT::"Create Electronic Invoices",FALSE,FALSE,SalesInvHeaderL);
+      //SID.02 STOP
+
+          END;
+      END;
+    END;
+
+    PROCEDURE GetFieldNo@1101382983(RecordRefP@1101382986 : RecordRef;FieldNameP@1101103000 : Text[20]) : Integer;
+    VAR
+      FieldL@1101103001 : Record 2000000041;
+    BEGIN
+      FieldL.RESET;
+      FieldL.SETRANGE(TableNo, RecordRefP.NUMBER);
+      FieldL.SETRANGE(FieldName, FieldNameP);
+      IF FieldL.FINDFIRST THEN
+        EXIT(FieldL."No.");
+      EXIT(0);
+    END;
+
+    BEGIN
+    {
+      +----------------------------------------------+
+      | Copyright ∏ 2015 SI-DATA SID                 |
+      +----------------------------------------------+
+      | MYENGINE@INCADEA                             |
+      +----------------------------------------------+
+      No.  Version  Date      ID  Remark
+      -------------------------------------- ----------
+      01.           01.09.15  GSP TFS101644 : NO EHF Electronic Invoice
+      02.           29.01.16  DNO Set the report to be triggered without a box
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,191 @@
+OBJECT MenuSuite 1090 Dept - Company
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08.02.17;
+    Time=14.29.14;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+  }
+  MENUNODES
+  {
+    {                ;[{8B53F309-FB1D-47BA-A2FE-1460E0D5ECDB}] ;NextNodeID=[{7D84E2C7-9D7A-4DA2-87C1-DDBB9435B63C}] }
+    { MenuItem       ;[{7D84E2C7-9D7A-4DA2-87C1-DDBB9435B63C}] ;Name=Item Tracking Codes;
+                                                                CaptionML=[ENU=Item Tracking Codes;
+                                                                           NOR=Varesporingskoder];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=6502;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{49448471-4DCE-4BAC-B6A9-BD8614D01A48}] ;Name=Transfer Routes;
+                                                                CaptionML=[ENU=Transfer Routes;
+                                                                           NOR=Overf›ringsruter];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=5747;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{81D2CE2C-6499-43ED-9A0B-398248B6B87B}] ;Name=Item Journal Templates;
+                                                                CaptionML=[ENU=Item Journal Templates;
+                                                                           NOR=Varekladdemaler];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=102;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{7CEA59FF-A695-44FD-A274-BF6178760FD7}] ;Name=Report Selections Inventory;
+                                                                CaptionML=[ENU=Report Selections Inventory;
+                                                                           NOR=Rapportvalg - beholdning];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=5754;
+                                                                Visible=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                DepartmentCategory=Tasks }
+    {                ;[{502E3FFC-A7CC-48F7-88A4-89A841F0C628}] ;NextNodeID=[{F17F96B7-D5DF-4C82-B90E-D172A36E4942}] }
+    { MenuItem       ;[{F17F96B7-D5DF-4C82-B90E-D172A36E4942}] ;Name=Incoming Documents Setup;
+                                                                CaptionML=[ENU=Incoming Documents Setup;
+                                                                           NOR=Oppsett for inng†ende dokumenter];
+                                                                ApplicationArea=#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=191;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    {                ;[{BAD8AF38-254A-4266-AF07-EDC55674B5FA}] ;NextNodeID=[{A2E2F2F9-5AB0-4C65-9A60-F9BAE2B24023}] }
+    { MenuItem       ;[{A2E2F2F9-5AB0-4C65-9A60-F9BAE2B24023}] ;Name=VAT Clauses;
+                                                                CaptionML=[ENU=VAT Clauses;
+                                                                           NOR=Mva-setninger];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=747;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    {                ;[{9474DF8C-B0E7-4FED-AF54-367E0639F7B0}] ;NextNodeID=[{C68C0462-288A-42CC-8BC7-6F224D8846CE}] }
+    { MenuItem       ;[{C68C0462-288A-42CC-8BC7-6F224D8846CE}] ;Name=VAT Clauses;
+                                                                CaptionML=[ENU=VAT Clauses;
+                                                                           NOR=Mva-setninger];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=747;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    {                ;[{44DC36A4-3D38-427C-B37D-02811193E52A}] ;NextNodeID=[{E0433AFB-5B38-4E2F-ADE7-0317B7ADE93D}] }
+    { MenuItem       ;[{E0433AFB-5B38-4E2F-ADE7-0317B7ADE93D}] ;Name=Application Area;
+                                                                CaptionML=[ENU=Application Area;
+                                                                           NOR=Modul];
+                                                                ApplicationArea=#All;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=9179;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{9CBA63AC-73D3-438F-818D-476B76D5DB75}] ;Name=Data Exchange Definition;
+                                                                CaptionML=[ENU=Data Exchange Definitions;
+                                                                           NOR=Datautvekslingsdefinisjoner];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1211;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{BB2D12FC-2EEB-4165-869B-098BBB42C6F6}] ;Name=Bank Export/Import Setup;
+                                                                CaptionML=[ENU=Bank Export/Import Setup;
+                                                                           NOR=Konfigurasjon av bankeksport/-import];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1200;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{C0BECAC0-F100-4C39-BBCA-714333A54406}] ;Name=SEPA Schema Viewer;
+                                                                CaptionML=[ENU=SEPA Schema Viewer;
+                                                                           NOR=Visningsprogram for SEPA-skjema];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=9610;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{7FD6154D-F047-4A31-B857-0DA1E0BA97D8}] ;Name=XML Schemas;
+                                                                CaptionML=[ENU=XML Schemas;
+                                                                           NOR=XML-skjemaer];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=9600;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{E55ED739-BBB9-4063-AF58-225E99C5FE72}] ;Name=Document Sending Profiles;
+                                                                CaptionML=[ENU=Document Sending Profiles;
+                                                                           NOR=Profiler for dokumentsending];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=359;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Lists }
+    { MenuItem       ;[{379BBC3B-5EBB-4617-8419-8D76352F8337}] ;Name=Electronic Document Formats;
+                                                                CaptionML=[ENU=Electronic Document Formats;
+                                                                           NOR=Elektroniske dokumentformater];
+                                                                ApplicationArea=#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=363;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Tasks }
+    { MenuItem       ;[{8A3934DD-BE0A-4851-B8E0-50A64106B98A}] ;Name=Data Exchange Types;
+                                                                CaptionML=[ENU=Data Exchange Types;
+                                                                           NOR=Datautvekslingstyper];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1213;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{0D3D0EB4-59D7-4D3E-95AC-49CD269C6C04}] ;Name=Data Migration Settings;
+                                                                AccessByPermission=TableData 1806=R;
+                                                                CaptionML=[ENU=Data Migration Settings;
+                                                                           NOR=Innstillinger for datamigrering];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1807;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{00646221-3EEF-4883-8640-FECFD9BEC705}] ;Name=Report Configuration;
+                                                                AccessByPermission=TableData 2000000196=IMD;
+                                                                CaptionML=[ENU=Report Settings;
+                                                                           NOR=Rapportinnstillinger];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1560;
+                                                                Visible=Yes;
+                                                                DepartmentCategory=Administration }
+    { MenuItem       ;[{A1E3A413-B0C4-4D20-8B1F-AFF7DFFDB43C}] ;Name=Setup and Help Resources;
+                                                                CaptionML=[ENU=Setup and Help Resources;
+                                                                           NOR=Ressurser for oppsett og hjelp];
+                                                                ApplicationArea=#Basic,#Suite;
+                                                                RunObjectType=Page;
+                                                                RunObjectID=1822;
+                                                                Visible=Yes;
+                                                                NextNodeID=[{4D3D68E9-6A4A-4F4A-8D33-747D76821EC8}];
+                                                                DepartmentCategory=Administration }
+    {                ;[{387B2D8D-4249-4D63-BE9C-850416EA6E81}] ;NextNodeID=[{34E4BEA4-29EB-4579-8568-973A8449A4A1}] }
+    { MenuItem       ;[{34E4BEA4-29EB-4579-8568-973A8449A4A1}] ;Name=Certificates of Supply;
+                                                                CaptionML=[ENU=Certificates of Supply;
+                                                                           NOR=Mottaksdeklarasjoner];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=780;
+                                                                Visible=Yes;
+                                                                NextNodeID=[{3E2FEC16-BE73-41A6-94E5-BAFFDE0CFB12}];
+                                                                DepartmentCategory=Lists }
+    {                ;[{A07A2127-D15F-4AF6-8301-EC0DA819FAE6}] ;NextNodeID=[{B0697E0F-6AD6-425A-9E5C-F0BD41F9BC72}] }
+    { MenuGroup      ;[{B0697E0F-6AD6-425A-9E5C-F0BD41F9BC72}] ;Name=New Group;
+                                                                CaptionML=[ENU=Employee Portal;
+                                                                           NOR=Employee Portal];
+                                                                Visible=Yes }
+    {                ;[{F1BC557C-C9E0-4E0D-B5F1-C57CD3BDA1E7}] ;NextNodeID=[{99D9055E-CB91-4A2D-8521-2A8255960AA2}] }
+    { MenuItem       ;[{99D9055E-CB91-4A2D-8521-2A8255960AA2}] ;Name=Price Calc.- Head List;
+                                                                CaptionML=ENU=Price Calc.- Head List;
+                                                                ApplicationArea=;
+                                                                MemberOfMenu=[{2DC8C4FE-7346-4124-8C20-383346384C03}];
+                                                                RunObjectType=Page;
+                                                                RunObjectID=50004;
+                                                                ParentNodeID=[{2DC8C4FE-7346-4124-8C20-383346384C03}];
+                                                                Visible=Yes;
+                                                                NextNodeID=[{00000000-0000-0000-0000-000000000000}];
+                                                                DepartmentCategory=Lists }
+  }
+}
+

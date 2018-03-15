@@ -1,0 +1,38 @@
+OBJECT Page 53102 Enter SMS Code
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26-01-16;
+    Time=23:48:40;
+    Modified=Yes;
+    Version List=SMS1.01;
+  }
+  PROPERTIES
+  {
+    PageType=StandardDialog;
+  }
+  CONTROLS
+  {
+    { 1   ;0   ;Container ;
+                ContainerType=ContentArea }
+
+    { 2   ;1   ;Field     ;
+                CaptionML=ENU=Enter the code you received by SMS;
+                SourceExpr=SMSCode }
+
+  }
+  CODE
+  {
+    VAR
+      SMSCode@1000 : Text;
+
+    PROCEDURE GetSMSCode@1() : Text;
+    BEGIN
+      EXIT(SMSCode);
+    END;
+
+    BEGIN
+    END.
+  }
+}
+

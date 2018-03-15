@@ -1,0 +1,68 @@
+OBJECT Table 53100 BulkSMS Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26-01-16;
+    Time=23:49:49;
+    Modified=Yes;
+    Version List=SMS1.01;
+  }
+  PROPERTIES
+  {
+  }
+  FIELDS
+  {
+    { 1   ;   ;Primary Key         ;Code10         }
+    { 3   ;   ;User Name           ;Text250        }
+    { 4   ;   ;Password Key        ;GUID           }
+    { 5   ;   ;Credits             ;Decimal       ;Editable=No }
+    { 6   ;   ;Credits Checked At  ;DateTime      ;Editable=No }
+  }
+  KEYS
+  {
+    {    ;Primary Key                             ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      ExchangeAccountNotConfiguredErr@1000000001 : TextConst 'ENU=The Exchange account is not configured.;NLD=Het Exchange-account is niet geconfigureerd.';
+      Text001@1000000000 : TextConst 'ENU=Autodiscovery of Exchange Service failed.;NLD=Automatische detectie van Exchange service is mislukt.';
+
+    PROCEDURE SetPassword@4(PasswordText@1001 : Text);
+    VAR
+      ServicePassword@1000 : Record 1261;
+    BEGIN
+      IF ISNULLGUID("Password Key") OR NOT ServicePassword.GET("Password Key") THEN BEGIN
+        ServicePassword.SavePassword(PasswordText);
+        ServicePassword.INSERT(TRUE);
+        "Password Key" := ServicePassword.Key;
+      END ELSE BEGIN
+        ServicePassword.SavePassword(PasswordText);
+        ServicePassword.MODIFY;
+      END;
+    END;
+
+    PROCEDURE GetPassword@1000000000() : Text;
+    VAR
+      ServicePassword@1000000000 : Record 1261;
+    BEGIN
+      IF NOT ISNULLGUID("Password Key") THEN
+        IF ServicePassword.GET("Password Key") THEN
+          EXIT(ServicePassword.GetPassword());
+    END;
+
+    PROCEDURE GetCredits@1();
+    VAR
+      SMSWebService@1000 : Codeunit 53101;
+    BEGIN
+      SMSWebService.GetCredits(Rec);
+    END;
+
+    BEGIN
+    END.
+  }
+}
+

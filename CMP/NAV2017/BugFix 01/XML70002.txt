@@ -1,0 +1,380 @@
+OBJECT XMLport 70002 Export Receipt to Compello
+{
+  OBJECT-PROPERTIES
+  {
+    Date=02.02.17;
+    Time=09:58:23;
+    Modified=Yes;
+    Version List=CMP2.01;
+  }
+  PROPERTIES
+  {
+    Direction=Export;
+    Encoding=ISO-8859-2;
+    Format/Evaluate=XML Format/Evaluate;
+    OnInitXMLport=BEGIN
+                    CompelloSetup.GET;
+                    "Company Information".GET;
+                  END;
+
+  }
+  ELEMENTS
+  {
+    { [{22E17649-2B83-46B0-B47F-D07E0CAE62D2}];  ;CMPORDER            ;Element ;Text     }
+
+    { [{72103C2D-B097-4921-BCEB-032F0C231C28}];1 ;OrderHeader         ;Element ;Table   ;
+                                                  SourceTable=Table38;
+                                                  SourceTableView=SORTING(Field1,Field3)
+                                                                  ORDER(Ascending)
+                                                                  WHERE(Field1=CONST(1));
+                                                  Export::OnAfterGetRecord=VAR
+                                                                             ReceiptHeader@1101103000 : Record 120;
+                                                                           BEGIN
+                                                                             "Purchase Header".CALCFIELDS(Amount, "Amount Including VAT");
+                                                                             NetOrderAmount := FORMAT("Purchase Header".Amount);
+                                                                             TotalTaxAmount := FORMAT("Purchase Header"."Amount Including VAT" - "Purchase Header".Amount);
+                                                                             TotalOrderAmount :=FORMAT("Purchase Header"."Amount Including VAT");
+                                                                             RoundAmount := '0';
+                                                                             Currency := FORMAT("Purchase Header"."Currency Code");
+                                                                             Currency := "Purchase Header"."Currency Code";
+
+                                                                             ReceiptHeader.SETRANGE("Order No.", "Purchase Header"."No.");
+                                                                             IF ReceiptHeader.FINDFIRST THEN BEGIN
+                                                                               IF(ReceiptHeader."No." <> ReceiptHeaderG."No.") THEN
+                                                                                 Update := 'true'
+                                                                               ELSE
+                                                                                 Update := 'false';
+                                                                             END;
+                                                                             //PageNo := '1';
+                                                                             Status := FORMAT(CompelloSetup."Authentication Code");
+                                                                             DocType := CompelloSetup."Doc. Type Purchase Order";
+                                                                             ScannerSeries := CompelloSetup."Scan. Doc. Type Purchase Order";
+                                                                           END;
+                                                                            }
+
+    { [{3537FC93-8706-4E21-95CA-8D24B893BB0F}];2 ;CompanyInfo         ;Element ;Table   ;
+                                                  SourceTable=Table79 }
+
+    { [{F52FB115-CC29-4E9D-96EF-F7FC50DC595F}];3 ;CompanyName         ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Company Information::Name }
+
+    { [{3130CBFE-E313-4BBC-8F32-E8C50BAB5711}];3 ;CompanyAddress      ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Company Information::Address }
+
+    { [{DE08CBA0-B633-403E-BFA8-F79A8BC17C44}];3 ;CompanyCity         ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Company Information::City }
+
+    { [{9A320375-4FFC-4A88-8F27-DE2A19B587FB}];3 ;CompanyPhone        ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Company Information::Phone No. }
+
+    { [{F054A7D7-C934-469A-B18C-FA44C1F1CBF5}];3 ;CompanyTelefax      ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Company Information::Fax No. }
+
+    { [{4D2DCAFF-45C4-4C98-8DE7-558D98FFF125}];3 ;CompanyGiro         ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Company Information::Giro No. }
+
+    { [{7013B50E-B1DD-419D-BB6C-6EDA444225DA}];3 ;CompanyRegNo        ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Company Information::VAT Registration No. }
+
+    { [{A5BC80B4-F860-4E37-8230-F841DE7D10DE}];3 ;ClientId            ;Element ;Text    ;
+                                                  VariableName=ClientId;
+                                                  Export::OnBeforePassVariable=BEGIN
+                                                                                 ClientId := CompelloSetup."Client ID";
+                                                                               END;
+                                                                                }
+
+    { [{25B0E513-46C5-41FF-8C2B-9C521A0F7062}];2 ;VendorInfo          ;Element ;Table   ;
+                                                  SourceTable=Table23;
+                                                  LinkFields=Field1=FIELD(Field2);
+                                                  LinkTable=Purchase Header;
+                                                  Export::OnAfterGetRecord=BEGIN
+                                                                             VendorName := DELCHR(Vendor.Name, '=', ''''); //02. 18.01.17 JAL
+                                                                           END;
+                                                                            }
+
+    { [{AED7DD12-6DBA-4334-AA44-BEFECB89DED7}];3 ;VendorId            ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=Vendor::No. }
+
+    { [{CF6321D1-7661-4E97-A761-2A352814A512}];3 ;VendorName          ;Element ;Text    ;
+                                                  DataType=Text }
+
+    { [{222B8DB3-5CC9-43B4-82D0-69D94B7D578A}];3 ;VendorAddress       ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Vendor::Address }
+
+    { [{E7FF0BDF-1DE7-4AA1-BACF-039C2FE2867E}];3 ;VendorCity          ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Vendor::City }
+
+    { [{ADDDE1C8-24EF-426E-BD70-5D1FA15A8433}];3 ;VendorCountry       ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=Vendor::Country/Region Code }
+
+    { [{F87F309E-1FE1-4712-BCC9-115B7FEC1752}];2 ;PurchaseInfo        ;Element ;Text     }
+
+    { [{37BE1DBB-1952-448B-92C2-2427B6CC720D}];3 ;PurchaseNumber      ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=Purchase Header::No. }
+
+    { [{A32F50E5-1DF3-48D9-8011-C2C186BC9EC0}];3 ;PackingSlip         ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=Purchase Header::Vendor Shipment No. }
+
+    { [{644F24B8-D17E-4D18-8676-48DA15D75821}];3 ;Update              ;Element ;Text     }
+
+    { [{3EF071BC-1F1D-4D30-9139-4C733CC78274}];3 ;PurchaseDate        ;Element ;Field   ;
+                                                  DataType=Date;
+                                                  SourceField=Purchase Header::Order Date }
+
+    { [{B0F9DCA6-CB21-461A-A9B3-36B8B223EB73}];3 ;PageNo              ;Element ;Text     }
+
+    { [{DDAF7763-A209-4AB2-8EB4-DE42CFC264AC}];3 ;Status              ;Element ;Text     }
+
+    { [{8F00E312-ABE5-465C-BC35-6E5FDFEFCF45}];3 ;DocType             ;Element ;Text     }
+
+    { [{83BE98A4-7D3E-464F-8715-A83284B6A345}];3 ;ScannerSeries       ;Element ;Text     }
+
+    { [{599CC3D2-32DF-4BFC-93F8-DE9325904998}];2 ;DeliveryInfo        ;Element ;Text     }
+
+    { [{A4665EFD-A730-4DC0-8AD1-E249DD3467B1}];3 ;DeliveryName        ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Purchase Header::Ship-to Name }
+
+    { [{4FC36E36-FC52-4260-AC8F-70D4EE073DB2}];3 ;DeliveryAddress     ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Purchase Header::Ship-to Address }
+
+    { [{86BA1392-40A8-4BCB-9372-259495F89949}];3 ;DeliveryCity        ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Purchase Header::Ship-to City }
+
+    { [{699E7DA5-6726-45D9-9EA7-6BA2A4309EDB}];3 ;DeliveryCountry     ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=Purchase Header::Ship-to Country/Region Code }
+
+    { [{F2D4FDCA-E1A8-42F3-9267-FD5D179E8C27}];1 ;OrderDetails        ;Element ;Text     }
+
+    { [{0245A113-C023-45AB-B874-DB8B1ADBD3C0}];2 ;OrderLines          ;Element ;Table   ;
+                                                  SourceTable=Table39;
+                                                  SourceTableView=SORTING(Field1,Field3,Field4)
+                                                                  ORDER(Ascending)
+                                                                  WHERE(Field5=FILTER(2|1));
+                                                  LinkFields=Field1=FIELD(Field1),
+                                                             Field3=FIELD(Field3);
+                                                  LinkTable=Purchase Header;
+                                                  Export::OnAfterGetRecord=VAR
+                                                                             ReceiptLine@1101103000 : Record 121;
+                                                                             DimMgt@1101103001 : Codeunit 408;
+                                                                             Dimension@1101103002 : ARRAY [8] OF Code[20];
+                                                                           BEGIN
+
+                                                                             ReceiptLine.SETRANGE("Document No." ,ReceiptHeaderG."No.");
+                                                                             ReceiptLine.SETRANGE("Order No.", "Purchase Line"."Document No.");
+                                                                             ReceiptLine.SETRANGE("Order Line No.", "Purchase Line"."Line No.");
+                                                                             ReceiptLine.SETFILTER(Quantity, '<>0');
+
+                                                                             IF ReceiptLine.FINDFIRST THEN BEGIN
+                                                                               UserDef8 := ReceiptLine."Document No.";
+                                                                               UserDef15 := FORMAT(ReceiptLine."Line No.");
+                                                                               TotalDelivered := FORMAT(ReceiptLine.Quantity, 0,'<Sign><Integer><Decimals>');
+                                                                               TotalDelivered := CONVERTSTR(TotalDelivered, ',', '.');
+                                                                               Quantity := FORMAT(ReceiptLine.Quantity, 0,'<Sign><Integer><Decimals>');
+                                                                               Quantity := CONVERTSTR(Quantity, ',', '.');
+                                                                               UserDef12 := FORMAT(ReceiptLine."Posting Date");
+                                                                               DeliveryDate := FORMAT(ReceiptHeaderG."Posting Date",0,0); //01. 21.03.16 FMY  Changed after request from compello 21.03.16
+                                                                             END
+                                                                             ELSE
+                                                                                currXMLport.SKIP;
+
+                                                                             UserDef9 := "Purchase Header"."Vendor Shipment No.";
+                                                                             Dim15 := "Purchase Header"."Purchaser Code";
+                                                                             LineStatus := FORMAT(CompelloSetup."Authentication Code");
+                                                                             InventTransId := ReceiptLine."Document No." + '-' + FORMAT(ReceiptLine."Line No.");
+
+                                                                             IF ReceiptLine.Type = ReceiptLine.Type::Item  THEN
+                                                                               Account := CompelloSetup."Default PO Account"
+                                                                             ELSE
+                                                                               Account := ReceiptLine."No.";
+
+
+                                                                             DimMgt.GetShortcutDimensions(ReceiptLine."Dimension Set ID", Dimension);
+
+                                                                             Dim1 := ReceiptLine."Shortcut Dimension 1 Code";
+                                                                             Dim2 := ReceiptLine."Shortcut Dimension 2 Code";
+                                                                             Dim3 := Dimension[3];
+                                                                             Dim4 := Dimension[4];
+                                                                             Dim5 := Dimension[5];
+                                                                             Dim6 := Dimension[6];
+                                                                             Dim7 := Dimension[7];
+                                                                             Dim8 := Dimension[8];
+                                                                             //Dim9 := Dimension[9];
+                                                                             //Dim10 := Dimension[10];
+                                                                             Description := DELCHR("Purchase Line".Description, '=', ''''); //02. 18.01.17 JAL
+                                                                           END;
+                                                                            }
+
+    { [{7533944A-EC26-4AE2-98CE-059E1CF202B9}];3 ;ItemNumber          ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=Purchase Line::No. }
+
+    { [{1CB0A2E0-297B-410A-93DA-D5BE92F3FC30}];3 ;Description         ;Element ;Text    ;
+                                                  DataType=Text }
+
+    { [{F42FC1BE-C254-4365-A012-04D6CE59AF8A}];3 ;DeliveryDate        ;Element ;Text    ;
+                                                  DataType=Date }
+
+    { [{E0DA296A-B6C7-4DB7-AA99-5711089AEF20}];3 ;Quantity            ;Element ;Text    ;
+                                                  DataType=Decimal }
+
+    { [{B544EC31-AD3E-4D17-9ADD-B38D04DE9C46}];3 ;CostPrice           ;Element ;Field   ;
+                                                  DataType=Decimal;
+                                                  SourceField=Purchase Line::Direct Unit Cost }
+
+    { [{8B55041B-C391-4C73-8E76-16E16CAEEB2C}];3 ;DiscPercent         ;Element ;Field   ;
+                                                  DataType=Decimal;
+                                                  SourceField=Purchase Line::Line Discount % }
+
+    { [{C1D98945-073B-4D50-9EE1-B4ACAA453D78}];3 ;TotalDelivered      ;Element ;Text    ;
+                                                  DataType=Decimal }
+
+    { [{F2F76A9D-6633-4280-82A1-D192BEBAF197}];3 ;InventTransId       ;Element ;Text    ;
+                                                  DataType=Integer }
+
+    { [{EC54060B-FFAE-478B-990A-0E7436350601}];3 ;LineAmount          ;Element ;Field   ;
+                                                  DataType=Decimal;
+                                                  SourceField=Purchase Line::Line Amount }
+
+    { [{10515D72-F803-4E9C-A009-5393C3D6FE32}];3 ;Currency            ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=Purchase Line::Currency Code }
+
+    { [{1FDB8032-D061-4B3F-A551-B611225EBF0B}];3 ;UserDef8            ;Element ;Text     }
+
+    { [{AA353828-65E9-4B00-9C5F-024DD240A987}];3 ;UserDef9            ;Element ;Text     }
+
+    { [{4B7ADDF3-021C-4EE7-BF97-825A8ACD193B}];3 ;UserDef11           ;Element ;Field   ;
+                                                  DataType=Text;
+                                                  SourceField=Purchase Line::Vendor Item No. }
+
+    { [{21A4E535-E327-49A3-BB54-F9154CA8B0C3}];3 ;UserDef12           ;Element ;Text     }
+
+    { [{3105EA09-712E-40E9-9F38-AEAAA4CFF996}];3 ;UserDef13           ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=Purchase Line::Location Code }
+
+    { [{C017E1EE-8D62-42F2-A375-4DBE511BAB9F}];3 ;UserDef15           ;Element ;Text     }
+
+    { [{61C182CA-319D-4006-BF71-8376EF9DE4D8}];3 ;Dim1                ;Element ;Text     }
+
+    { [{A7DEAE0A-FE5B-4062-B761-3A8336502353}];3 ;Dim2                ;Element ;Text     }
+
+    { [{88A91CD3-2A34-4D7F-875C-82BC0BA30579}];3 ;Dim3                ;Element ;Text     }
+
+    { [{3CAB40A7-3ADA-44FE-8B79-EFF293F8F8DD}];3 ;Dim4                ;Element ;Text     }
+
+    { [{25CBD9DA-A2F5-4A04-8124-53D6BDC2E86C}];3 ;Dim5                ;Element ;Text     }
+
+    { [{AB047FE8-BFDB-4344-8A37-4C5F7AA4E62F}];3 ;Dim6                ;Element ;Text     }
+
+    { [{AAF5B753-1F2C-4E90-90CB-E01BD9133713}];3 ;Dim7                ;Element ;Text     }
+
+    { [{F4B78786-A17A-4C33-BBC3-FDF24BC37549}];3 ;Dim8                ;Element ;Text     }
+
+    { [{17D4D3E6-E860-4622-A900-4666FA9E2793}];3 ;Dim9                ;Element ;Text     }
+
+    { [{FA23820E-C853-45C3-91A3-B0F8355CE0BC}];3 ;Dim10               ;Element ;Text     }
+
+    { [{A179C7DE-DE6A-405B-8E94-2375B2EC7A55}];3 ;Dim11               ;Element ;Text     }
+
+    { [{910EB023-5C1A-4E44-B4B9-67257FEF2301}];3 ;Dim12               ;Element ;Text     }
+
+    { [{F20245EE-4523-4920-9B35-0B864DED30AD}];3 ;Dim13               ;Element ;Text     }
+
+    { [{CCADA77C-586C-47A2-8037-F5E46C4B3833}];3 ;Dim14               ;Element ;Text     }
+
+    { [{36FF0B7B-54BC-4680-97FA-80269615A153}];3 ;Dim15               ;Element ;Text     }
+
+    { [{1BFB548C-FEF2-4559-90E9-E51AB5A0291A}];3 ;Purchaser           ;Element ;Text     }
+
+    { [{255776C2-2B01-44A7-9D7B-1A4B7AC1740A}];3 ;Responsible         ;Element ;Text     }
+
+    { [{943928F9-13AC-41DF-92C8-29DC79E34EAE}];3 ;Status              ;Element ;Text    ;
+                                                  VariableName=LineStatus }
+
+    { [{30C6EB96-5FC9-495A-8889-4F9AB2C3D3F9}];3 ;Account             ;Element ;Text     }
+
+    { [{0D13B042-B409-4F8C-97A8-6B038A5BD6DD}];3 ;TaxCode             ;Element ;Field   ;
+                                                  DataType=Code;
+                                                  SourceField=Purchase Line::VAT Code }
+
+    { [{B8218288-6B12-4205-B42E-0496146B6CED}];1 ;OrderTotals         ;Element ;Text     }
+
+    { [{2FD77AF4-3760-475A-9172-3FBC20FB2FA6}];2 ;Totals              ;Element ;Text     }
+
+    { [{C68988DF-9231-42F5-ADC1-217A1D8F6370}];3 ;NetOrderAmount      ;Element ;Text    ;
+                                                  VariableName=NetOrderAmount }
+
+    { [{B2A3FCFA-EDF3-45C4-88AE-E20A521D7994}];3 ;TotalTaxAmount      ;Element ;Text    ;
+                                                  VariableName=TotalTaxAmount }
+
+    { [{8395801E-1CF8-4601-835C-671FF18260F6}];3 ;RoundAmount         ;Element ;Text    ;
+                                                  VariableName=RoundAmount }
+
+    { [{BD4CC9C0-C37D-4057-A575-CDC04ADD0FC9}];3 ;Freight             ;Element ;Text    ;
+                                                  VariableName=Freight }
+
+    { [{A2ADBEF2-A1A3-48B9-AD9A-DCB271C68969}];3 ;Packaging           ;Element ;Text    ;
+                                                  VariableName=Packaging }
+
+    { [{53B3BB47-C8C3-473E-B77E-5FCDDA5D637F}];3 ;TotalOrderAmount    ;Element ;Text    ;
+                                                  VariableName=TotalOrderAmount }
+
+    { [{57725DF3-F1B9-4F2D-B3F1-5A9697205F8C}];3 ;Currency            ;Element ;Text    ;
+                                                  VariableName=Currency }
+
+  }
+  EVENTS
+  {
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+    }
+    CONTROLS
+    {
+    }
+  }
+  CODE
+  {
+    VAR
+      CompelloSetup@1101103000 : Record 70000;
+      ReceiptHeaderG@1101103001 : Record 120;
+
+    PROCEDURE SetTableFilters@1101103000(VAR ReceiptHeader@1101103000 : Record 120);
+    BEGIN
+      ReceiptHeaderG := ReceiptHeader;
+      "Purchase Header".SETRANGE("No.", ReceiptHeader."Order No.");
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 21.03.16 FMY Changed after request from compello 21.03.16 Mottaksdato/DeliveryDate
+      02. 18.01.17 JAL Removing the symbol ' from Item Description and Vendor Name because import to Compello fails.
+    }
+    END.
+  }
+}
+

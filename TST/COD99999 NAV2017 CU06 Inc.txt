@@ -1,0 +1,46 @@
+OBJECT Codeunit 99999 Insert Value to Std. Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=18.08.17;
+    Time=21:54:58;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+            InsertOPCSetup();
+            //UpdateManufacturingSetup();
+            MESSAGE('OnRun Finished');
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      LibraryIncadeaG@1101103001 : Codeunit 91062;
+      OPCTestingG@1101103000 : Codeunit 91068;
+
+    LOCAL PROCEDURE InsertOPCSetup@1101103000();
+    BEGIN
+      OPCTestingG.OPCSetup();
+    END;
+
+    LOCAL PROCEDURE UpdateManufacturingSetup@1101103001();
+    BEGIN
+      LibraryIncadeaG.ManufacturingSetup;
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 18.08.17 JAL Updates standard setup tables with values (Customers) from test functions.
+    }
+    END.
+  }
+}
+

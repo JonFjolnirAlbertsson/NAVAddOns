@@ -1,0 +1,82 @@
+OBJECT Codeunit 83003 Clocking Calculation
+{
+  OBJECT-PROPERTIES
+  {
+    Date=20.04.17;
+    Time=16.20.12;
+    Modified=Yes;
+    Version List=OPC (RSI);
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+
+    PROCEDURE FillTable@1000000001(FromDate@1000000002 : Date;ToDate@1000000003 : Date);
+    VAR
+      PaymentTable@1000000000 : Record 83006;
+      MachineCenter@1000000001 : Record 99000758;
+      WorkTypeCode@1000000004 : Record 83004;
+      Window@1000000006 : Dialog;
+      Qty@1000000005 : Decimal;
+    BEGIN
+
+      PaymentTable.DELETEALL;
+
+      Window.OPEN('Beregner for #1##########');
+
+      MachineCenter.RESET;
+      MachineCenter.SETRANGE(Clocking, TRUE);
+      MachineCenter.SETRANGE("Date Filter", FromDate, ToDate);
+      IF MachineCenter.FIND('-') THEN
+        REPEAT
+
+          MachineCenter.TESTFIELD("Employee No.");
+
+          Window.UPDATE(1, MachineCenter."No.");
+
+          WorkTypeCode.RESET;
+          WorkTypeCode.SETFILTER("Payment Type", '<>%1', '');
+          IF WorkTypeCode.FIND('-') THEN
+            REPEAT
+              Qty := GetSum( WorkTypeCode, MachineCenter);
+
+              IF Qty <> 0 THEN BEGIN
+
+                PaymentTable.INIT;
+                PaymentTable."Machine Center No." := MachineCenter."No.";
+                PaymentTable."Work Type Code" := WorkTypeCode.Code;
+                PaymentTable."Employee No." := MachineCenter."Employee No.";
+                PaymentTable."Employee Name" := MachineCenter.Name;
+                PaymentTable."Payment Type" := WorkTypeCode."Payment Type";
+                PaymentTable.Quantity := Qty;
+                PaymentTable.INSERT;
+
+              END;
+
+            UNTIL WorkTypeCode.NEXT = 0;
+        UNTIL MachineCenter.NEXT = 0;
+
+      Window.CLOSE;
+    END;
+
+    PROCEDURE GetSum@1000000000(VAR WorkTypeCode@1000000000 : Record 83004;VAR MachineCenter@1000000001 : Record 99000758) : Decimal;
+    BEGIN
+      WITH WorkTypeCode DO BEGIN
+        SETRANGE("Machine Center Filter", MachineCenter."No.");
+        SETFILTER("Date Filter", MachineCenter.GETFILTER("Date Filter"));
+        CALCFIELDS("Time Registered");
+
+        EXIT("Time Registered");
+      END;
+    END;
+
+    BEGIN
+    END.
+  }
+}
+

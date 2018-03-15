@@ -1,0 +1,84 @@
+OBJECT Page 50050 Price Calc. - Routing Lines
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09.02.17;
+    Time=11.00.44;
+    Modified=Yes;
+    Version List=INC1.0;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Price Calc. - Routing Lines;
+               NOR=Kalkylelinjer rutelinjer];
+    MultipleNewLines=Yes;
+    SourceTable=Table50009;
+    DelayedInsert=Yes;
+    PageType=ListPart;
+    OnNewRecord=BEGIN
+                  "Calc. No." := xRec."Calc. No.";
+                  Type := xRec.Type;
+                  "Sequence No." := xRec."Sequence No." + 10;
+                END;
+
+  }
+  CONTROLS
+  {
+    { 1101103000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1101103001;1;Group  ;
+                Name=Group;
+                GroupType=Repeater }
+
+    { 1101103002;2;Field  ;
+                SourceExpr=Type }
+
+    { 1101103003;2;Field  ;
+                SourceExpr="No." }
+
+    { 1101103004;2;Field  ;
+                SourceExpr="Work Center" }
+
+    { 1101103005;2;Field  ;
+                SourceExpr=Description }
+
+    { 1101103006;2;Field  ;
+                SourceExpr=Quantity;
+                OnValidate=BEGIN
+                             CurrPage.UPDATE();
+                           END;
+                            }
+
+    { 1101103007;2;Field  ;
+                SourceExpr="Unit of Measure" }
+
+    { 1101103008;2;Field  ;
+                SourceExpr="Unit Cost";
+                OnValidate=BEGIN
+                             CurrPage.UPDATE();
+                           END;
+                            }
+
+    { 1101103009;2;Field  ;
+                SourceExpr="Line Amount";
+                OnValidate=BEGIN
+                             CurrPage.UPDATE();
+                           END;
+                            }
+
+    { 1101103010;2;Field  ;
+                SourceExpr="Vendor No." }
+
+    { 1101103011;2;Field  ;
+                SourceExpr="Activity type" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+

@@ -1,0 +1,2774 @@
+OBJECT Report 50035 Item Price Calculation
+{
+  OBJECT-PROPERTIES
+  {
+    Date=10.02.17;
+    Time=14.50.40;
+    Modified=Yes;
+    Version List=INC1.0;
+  }
+  PROPERTIES
+  {
+  }
+  DATASET
+  {
+    { 1101103000;;DataItem;                  ;
+               DataItemTable=Table50008 }
+
+    { 1101103001;1;Column;CalcNo_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Calc No." }
+
+    { 1101103002;1;Column;ItemNo_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Item No." }
+
+    { 1101103003;1;Column;ItemDescription_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Item Description" }
+
+    { 1101103004;1;Column;CalcDate_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Calc. Date" }
+
+    { 1101103005;1;Column;Calcby_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Calc. by" }
+
+    { 1101103006;1;Column;TotMaterialcost_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Tot. Materialcost" }
+
+    { 1101103007;1;Column;TotCapacitycost_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Tot. Capacity cost" }
+
+    { 1101103008;1;Column;TotAdditionalCost_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Tot. Additional Cost" }
+
+    { 1101103009;1;Column;Salesprice_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Sales price" }
+
+    { 1101103010;1;Column;CalcFactor_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head".CalcFactor }
+
+    { 1101103011;1;Column;TotCost_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Tot. Cost" }
+
+    { 1101103012;1;Column;Lotsizenoofpcs_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Lot size (no. of pcs)" }
+
+    { 1101103013;1;Column;CalculationMethod_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Calculation Method" }
+
+    { 1101103014;1;Column;Orderquantity_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Order quantity" }
+
+    { 1101103015;1;Column;Locked_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head".Locked }
+
+    { 1101103016;1;Column;Projectcode_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Project code" }
+
+    { 1101103017;1;Column;Variantcode_PriceCalcHead;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc.- Head"."Variant code" }
+
+    { 1101103040;1;Column;WorkDate           ;
+               SourceExpr=WORKDATE }
+
+    { 1101103018;1;DataItem;                 ;
+               DataItemTable=Table50009;
+               DataItemTableView=SORTING(Calc. No.,Type,Sequence No.);
+               DataItemLink=Calc. No.=FIELD(Calc No.) }
+
+    { 1101103019;2;Column;CalcNo_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Calc. No." }
+
+    { 1101103020;2;Column;Type_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines".Type }
+
+    { 1101103021;2;Column;SequenceNo_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Sequence No." }
+
+    { 1101103022;2;Column;No_PriceCalcLines  ;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."No." }
+
+    { 1101103023;2;Column;Description_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines".Description }
+
+    { 1101103024;2;Column;Quantity_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines".Quantity }
+
+    { 1101103025;2;Column;UnitofMeasure_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Unit of Measure" }
+
+    { 1101103026;2;Column;UnitCost_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Unit Cost" }
+
+    { 1101103027;2;Column;LineAmount_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Line Amount" }
+
+    { 1101103028;2;Column;Projectcode_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Project code" }
+
+    { 1101103029;2;Column;Variantcode_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Variant code" }
+
+    { 1101103030;2;Column;VendorNo_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Vendor No." }
+
+    { 1101103031;2;Column;SystemCreated_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."System Created" }
+
+    { 1101103032;2;Column;WorkCenter_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Work Center" }
+
+    { 1101103033;2;Column;Activitytype_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Activity type" }
+
+    { 1101103034;2;Column;Purchasestatus_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Purchase status" }
+
+    { 1101103035;2;Column;PurchaseDocumentNo_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Purchase Document No." }
+
+    { 1101103036;2;Column;Purchaselineno_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Purchase line no." }
+
+    { 1101103037;2;Column;Purchaseprice_PriceCalcLines;
+               IncludeCaption=Yes;
+               SourceExpr="Price Calc. - Lines"."Purchase price" }
+
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+    }
+    CONTROLS
+    {
+    }
+  }
+  LABELS
+  {
+    { 1101103038;ItemPriceEstimate;
+                                CaptionML=[ENU=Item Price Calculation;
+                                           NOR=Kalkyleutskrift] }
+    { 1101103039;PageCaption   ;CaptionML=[ENU=Page %1 of %2;
+                                           NOR=Side %1 av %2] }
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+  RDLDATA
+  {
+    <?xml version="1.0" encoding="utf-8"?>
+<Report xmlns:rd="http://schemas.microsoft.com/SQLServer/reporting/reportdesigner" xmlns:cl="http://schemas.microsoft.com/sqlserver/reporting/2010/01/componentdefinition" xmlns="http://schemas.microsoft.com/sqlserver/reporting/2010/01/reportdefinition">
+  <AutoRefresh>0</AutoRefresh>
+  <DataSources>
+    <DataSource Name="DataSource">
+      <ConnectionProperties>
+        <DataProvider>SQL</DataProvider>
+        <ConnectString />
+      </ConnectionProperties>
+      <rd:DataSourceID>65825d07-0492-4ebd-b1f4-f099e41f9e32</rd:DataSourceID>
+    </DataSource>
+  </DataSources>
+  <DataSets>
+    <DataSet Name="DataSet_Result">
+      <Query>
+        <DataSourceName>DataSource</DataSourceName>
+        <CommandText />
+      </Query>
+      <Fields>
+        <Field Name="CalcNo_PriceCalcHead">
+          <DataField>CalcNo_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="ItemNo_PriceCalcHead">
+          <DataField>ItemNo_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="ItemDescription_PriceCalcHead">
+          <DataField>ItemDescription_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="CalcDate_PriceCalcHead">
+          <DataField>CalcDate_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="Calcby_PriceCalcHead">
+          <DataField>Calcby_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="TotMaterialcost_PriceCalcHead">
+          <DataField>TotMaterialcost_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="TotMaterialcost_PriceCalcHeadFormat">
+          <DataField>TotMaterialcost_PriceCalcHeadFormat</DataField>
+        </Field>
+        <Field Name="TotCapacitycost_PriceCalcHead">
+          <DataField>TotCapacitycost_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="TotCapacitycost_PriceCalcHeadFormat">
+          <DataField>TotCapacitycost_PriceCalcHeadFormat</DataField>
+        </Field>
+        <Field Name="TotAdditionalCost_PriceCalcHead">
+          <DataField>TotAdditionalCost_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="TotAdditionalCost_PriceCalcHeadFormat">
+          <DataField>TotAdditionalCost_PriceCalcHeadFormat</DataField>
+        </Field>
+        <Field Name="Salesprice_PriceCalcHead">
+          <DataField>Salesprice_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="Salesprice_PriceCalcHeadFormat">
+          <DataField>Salesprice_PriceCalcHeadFormat</DataField>
+        </Field>
+        <Field Name="CalcFactor_PriceCalcHead">
+          <DataField>CalcFactor_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="CalcFactor_PriceCalcHeadFormat">
+          <DataField>CalcFactor_PriceCalcHeadFormat</DataField>
+        </Field>
+        <Field Name="TotCost_PriceCalcHead">
+          <DataField>TotCost_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="TotCost_PriceCalcHeadFormat">
+          <DataField>TotCost_PriceCalcHeadFormat</DataField>
+        </Field>
+        <Field Name="Lotsizenoofpcs_PriceCalcHead">
+          <DataField>Lotsizenoofpcs_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="CalculationMethod_PriceCalcHead">
+          <DataField>CalculationMethod_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="Orderquantity_PriceCalcHead">
+          <DataField>Orderquantity_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="Locked_PriceCalcHead">
+          <DataField>Locked_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="Projectcode_PriceCalcHead">
+          <DataField>Projectcode_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="Variantcode_PriceCalcHead">
+          <DataField>Variantcode_PriceCalcHead</DataField>
+        </Field>
+        <Field Name="WorkDate">
+          <DataField>WorkDate</DataField>
+        </Field>
+        <Field Name="CalcNo_PriceCalcLines">
+          <DataField>CalcNo_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Type_PriceCalcLines">
+          <DataField>Type_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="SequenceNo_PriceCalcLines">
+          <DataField>SequenceNo_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="No_PriceCalcLines">
+          <DataField>No_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Description_PriceCalcLines">
+          <DataField>Description_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Quantity_PriceCalcLines">
+          <DataField>Quantity_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Quantity_PriceCalcLinesFormat">
+          <DataField>Quantity_PriceCalcLinesFormat</DataField>
+        </Field>
+        <Field Name="UnitofMeasure_PriceCalcLines">
+          <DataField>UnitofMeasure_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="UnitCost_PriceCalcLines">
+          <DataField>UnitCost_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="UnitCost_PriceCalcLinesFormat">
+          <DataField>UnitCost_PriceCalcLinesFormat</DataField>
+        </Field>
+        <Field Name="LineAmount_PriceCalcLines">
+          <DataField>LineAmount_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="LineAmount_PriceCalcLinesFormat">
+          <DataField>LineAmount_PriceCalcLinesFormat</DataField>
+        </Field>
+        <Field Name="Projectcode_PriceCalcLines">
+          <DataField>Projectcode_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Variantcode_PriceCalcLines">
+          <DataField>Variantcode_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="VendorNo_PriceCalcLines">
+          <DataField>VendorNo_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="SystemCreated_PriceCalcLines">
+          <DataField>SystemCreated_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="WorkCenter_PriceCalcLines">
+          <DataField>WorkCenter_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Activitytype_PriceCalcLines">
+          <DataField>Activitytype_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Purchasestatus_PriceCalcLines">
+          <DataField>Purchasestatus_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="PurchaseDocumentNo_PriceCalcLines">
+          <DataField>PurchaseDocumentNo_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Purchaselineno_PriceCalcLines">
+          <DataField>Purchaselineno_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Purchaseprice_PriceCalcLines">
+          <DataField>Purchaseprice_PriceCalcLines</DataField>
+        </Field>
+        <Field Name="Purchaseprice_PriceCalcLinesFormat">
+          <DataField>Purchaseprice_PriceCalcLinesFormat</DataField>
+        </Field>
+      </Fields>
+      <rd:DataSetInfo>
+        <rd:DataSetName>DataSet</rd:DataSetName>
+        <rd:SchemaPath>Report.xsd</rd:SchemaPath>
+        <rd:TableName>Result</rd:TableName>
+      </rd:DataSetInfo>
+    </DataSet>
+  </DataSets>
+  <ReportSections>
+    <ReportSection>
+      <Body>
+        <ReportItems>
+          <Tablix Name="list1">
+            <TablixBody>
+              <TablixColumns>
+                <TablixColumn>
+                  <Width>19.4cm</Width>
+                </TablixColumn>
+              </TablixColumns>
+              <TablixRows>
+                <TablixRow>
+                  <Height>11.19711cm</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Rectangle Name="list1_Contents">
+                          <ReportItems>
+                            <Tablix Name="Line">
+                              <TablixBody>
+                                <TablixColumns>
+                                  <TablixColumn>
+                                    <Width>1.5cm</Width>
+                                  </TablixColumn>
+                                  <TablixColumn>
+                                    <Width>2.25cm</Width>
+                                  </TablixColumn>
+                                  <TablixColumn>
+                                    <Width>5.85cm</Width>
+                                  </TablixColumn>
+                                  <TablixColumn>
+                                    <Width>1.2cm</Width>
+                                  </TablixColumn>
+                                  <TablixColumn>
+                                    <Width>1.2cm</Width>
+                                  </TablixColumn>
+                                  <TablixColumn>
+                                    <Width>1.2cm</Width>
+                                  </TablixColumn>
+                                  <TablixColumn>
+                                    <Width>1.8cm</Width>
+                                  </TablixColumn>
+                                  <TablixColumn>
+                                    <Width>1.8cm</Width>
+                                  </TablixColumn>
+                                  <TablixColumn>
+                                    <Width>1.3cm</Width>
+                                  </TablixColumn>
+                                  <TablixColumn>
+                                    <Width>1.3cm</Width>
+                                  </TablixColumn>
+                                </TablixColumns>
+                                <TablixRows>
+                                  <TablixRow>
+                                    <Height>0.35278cm</Height>
+                                    <TablixCells>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="Type_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!Type_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <ZIndex>67</ZIndex>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="CalcNo_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!CalcNo_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="Description_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!Description_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="Quantity_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!Quantity_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="UnitofMeasure_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!UnitofMeasure_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="UnitCost_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!UnitCost_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="LineAmount_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!LineAmount_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="VendorNo_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!VendorNo_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="SystemCreated_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!SystemCreated_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="WorkCenter_PriceCalcLinesCaption">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Parameters!WorkCenter_PriceCalcLinesCaption.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                    </TablixCells>
+                                  </TablixRow>
+                                  <TablixRow>
+                                    <Height>0.17638cm</Height>
+                                    <TablixCells>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="EmptyRow">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto" />
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <FontWeight>Bold</FontWeight>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <BottomBorder>
+                                                <Style>Solid</Style>
+                                              </BottomBorder>
+                                              <VerticalAlign>Bottom</VerticalAlign>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                          <ColSpan>10</ColSpan>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell />
+                                      <TablixCell />
+                                      <TablixCell />
+                                      <TablixCell />
+                                      <TablixCell />
+                                      <TablixCell />
+                                      <TablixCell />
+                                      <TablixCell />
+                                      <TablixCell />
+                                    </TablixCells>
+                                  </TablixRow>
+                                  <TablixRow>
+                                    <Height>0.35278cm</Height>
+                                    <TablixCells>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="Type_PriceCalcLines">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Fields!Type_PriceCalcLines.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <ZIndex>15</ZIndex>
+                                            <DataElementOutput>NoOutput</DataElementOutput>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="CalcNo_PriceCalcLines">
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Fields!CalcNo_PriceCalcLines.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <rd:DefaultName>CalcNo_PriceCalcLines</rd:DefaultName>
+                                            <ZIndex>14</ZIndex>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="Description_PriceCalcLines">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Fields!Description_PriceCalcLines.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="Quantity_PriceCalcLines">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Fields!Quantity_PriceCalcLines.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <Format>=Fields!Quantity_PriceCalcLinesFormat.Value</Format>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="UnitofMeasure_PriceCalcLines">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Fields!UnitofMeasure_PriceCalcLines.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="UnitCost_PriceCalcLines">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Fields!UnitCost_PriceCalcLines.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <Format>=Fields!UnitCost_PriceCalcLinesFormat.Value</Format>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="LineAmount_PriceCalcLines">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Fields!LineAmount_PriceCalcLines.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                      <Format>=Fields!LineAmount_PriceCalcLinesFormat.Value</Format>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="VendorNo_PriceCalcLines">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Fields!VendorNo_PriceCalcLines.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="SystemCreated_PriceCalcLines">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=IIF(Fields!SystemCreated_PriceCalcLines.Value,Chr(254),Chr(168)) ''
+'',"a","r")</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Wingdings</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Left</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="WorkCenter_PriceCalcLines">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto">=Fields!WorkCenter_PriceCalcLines.Value</Value>
+                                                    <Style>
+                                                      <FontStyle>Normal</FontStyle>
+                                                      <FontFamily>Segoe UI</FontFamily>
+                                                      <FontSize>8pt</FontSize>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style>
+                                                  <TextAlign>Right</TextAlign>
+                                                </Style>
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                              <VerticalAlign>Top</VerticalAlign>
+                                              <PaddingLeft>5pt</PaddingLeft>
+                                              <PaddingRight>5pt</PaddingRight>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                    </TablixCells>
+                                  </TablixRow>
+                                </TablixRows>
+                              </TablixBody>
+                              <TablixColumnHierarchy>
+                                <TablixMembers>
+                                  <TablixMember />
+                                  <TablixMember />
+                                  <TablixMember />
+                                  <TablixMember />
+                                  <TablixMember />
+                                  <TablixMember />
+                                  <TablixMember />
+                                  <TablixMember />
+                                  <TablixMember />
+                                  <TablixMember />
+                                </TablixMembers>
+                              </TablixColumnHierarchy>
+                              <TablixRowHierarchy>
+                                <TablixMembers>
+                                  <TablixMember>
+                                    <KeepWithGroup>After</KeepWithGroup>
+                                    <RepeatOnNewPage>true</RepeatOnNewPage>
+                                    <KeepTogether>true</KeepTogether>
+                                  </TablixMember>
+                                  <TablixMember>
+                                    <KeepWithGroup>After</KeepWithGroup>
+                                    <RepeatOnNewPage>true</RepeatOnNewPage>
+                                  </TablixMember>
+                                  <TablixMember>
+                                    <Group Name="table2_Group1">
+                                      <GroupExpressions>
+                                        <GroupExpression>=Fields!CalcNo_PriceCalcLines.Value</GroupExpression>
+                                        <GroupExpression>=Fields!SequenceNo_PriceCalcLines.Value</GroupExpression>
+                                      </GroupExpressions>
+                                    </Group>
+                                    <TablixMembers>
+                                      <TablixMember>
+                                        <Group Name="table2_Details_Group">
+                                          <DataElementName>Detail</DataElementName>
+                                        </Group>
+                                        <DataElementName>Detail_Collection</DataElementName>
+                                        <DataElementOutput>Output</DataElementOutput>
+                                        <KeepTogether>true</KeepTogether>
+                                      </TablixMember>
+                                    </TablixMembers>
+                                  </TablixMember>
+                                </TablixMembers>
+                              </TablixRowHierarchy>
+                              <KeepTogether>true</KeepTogether>
+                              <DataSetName>DataSet_Result</DataSetName>
+                              <Top>0.03167cm</Top>
+                              <Height>0.88194cm</Height>
+                              <Width>19.4cm</Width>
+                              <DataElementOutput>NoOutput</DataElementOutput>
+                              <Style />
+                            </Tablix>
+                            <Tablix Name="SetDataTable">
+                              <TablixBody>
+                                <TablixColumns>
+                                  <TablixColumn>
+                                    <Width>1.31708cm</Width>
+                                  </TablixColumn>
+                                </TablixColumns>
+                                <TablixRows>
+                                  <TablixRow>
+                                    <Height>0.4064cm</Height>
+                                    <TablixCells>
+                                      <TablixCell>
+                                        <CellContents>
+                                          <Textbox Name="SetDataTextBox">
+                                            <CanGrow>true</CanGrow>
+                                            <KeepTogether>true</KeepTogether>
+                                            <Paragraphs>
+                                              <Paragraph>
+                                                <TextRuns>
+                                                  <TextRun>
+                                                    <Value EvaluationMode="Auto" />
+                                                    <Style>
+                                                      <Color>Red</Color>
+                                                    </Style>
+                                                  </TextRun>
+                                                </TextRuns>
+                                                <Style />
+                                              </Paragraph>
+                                            </Paragraphs>
+                                            <ZIndex>6</ZIndex>
+                                            <Visibility>
+                                              <Hidden>=Code.SetData(Cstr(Fields!CalcNo_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Parameters!PageCaption.Value) + Chr(177) + 
+Cstr(Fields!WorkDate.Value) + Chr(177) + 
+Cstr(Fields!ItemNo_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!ItemDescription_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!Orderquantity_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!TotMaterialcost_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!TotCapacitycost_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!TotAdditionalCost_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!TotCost_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!CalcFactor_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!Salesprice_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!Lotsizenoofpcs_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!Calcby_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!CalcDate_PriceCalcHead.Value) + Chr(177) + 
+Cstr(Fields!Locked_PriceCalcHead.Value)
+, 1)</Hidden>
+                                            </Visibility>
+                                            <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
+                                            </Style>
+                                          </Textbox>
+                                        </CellContents>
+                                      </TablixCell>
+                                    </TablixCells>
+                                  </TablixRow>
+                                </TablixRows>
+                              </TablixBody>
+                              <TablixColumnHierarchy>
+                                <TablixMembers>
+                                  <TablixMember />
+                                </TablixMembers>
+                              </TablixColumnHierarchy>
+                              <TablixRowHierarchy>
+                                <TablixMembers>
+                                  <TablixMember>
+                                    <KeepTogether>true</KeepTogether>
+                                  </TablixMember>
+                                </TablixMembers>
+                              </TablixRowHierarchy>
+                              <DataSetName>DataSet_Result</DataSetName>
+                              <Left>6.63976in</Left>
+                              <Height>0.4064cm</Height>
+                              <Width>1.31708cm</Width>
+                              <ZIndex>1</ZIndex>
+                              <Style />
+                            </Tablix>
+                          </ReportItems>
+                          <KeepTogether>true</KeepTogether>
+                          <Style />
+                        </Rectangle>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+              </TablixRows>
+            </TablixBody>
+            <TablixColumnHierarchy>
+              <TablixMembers>
+                <TablixMember />
+              </TablixMembers>
+            </TablixColumnHierarchy>
+            <TablixRowHierarchy>
+              <TablixMembers>
+                <TablixMember>
+                  <Group Name="list1_Details_Group">
+                    <GroupExpressions>
+                      <GroupExpression>=Fields!CalcNo_PriceCalcHead.Value</GroupExpression>
+                    </GroupExpressions>
+                    <PageBreak>
+                      <BreakLocation>Between</BreakLocation>
+                      <ResetPageNumber>true</ResetPageNumber>
+                    </PageBreak>
+                  </Group>
+                  <DataElementOutput>Output</DataElementOutput>
+                  <KeepTogether>true</KeepTogether>
+                </TablixMember>
+              </TablixMembers>
+            </TablixRowHierarchy>
+            <KeepTogether>true</KeepTogether>
+            <DataSetName>DataSet_Result</DataSetName>
+            <Left>0.02272cm</Left>
+            <Height>11.19711cm</Height>
+            <Width>19.4cm</Width>
+            <Style />
+          </Tablix>
+        </ReportItems>
+        <Height>11.19711cm</Height>
+        <Style />
+      </Body>
+      <Width>19.4453cm</Width>
+      <Page>
+        <PageHeader>
+          <Height>5.64258cm</Height>
+          <PrintOnFirstPage>true</PrintOnFirstPage>
+          <PrintOnLastPage>true</PrintOnLastPage>
+          <ReportItems>
+            <Textbox Name="TotAdditionalCost_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!TotAdditionalCost_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.05304cm</Top>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="TotCapacitycost_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!TotCapacitycost_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>2.66498cm</Top>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>1</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="TotCost_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!TotCost_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.44109cm</Top>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>2</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="TotMaterialcost_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!TotMaterialcost_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>2.27693cm</Top>
+              <Height>11pt</Height>
+              <Width>3.62271cm</Width>
+              <ZIndex>3</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Orderquantity_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!Orderquantity_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>1.88887cm</Top>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>4</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="ItemDescription_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!ItemDescription_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>1.50082cm</Top>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>5</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="ItemNo_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!ItemNo_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>1.11276cm</Top>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>6</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="CalcNo_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!CalcNo_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>0.72471cm</Top>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>7</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Calcby_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!Calcby_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.05304cm</Top>
+              <Left>13.58771cm</Left>
+              <Height>11pt</Height>
+              <Width>3.26472cm</Width>
+              <ZIndex>8</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Locked_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(16,1)</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.82916cm</Top>
+              <Left>16.88771cm</Left>
+              <Height>11pt</Height>
+              <Width>2.51359cm</Width>
+              <ZIndex>9</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="CalcDate_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(15,1)</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.4411cm</Top>
+              <Left>16.88771cm</Left>
+              <Height>11pt</Height>
+              <Width>2.51359cm</Width>
+              <ZIndex>10</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Calcby_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(14,1)</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.05304cm</Top>
+              <Left>16.88771cm</Left>
+              <Height>11pt</Height>
+              <Width>2.51359cm</Width>
+              <ZIndex>11</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="ExecutionTime">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Globals!ExecutionTime</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>1.46555cm</Top>
+              <Left>13.58771cm</Left>
+              <Height>11pt</Height>
+              <Width>5.81359cm</Width>
+              <ZIndex>12</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+              </Style>
+            </Textbox>
+            <Textbox Name="PageNumber">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Replace(Replace(Code.GetData(2,1), "%1", Globals!PageNumber), "%2", Globals!TotalPages)</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>0.72472cm</Top>
+              <Left>13.58771cm</Left>
+              <Height>11pt</Height>
+              <Width>5.81359cm</Width>
+              <ZIndex>13</ZIndex>
+              <Style />
+            </Textbox>
+            <Textbox Name="ItemPriceEstimateCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!ItemPriceEstimate.Value</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>14pt</FontSize>
+                        <FontWeight>Bold</FontWeight>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Left</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>0.01915cm</Top>
+              <Height>20pt</Height>
+              <Width>19.42272cm</Width>
+              <ZIndex>14</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="UserId">
+              <CanGrow>true</CanGrow>
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=User!UserID</Value>
+                      <Style>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>1.11277cm</Top>
+              <Left>13.58771cm</Left>
+              <Height>10pt</Height>
+              <Width>5.85759cm</Width>
+              <ZIndex>15</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+              </Style>
+            </Textbox>
+            <Textbox Name="CalcDate_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!CalcDate_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.4411cm</Top>
+              <Left>13.58771cm</Left>
+              <Height>11pt</Height>
+              <Width>3.26472cm</Width>
+              <ZIndex>16</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Locked_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!Locked_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.82916cm</Top>
+              <Left>13.58771cm</Left>
+              <Height>11pt</Height>
+              <Width>3.26472cm</Width>
+              <ZIndex>17</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="TotAdditionalCost_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(9,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                        <Format>=First(Fields!TotAdditionalCost_PriceCalcHeadFormat.Value, "DataSet_Result")</Format>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.05304cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>18</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="TotCapacitycost_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(8,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                        <Format>=First(Fields!TotCapacitycost_PriceCalcHeadFormat.Value, "DataSet_Result")</Format>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>2.66498cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>19</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="TotCost_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(19,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                        <Format>=First(Fields!TotCost_PriceCalcHeadFormat.Value, "DataSet_Result")</Format>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.44109cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>20</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="TotMaterialcost_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(7,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                        <Format>=First(Fields!TotMaterialcost_PriceCalcHeadFormat.Value, "DataSet_Result")</Format>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>2.27693cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62271cm</Width>
+              <ZIndex>21</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Orderquantity_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(6,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                        <Format>0.00;(0.00)</Format>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>1.88887cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>22</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="ItemDescription_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(5,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>1.50082cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>23</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="ItemNo_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(4,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>1.11276cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>24</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="CalcNo_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(1,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>0.72471cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>25</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="ExecutionTime2">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(3,1)</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <Top>1.88888cm</Top>
+              <Left>13.58771cm</Left>
+              <Height>11pt</Height>
+              <Width>5.81359cm</Width>
+              <ZIndex>26</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="CalcFactor_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!CalcFactor_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.86442cm</Top>
+              <Left>0cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>27</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Salesprice_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!Salesprice_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>4.25247cm</Top>
+              <Left>0cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>28</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="CalcFactor_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(11,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>3.86442cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>29</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Salesprice_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(12,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                        <Format>=First(Fields!Salesprice_PriceCalcHeadFormat.Value, "DataSet_Result")</Format>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>4.25247cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>30</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Lotsizenoofpcs_PriceCalcHeadCaption">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Parameters!Lotsizenoofpcs_PriceCalcHeadCaption.Value ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>4.67581cm</Top>
+              <Left>0cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>31</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+            <Textbox Name="Lotsizenoofpcs_PriceCalcHead">
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value EvaluationMode="Auto">=Code.GetData(13,1) ''</Value>
+                      <Style>
+                        <FontStyle>Normal</FontStyle>
+                        <FontFamily>Segoe UI</FontFamily>
+                        <FontSize>8pt</FontSize>
+                      </Style>
+                    </TextRun>
+                  </TextRuns>
+                  <Style />
+                </Paragraph>
+              </Paragraphs>
+              <Top>4.67581cm</Top>
+              <Left>3.62272cm</Left>
+              <Height>11pt</Height>
+              <Width>3.62272cm</Width>
+              <ZIndex>32</ZIndex>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <VerticalAlign>Middle</VerticalAlign>
+              </Style>
+            </Textbox>
+          </ReportItems>
+          <Style>
+            <Border>
+              <Style>None</Style>
+            </Border>
+          </Style>
+        </PageHeader>
+        <PageHeight>29.7cm</PageHeight>
+        <PageWidth>21cm</PageWidth>
+        <LeftMargin>0cm</LeftMargin>
+        <RightMargin>0cm</RightMargin>
+        <TopMargin>0cm</TopMargin>
+        <BottomMargin>0cm</BottomMargin>
+        <ColumnSpacing>1.27cm</ColumnSpacing>
+        <Style />
+      </Page>
+    </ReportSection>
+  </ReportSections>
+  <ReportParameters>
+    <ReportParameter Name="CalcNo_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>CalcNo_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>CalcNo_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="ItemNo_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>ItemNo_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>ItemNo_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="ItemDescription_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>ItemDescription_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>ItemDescription_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="CalcDate_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>CalcDate_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>CalcDate_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Calcby_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Calcby_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Calcby_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="TotMaterialcost_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>TotMaterialcost_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>TotMaterialcost_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="TotCapacitycost_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>TotCapacitycost_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>TotCapacitycost_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="TotAdditionalCost_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>TotAdditionalCost_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>TotAdditionalCost_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Salesprice_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Salesprice_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Salesprice_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="CalcFactor_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>CalcFactor_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>CalcFactor_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="TotCost_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>TotCost_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>TotCost_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Lotsizenoofpcs_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Lotsizenoofpcs_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Lotsizenoofpcs_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="CalculationMethod_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>CalculationMethod_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>CalculationMethod_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Orderquantity_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Orderquantity_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Orderquantity_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Locked_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Locked_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Locked_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Projectcode_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Projectcode_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Projectcode_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Variantcode_PriceCalcHeadCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Variantcode_PriceCalcHeadCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Variantcode_PriceCalcHeadCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="CalcNo_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>CalcNo_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>CalcNo_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Type_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Type_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Type_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="SequenceNo_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>SequenceNo_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>SequenceNo_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="No_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>No_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>No_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Description_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Description_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Description_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Quantity_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Quantity_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Quantity_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="UnitofMeasure_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>UnitofMeasure_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>UnitofMeasure_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="UnitCost_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>UnitCost_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>UnitCost_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="LineAmount_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>LineAmount_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>LineAmount_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Projectcode_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Projectcode_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Projectcode_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Variantcode_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Variantcode_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Variantcode_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="VendorNo_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>VendorNo_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>VendorNo_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="SystemCreated_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>SystemCreated_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>SystemCreated_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="WorkCenter_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>WorkCenter_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>WorkCenter_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Activitytype_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Activitytype_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Activitytype_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Purchasestatus_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Purchasestatus_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Purchasestatus_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="PurchaseDocumentNo_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>PurchaseDocumentNo_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>PurchaseDocumentNo_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Purchaselineno_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Purchaselineno_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Purchaselineno_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="Purchaseprice_PriceCalcLinesCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>Purchaseprice_PriceCalcLinesCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>Purchaseprice_PriceCalcLinesCaption</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="ItemPriceEstimate">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>ItemPriceEstimate</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>ItemPriceEstimate</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="PageCaption">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>PageCaption</Value>
+        </Values>
+      </DefaultValue>
+      <Prompt>PageCaption</Prompt>
+    </ReportParameter>
+  </ReportParameters>
+  <Code>Public Function BlankZero(ByVal Value As Decimal)
+    if Value = 0 then
+        Return ""
+    end if
+    Return Value
+End Function
+
+Public Function BlankPos(ByVal Value As Decimal)
+    if Value &gt; 0 then
+        Return ""
+    end if
+    Return Value
+End Function
+
+Public Function BlankZeroAndPos(ByVal Value As Decimal)
+    if Value &gt;= 0 then
+        Return ""
+    end if
+    Return Value
+End Function
+
+Public Function BlankNeg(ByVal Value As Decimal)
+    if Value &lt; 0 then
+        Return ""
+    end if
+    Return Value
+End Function
+
+Public Function BlankNegAndZero(ByVal Value As Decimal)
+    if Value &lt;= 0 then
+        Return ""
+    end if
+    Return Value
+End Function
+Shared Data1 as Object
+Shared Data2 as Object
+Shared Data3 as Object
+Shared Data4 as Object
+Shared Data5 as Object
+Shared Data6 as Object
+Shared Data7 as Object
+
+Public Function GetData(Num as Integer, Group as integer) as Object
+if Group = 1 then
+   Return Cstr(Choose(Num, Split(Cstr(Data1),Chr(177))))
+End If
+
+if Group = 2 then
+   Return Cstr(Choose(Num, Split(Cstr(Data2),Chr(177))))
+End If
+
+if Group = 3 then
+   Return Cstr(Choose(Num, Split(Cstr(Data3),Chr(177))))
+End If
+if Group = 4 then
+   Return Cstr(Choose(Num, Split(Cstr(Data4),Chr(177))))
+End If
+
+if Group = 5 then
+   Return Cstr(Choose(Num, Split(Cstr(Data5),Chr(177))))
+End If
+if Group = 6 then
+   Return Cstr(Choose(Num, Split(Cstr(Data6),Chr(177))))
+End If
+
+if Group = 7 then
+   Return Cstr(Choose(Num, Split(Cstr(Data7),Chr(177))))
+End If
+End Function
+
+Public Function SetData(NewData as Object,Group as integer)
+  If Group = 1 and NewData &gt; "" Then
+      Data1 = NewData
+  End If
+
+  If Group = 2 and NewData &gt; "" Then
+      Data2 = NewData
+  End If
+
+  If Group = 3 and NewData &gt; "" Then
+      Data3 = NewData
+End If
+
+  If Group = 4 and NewData &gt; "" Then
+      Data4 = NewData
+  End If
+
+If Group = 5 and NewData &gt; "" Then
+      Data5 = NewData
+  End If
+
+If Group = 6 and NewData &gt; "" Then
+      Data6 = NewData
+  End If
+
+If Group = 7 and NewData &gt; "" Then
+      Data7 = NewData
+  End If
+End Function
+
+</Code>
+  <Language>=User!Language</Language>
+  <ConsumeContainerWhitespace>true</ConsumeContainerWhitespace>
+  <rd:ReportUnitType>Cm</rd:ReportUnitType>
+  <rd:ReportID>0eeb6585-38ae-40f1-885b-8d50088d51b4</rd:ReportID>
+</Report>
+    END_OF_RDLDATA
+  }
+}
+

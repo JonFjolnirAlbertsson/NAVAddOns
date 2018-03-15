@@ -1,0 +1,125 @@
+OBJECT Page 73053 Item Calculation List
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08.09.17;
+    Time=08:27:51;
+    Modified=Yes;
+    Version List=ICA2.01;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=[ENU=Item Calculation List;
+               NOR=Kalkyle oversikt];
+    SourceTable=Table73051;
+    PageType=List;
+    CardPageID=Item Calculation;
+    ActionList=ACTIONS
+    {
+      { 1101103014;  ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1101103013;1 ;ActionGroup }
+      { 1101103012;2 ;Action    ;
+                      Name=CopyCalculationFrom;
+                      CaptionML=[ENU=Copy Calculation From;
+                                 NOR="Kopier fra kalkyle "];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=CopyItem;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 CalcHeaderL@1101103005 : Record 73051;
+                                 CalcListL@1101103004 : Page 73053;
+                                 CopyFromCalcL@1101103003 : Code[20];
+                                 TXT001L@1101103000 : TextConst 'ENU=You cannot copy calculation to it self. Create a new calculation no?;NOR=Du kan ikke kopiere en kalkyle til seg selv. Opprett en ny kalkyle?';
+                               BEGIN
+                                 CLEAR(CalcHeaderL);
+                                 CLEAR(CalcListL);
+                                 CalcHeaderL.SETFILTER("No.", '<>%1', Rec."No.");
+                                 CalcListL.SETTABLEVIEW(CalcHeaderL);
+                                 CalcListL.LOOKUPMODE(TRUE);
+                                 IF CalcListL.RUNMODAL = ACTION::LookupOK THEN BEGIN
+                                   CalcListL.GETRECORD(CalcHeaderL);
+                                   CopyFromCalcL := CalcHeaderL."No.";
+                                 END;
+                                 IF "Item No." = '' THEN BEGIN
+                                   IF "No." = '' THEN
+                                     VALIDATE("No.",'');
+                                   CopyCalculation("No.",CopyFromCalcL);
+                                 END ELSE BEGIN
+                                   ERROR(TXT001L);
+                                 END;
+                               END;
+                                }
+      { 1101103011;2 ;Action    ;
+                      Name=PrintCalculation;
+                      CaptionML=[ENU=Print Item Price Calculation;
+                                 NOR=Skriv ut kalkyle];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Print;
+                      PromotedCategory=Report;
+                      OnAction=VAR
+                                 PriceCalcHeadL@1101103000 : Record 73051;
+                                 ItemPriceCalculationL@1101103001 : Report 73050;
+                               BEGIN
+                                 PriceCalcHeadL.SETRANGE("No.", Rec."No.");
+                                 ItemPriceCalculationL.SETTABLEVIEW(PriceCalcHeadL);
+                                 ItemPriceCalculationL.RUN();
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1101103000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1101103001;1;Group  ;
+                Name=Group;
+                GroupType=Repeater }
+
+    { 1101103002;2;Field  ;
+                SourceExpr="No." }
+
+    { 1101103003;2;Field  ;
+                SourceExpr="Item No." }
+
+    { 1101103004;2;Field  ;
+                SourceExpr="Item Description" }
+
+    { 1101103005;2;Field  ;
+                SourceExpr="Order Quantity" }
+
+    { 1101103006;2;Field  ;
+                SourceExpr="Calc. Date" }
+
+    { 1101103007;2;Field  ;
+                SourceExpr="Sales Price" }
+
+    { 1101103008;2;Field  ;
+                SourceExpr="Tot. Cost" }
+
+    { 1101103009;2;Field  ;
+                SourceExpr="Calc. Factor" }
+
+    { 1101103010;2;Field  ;
+                SourceExpr="Lot Size (No. of PCS)" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Item Calculation (Kalkyle)
+    }
+    END.
+  }
+}
+

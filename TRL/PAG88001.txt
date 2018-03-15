@@ -1,0 +1,298 @@
+OBJECT Page 88001 Incadea Translation Tool
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=14:09:42;
+    Modified=Yes;
+    Version List=TRL1.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Incadea Translation Tool;
+               NOR=Incadea Oversettelsesverkt›y];
+    SourceTable=Table88001;
+    PageType=Worksheet;
+    PromotedActionCategoriesML=[ENU=New,Manage,Process,Report,Translate,Object Manager;
+                                NOR=Ny,Prosess,Rapport,Oversettelse,Object Manager];
+    OnOpenPage=BEGIN
+                 SETCURRENTKEY(Length,"Base Text");
+               END;
+
+    ActionList=ACTIONS
+    {
+      { 1000000009;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 1000000008;1 ;ActionGroup;
+                      Name=Translate;
+                      CaptionML=[ENU=Translate;
+                                 NOR=Translate] }
+      { 1000000010;2 ;Action    ;
+                      Name=Update Translations;
+                      CaptionML=[ENU=Update Translations;
+                                 NOR=Oppdater Oversettelser];
+                      ToolTipML=[ENU="Updates the table with the first line with matching translation text and with Translated = True. Then marks the record as Translated.";
+                                 NOR="Oppdaterer tabellen med f›rste linje med samsvarende oversettelsestekst of med Oversatt = Ja. Deretter markeres posten som Oversatt."];
+                      Promoted=Yes;
+                      Image=UpdateDescription;
+                      PromotedCategory=Category4;
+                      OnAction=BEGIN
+                                 TranslationMgtG.UpdateTranslationTable(Rec);
+                                 CurrPage.UPDATE;
+                               END;
+                                }
+      { 1000000012;2 ;Action    ;
+                      Name=Update Length;
+                      CaptionML=[ENU=Update Length;
+                                 NOR=Oppdater Lengde];
+                      ToolTipML=[ENU=Updates the Length felt in the table.;
+                                 NOR=Oppdaterer Lengde feltet i tabellen.];
+                      Promoted=Yes;
+                      Image=Edit;
+                      PromotedCategory=Category4;
+                      OnAction=BEGIN
+                                 TranslationMgtG.UpdateLength();
+                                 CurrPage.UPDATE;
+                               END;
+                                }
+      { 1000000031;2 ;Action    ;
+                      Name=Update NT Count;
+                      CaptionML=[ENU=Update NT Count;
+                                 NOR=Oppdater IO antall];
+                      ToolTipML=[ENU=Update Not Translated Count;
+                                 NOR=Oppdater ikke oversatt antall];
+                      Promoted=Yes;
+                      Image=Edit;
+                      PromotedCategory=Category4;
+                      OnAction=BEGIN
+                                 TranslationMgtG.UpdateNTCount();
+                                 CurrPage.UPDATE;
+                               END;
+                                }
+      { 1000000013;2 ;Action    ;
+                      Name=Replace Word Inside Filtered Lines;
+                      CaptionML=[ENU=Replace Word Inside Filtered Lines;
+                                 NOR=Endre alle tilfeller av ord innenfor filteret];
+                      ToolTipML=[ENU=Replace the Word on all lines inside the filter;
+                                 NOR=Endre alle tilfeller av ordet innenfor filteret];
+                      Promoted=Yes;
+                      Image=EditFilter;
+                      PromotedCategory=Category4;
+                      OnAction=VAR
+                                 WindowL@1000000000 : DotNet "'Microsoft.VisualBasic, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'.Microsoft.VisualBasic.Interaction" RUNONCLIENT;
+                                 InputtextL@1000000001 : Text;
+                                 ReplaceWithL@1000000007 : Text;
+                                 TransTableL@1000000002 : Record 88001;
+                                 TempTextL@1000000003 : Text;
+                                 TimeToExitL@1000000004 : Boolean;
+                                 StrPositionL@1000000005 : Integer;
+                                 TempStrLengthL@1000000006 : Integer;
+                               BEGIN
+                                 TranslationMgtG.ReplaceWordInFilter(Rec, TextToFindG, ReplaceTextG, CaseSensitiveG);
+                                 CurrPage.UPDATE(FALSE);
+                                 InitReplaceParam();
+                               END;
+                                }
+      { 1000000020;2 ;Action    ;
+                      Name=Record Count;
+                      CaptionML=[ENU=Record Count;
+                                 NOR=Antall linjer];
+                      Promoted=Yes;
+                      Image=Calculate;
+                      PromotedCategory=Report;
+                      OnAction=VAR
+                                 WindowL@1000000000 : DotNet "'Microsoft.VisualBasic, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'.Microsoft.VisualBasic.Interaction" RUNONCLIENT;
+                                 InputtextL@1000000001 : Text;
+                                 ReplaceWithL@1000000007 : Text;
+                                 TransTableL@1000000002 : Record 88001;
+                                 TempTextL@1000000003 : Text;
+                                 TimeToExitL@1000000004 : Boolean;
+                                 StrPositionL@1000000005 : Integer;
+                                 TempStrLengthL@1000000006 : Integer;
+                               BEGIN
+                                 TranslationMgtG.RecordCount(Rec);
+                               END;
+                                }
+      { 1000000015;2 ;Action    ;
+                      Name=Get Type;
+                      CaptionML=[ENU=Get Type;
+                                 NOR=Get Type];
+                      Promoted=Yes;
+                      Image=GetLines;
+                      PromotedCategory=Category4;
+                      OnAction=BEGIN
+                                 TranslationMgtG.GetType();
+                               END;
+                                }
+      { 1000000025;2 ;Action    ;
+                      Name=Export / Import XML;
+                      CaptionML=[ENU=Export or Import XML;
+                                 NOR=Eksport eller Import XML];
+                      RunObject=XMLport 88001;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=XMLFile;
+                      PromotedCategory=Category4 }
+      { 1000000030;1 ;ActionGroup;
+                      Name=OMA;
+                      CaptionML=[ENU=Object Manager;
+                                 NOR=Object Manager] }
+      { 1000000014;2 ;Action    ;
+                      Name=Import Translation Lines from Object Manager;
+                      Ellipsis=Yes;
+                      CaptionML=[ENU=Import Translation Lines from Object Manager;
+                                 NOR=Importer oversettelseslinjer fra Object Manager];
+                      Promoted=Yes;
+                      Image=Period;
+                      PromotedCategory=Category5;
+                      OnAction=BEGIN
+                                 TranslationMgtG.ImportTranslationLinesFromOMA();
+                                 CurrPage.UPDATE;
+                               END;
+                                }
+      { 1000000032;2 ;Action    ;
+                      Name=Update Translation Table in Object Manager;
+                      CaptionML=[ENU=Update OM - Translation Tool Line in Object Manager;
+                                 NOR=Oppdater OM - Translation Tool Line i Object Manager];
+                      ToolTipML=[ENU=Updates OM - Translation Tool Line in Object Manager with Translation value. Only lines inside filter on the page will be updated.;
+                                 NOR=Oppdater OM - Translation Tool Line i Object Manager med oversettelsesverdi. Bare linjer innen i filteret p† siden vil bli oppdatert.];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=PostBatch;
+                      PromotedCategory=Category5;
+                      OnAction=BEGIN
+                                 TranslationMgtG.UpdateOMATranslationToolLine(Rec);
+                               END;
+                                }
+      { 1000000007;2 ;Action    ;
+                      Name=Change Fastfit Menu Object in OMA;
+                      CaptionML=[ENU=Change Fastfit Menu Object in  Object Manager;
+                                 NOR=Endre Fastfit Meny i Object Manager];
+                      ToolTipML=[ENU="Change status of the field ""Changed Caption"" = TRUE in Object Manager  OM - Translation Tool Line. This is needed because ""Write to Database"" does not work for menu item.";
+                                 NOR="Endre status for feltet ""Changed Caption"" = Ja i Object Manager  OM - Translation Tool Line. Dette er n›dvendig fordi ""Skriv til database"" fungerer ikke for menyelementet."];
+                      Promoted=Yes;
+                      Image=ChangeTo;
+                      PromotedCategory=Category5;
+                      OnAction=BEGIN
+                                 TranslationMgtG.ChangeMenuObjectInOMATranslationLine(1058, TRUE);
+                               END;
+                                }
+      { 1000000033;1 ;ActionGroup;
+                      Name=Administration }
+      { 1000000034;2 ;Action    ;
+                      Name=Translation Setup;
+                      RunObject=Page 88000;
+                      Image=Setup;
+                      PromotedCategory=Category4 }
+    }
+  }
+  CONTROLS
+  {
+    { 1000000000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1000000023;1;Group  ;
+                Name=Replace;
+                CaptionML=[ENU=Replace;
+                           NOR=Erstatt];
+                GroupType=Group;
+                Layout=Columns }
+
+    { 1000000021;2;Field  ;
+                Name=Text To Find;
+                CaptionML=[ENU=Text To Find;
+                           NOR=S›ketekst];
+                SourceExpr=TextToFindG }
+
+    { 1000000022;2;Field  ;
+                Name=Replace Text;
+                CaptionML=[ENU=Replace Text;
+                           NOR=Tekst som skal erstattes];
+                SourceExpr=ReplaceTextG }
+
+    { 1000000024;2;Field  ;
+                Name=Case Sensitive;
+                CaptionML=[ENU=Case Sensitive;
+                           NOR=Skill mellom store og sm† bokstaver];
+                ToolTipML=[ENU="Case sensitive search for text in the Text 1 field. ";
+                           NOR=Tar hensikt til store og sm† bokstaver ved s›k i Tekst 1 feltet.];
+                SourceExpr=CaseSensitiveG }
+
+    { 1000000001;1;Group  ;
+                Name=Group;
+                GroupType=Repeater }
+
+    { 1000000002;2;Field  ;
+                SourceExpr="Entry No." }
+
+    { 1000000003;2;Field  ;
+                SourceExpr="Base Text" }
+
+    { 1000000004;2;Field  ;
+                SourceExpr=Translation }
+
+    { 1000000005;2;Field  ;
+                SourceExpr="Auto Increment" }
+
+    { 1000000006;2;Field  ;
+                SourceExpr=Translated;
+                OnValidate=BEGIN
+                             CurrPage.UPDATE(TRUE);
+                           END;
+                            }
+
+    { 1000000011;2;Field  ;
+                SourceExpr=Length }
+
+    { 1000000029;2;Field  ;
+                SourceExpr=QuantityNottranslated }
+
+    { 1000000016;2;Field  ;
+                SourceExpr=Type }
+
+    { 1000000018;2;Field  ;
+                SourceExpr="Object Type" }
+
+    { 1000000019;2;Field  ;
+                SourceExpr="Object No." }
+
+    { 1000000017;2;Field  ;
+                SourceExpr="Translate File Line" }
+
+    { 1000000026;2;Field  ;
+                SourceExpr="Ikke Oversatt runde 1" }
+
+    { 1000000027;2;Field  ;
+                SourceExpr="Ikke Oversatt runde 2" }
+
+    { 1000000028;2;Field  ;
+                SourceExpr="Ikke Oversatt runde 3" }
+
+  }
+  CODE
+  {
+    VAR
+      TempTable2G@1000000000 : Record 88001;
+      TextToFindG@1000000001 : Text INDATASET;
+      ReplaceTextG@1000000002 : Text INDATASET;
+      CaseSensitiveG@1000000003 : Boolean INDATASET;
+      TranslationMgtG@1000000004 : Codeunit 88001;
+
+    LOCAL PROCEDURE InitReplaceParam@1000000000();
+    BEGIN
+      TextToFindG := '';
+      ReplaceTextG := '';
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Incadea Translation Tool
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,323 @@
+OBJECT Codeunit 73050 Item Calculation
+{
+  OBJECT-PROPERTIES
+  {
+    Date=02.01.18;
+    Time=13:52:31;
+    Modified=Yes;
+    Version List=ICA2.04;
+  }
+  PROPERTIES
+  {
+    OnRun=VAR
+            Salgslinjen@1101103000 : Record 37;
+          BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      Text000@1101103005 : TextConst 'ENU=This function updates the indentation of all the Job Tasks.;NOR=Denne funksjonen oppdaterer innrykkingen av alle prosjektoppgavene.';
+      Text001@1101103004 : TextConst 'ENU="All Job Tasks between a Begin-Total and the matching End-Total are indented one level. ";NOR="Alle prosjektoppgaver mellom en fra-sum og den tilh›rende til-summen er rykket inn ett niv†. "';
+      Text002@1101103003 : TextConst 'ENU=The Totaling for each End-total is also updated.;NOR=Totalen for hver Til-sum blir ogs† oppdatert.';
+      Text003@1101103002 : TextConst 'ENU=\\Do you want to indent the Job Tasks?;NOR=\\Vil du rykke inn prosjektoppgavene?';
+      Text004@1101103001 : TextConst 'ENU=Indenting the Job Tasks #1##########.;NOR=Rykker inn prosjektoppgavene #1##########.';
+      Text005@1101103000 : TextConst 'ENU=End-Total %1 is missing a matching Begin-Total.;NOR=Til-sum %1 mangler en tilh›rende Fra-sum.';
+
+    LOCAL PROCEDURE GetSalesHeader@1(VAR SalesLineP@1101103001 : Record 37;VAR SalesHeaderP@1101103000 : Record 36);
+    BEGIN
+      //Function is copied from TAB37.
+      SalesLineP.TESTFIELD("Document No.");
+      IF (SalesLineP ."Document Type" <> SalesHeaderP."Document Type") OR (SalesLineP."Document No." <> SalesHeaderP."No.") THEN BEGIN
+        SalesHeaderP.GET(SalesLineP."Document Type",SalesLineP."Document No.");
+        IF SalesHeaderP."Currency Code" <> '' THEN
+          SalesHeaderP.TESTFIELD("Currency Factor");
+      END;
+    END;
+
+    LOCAL PROCEDURE RunPriceCalculationPage@1101103006(VAR SalesLineP@1101103000 : Record 37);
+    VAR
+      PriceCalcHeadL@1101103002 : Record 73051;
+      PageManagementL@1101103001 : Codeunit 700;
+    BEGIN
+      IF SalesLineP.Type = SalesLineP.Type::Item THEN BEGIN
+        //PriceCalcHeadL.SETRANGE("Item No.", Rec."No.");
+        PAGE.RUN(PageManagementL.GetDefaultLookupPageID(DATABASE::"Item Calc. Header"), PriceCalcHeadL) ;
+      END;
+    END;
+
+    LOCAL PROCEDURE TransferRoutingCalc@1000000001(VAR CalculateProdOrderP@1101103003 : Codeunit 99000773;VAR ProdOrderLineP@1101103000 : Record 5406);
+    VAR
+      RtngHeader@1000 : Record 99000763;
+      ProdOrderRtngLine@1002 : Record 5409;
+      WorkCenter@1003 : Record 99000754;
+      MachineCenter@1004 : Record 99000758;
+      CalcLines@1000000000 : Record 73052;
+      CostCalcMgtL@1101103002 : Codeunit 5836;
+      OperationNoL@1101103001 : Integer;
+    BEGIN
+      IF ProdOrderLineP."Routing No." = '' THEN
+        EXIT;
+      RtngHeader.GET(ProdOrderLineP."Routing No.");
+
+      ProdOrderRtngLine.SETRANGE(Status, ProdOrderLineP.Status);
+      ProdOrderRtngLine.SETRANGE("Prod. Order No.", ProdOrderLineP."Prod. Order No.");
+      ProdOrderRtngLine.SETRANGE("Routing Reference No.", ProdOrderLineP."Routing Reference No.");
+      ProdOrderRtngLine.SETRANGE("Routing No.", ProdOrderLineP."Routing No.");
+      IF ProdOrderRtngLine.FIND('-') THEN
+        EXIT;
+      OperationNoL := 0;
+      CalcLines.SETRANGE("Calc. No.", ProdOrderLineP."Calculation No.");
+      CalcLines.SETRANGE(Type, CalcLines.Type::Capacity);
+      IF CalcLines.FIND('-') THEN
+        REPEAT
+          OperationNoL += 10;
+          CalcLines.TESTFIELD("Work Center");
+          CalcLines.TESTFIELD("Unit Cost");
+          WorkCenter.GET(CalcLines."Work Center");
+
+          ProdOrderRtngLine.INIT;
+          ProdOrderRtngLine.Status := ProdOrderLineP.Status;
+          ProdOrderRtngLine."Prod. Order No." := ProdOrderLineP."Prod. Order No.";
+          ProdOrderRtngLine."Routing Reference No." := ProdOrderLineP."Routing Reference No.";
+          ProdOrderRtngLine."Routing No." := ProdOrderLineP."Routing No.";
+          ProdOrderRtngLine."Operation No." := FORMAT(OperationNoL);
+          ProdOrderRtngLine."Next Operation No." := FORMAT(OperationNoL + 10);
+          ProdOrderRtngLine."Previous Operation No." := FORMAT(OperationNoL - 10);
+          //Sid.ojo 290507 --------->
+          //JAL 05.09.17 ProdOrderRtngLine."Activity type" := CalcLines."Activity type";
+          //<-------- Sid.ojo 290507
+          ProdOrderRtngLine.Type := ProdOrderRtngLine.Type::"Work Center"; // ??
+          ProdOrderRtngLine."No." := CalcLines."Work Center";
+          ProdOrderRtngLine."Work Center No." := CalcLines."Work Center";
+          ProdOrderRtngLine."Work Center Group Code" := WorkCenter."Work Center Group Code";
+          ProdOrderRtngLine.Description := CalcLines.Description;
+          //hhe 4.2.13 -> IF (CalcLines."Work Center" = 'VIAS 1') OR (CalcLines."Work Center" = 'VIAS 2') THEN
+          IF WorkCenter."Subcontractor No." = '' THEN
+          //hhe 4.2.13<-
+            ProdOrderRtngLine."Setup Time" := CalcLines.Quantity
+          ELSE
+            ProdOrderRtngLine."Setup Time" := 0;
+          ProdOrderRtngLine."Run Time" := 0;
+          ProdOrderRtngLine."Wait Time" := 0;
+          ProdOrderRtngLine."Move Time" := 0;
+          ProdOrderRtngLine."Fixed Scrap Quantity" := 0;
+          ProdOrderRtngLine."Lot Size" :=  0;
+          ProdOrderRtngLine."Scrap Factor %" := 0;
+          ProdOrderRtngLine."Minimum Process Time" := 0;
+          ProdOrderRtngLine."Maximum Process Time" := 0;
+          ProdOrderRtngLine."Concurrent Capacities" := 0;
+          IF ProdOrderRtngLine."Concurrent Capacities" = 0 THEN
+            ProdOrderRtngLine."Concurrent Capacities" := 1;
+          ProdOrderRtngLine."Send-Ahead Quantity" := 0;
+          ProdOrderRtngLine."Setup Time Unit of Meas. Code" := CalcLines."Unit of Measure";
+          ProdOrderRtngLine."Run Time Unit of Meas. Code" := CalcLines."Unit of Measure";
+          ProdOrderRtngLine."Wait Time Unit of Meas. Code" := CalcLines."Unit of Measure";
+          ProdOrderRtngLine."Move Time Unit of Meas. Code" := CalcLines."Unit of Measure";
+          ProdOrderRtngLine."Routing Link Code" := '';
+          ProdOrderRtngLine."Standard Task Code" := '';
+          ProdOrderRtngLine."Sequence No. (Forward)" := 0;
+          ProdOrderRtngLine."Sequence No. (Backward)" := 0;
+          ProdOrderRtngLine."Fixed Scrap Qty. (Accum.)" := 0;
+          ProdOrderRtngLine."Scrap Factor % (Accumulated)" := 0;
+          ProdOrderRtngLine."Unit Cost per" := CalcLines."Unit Cost";
+
+          CostCalcMgtL.RoutingCostPerUnit(
+            ProdOrderRtngLine.Type,
+            ProdOrderRtngLine."No.",
+            ProdOrderRtngLine."Direct Unit Cost",
+            ProdOrderRtngLine."Indirect Cost %",
+            ProdOrderRtngLine."Overhead Rate",
+            ProdOrderRtngLine."Unit Cost per",
+            ProdOrderRtngLine."Unit Cost Calculation");
+          CASE ProdOrderRtngLine.Type OF
+            ProdOrderRtngLine.Type::"Work Center":
+              BEGIN
+                  WorkCenter.GET(CalcLines."Work Center");
+                  ProdOrderRtngLine."Flushing Method" := WorkCenter."Flushing Method";
+               END;
+            ProdOrderRtngLine.Type::"Machine Center":
+              BEGIN
+                MachineCenter.GET(ProdOrderRtngLine."No.");
+                ProdOrderRtngLine."Flushing Method" := MachineCenter."Flushing Method";
+              END;
+          END;
+          ProdOrderRtngLine.VALIDATE("Direct Unit Cost");
+          ProdOrderRtngLine."Starting Time" := ProdOrderLineP."Starting Time";
+          ProdOrderRtngLine."Starting Date" := ProdOrderLineP."Starting Date";
+          ProdOrderRtngLine."Ending Time" := ProdOrderLineP."Ending Time";
+          ProdOrderRtngLine."Ending Date" := ProdOrderLineP."Ending Date";
+          ProdOrderRtngLine.UpdateDatetime;
+          ProdOrderRtngLine.INSERT;
+        UNTIL CalcLines.NEXT = 0;
+      CalculateProdOrderP.TransferTaskInfo(ProdOrderRtngLine, ProdOrderLineP."Routing Version Code");
+    END;
+
+    LOCAL PROCEDURE TransferComponents@1000000002(VAR ProdOrderLineP@1101103001 : Record 5406;QuantityP@1002 : Decimal;BlockedP@1101103003 : Boolean);
+    VAR
+      ProdOrderComponentL@1101103000 : Record 5407;
+      BOMHeaderL@1003 : Record 99000771;
+      ComponentSKUL@1004 : Record 5700;
+      Item2L@1007 : Record 27;
+      ItemCalcLineL@1000000000 : Record 73052;
+      ReqQtyL@1006 : Decimal;
+      NextProdOrderCompLineNoL@1101103002 : Integer;
+      Calc_DescriptionL@1101103004 : Text[30];
+    BEGIN
+      ProdOrderComponentL.LOCKTABLE;
+
+      ItemCalcLineL.SETRANGE("Calc. No.", ProdOrderLineP."Calculation No.");
+      ItemCalcLineL.SETRANGE(Type, ItemCalcLineL.Type::Item);
+      //02. hhe 22.09.06->
+      ItemCalcLineL.SETFILTER(Quantity,'>0');
+      //02. hhe 22.09.06<-
+      IF ItemCalcLineL.FIND('-') THEN
+        REPEAT
+          ProdOrderComponentL.RESET;
+          ProdOrderComponentL.SETRANGE(Status, ProdOrderLineP.Status);
+          ProdOrderComponentL.SETRANGE("Prod. Order No.", ProdOrderLineP."Prod. Order No.");
+          ProdOrderComponentL.SETRANGE("Prod. Order Line No.", ProdOrderLineP."Line No.");
+          IF ProdOrderComponentL.FIND('+') THEN
+            NextProdOrderCompLineNoL := ProdOrderComponentL."Line No." + 10000
+          ELSE
+            NextProdOrderCompLineNoL := 10000;
+
+          ProdOrderComponentL.INIT;
+          ProdOrderComponentL.BlockDynamicTracking(BlockedP);
+          ProdOrderComponentL.Status := ProdOrderLineP.Status;
+          ProdOrderComponentL."Prod. Order No." := ProdOrderLineP."Prod. Order No.";
+          ProdOrderComponentL."Prod. Order Line No." := ProdOrderLineP."Line No.";
+          ProdOrderComponentL."Line No." := NextProdOrderCompLineNoL;
+
+          Item2L.GET( ItemCalcLineL."No." );
+          ProdOrderComponentL.VALIDATE("Item No.", ItemCalcLineL."No.");
+          //hhe 01.12.06->
+          ProdOrderComponentL."Variant Code" := ItemCalcLineL."Variant Code";
+          //hhe 01.12.06<-
+          //03. ->
+          Calc_DescriptionL := COPYSTR(ItemCalcLineL.Description,1,30);
+          ProdOrderComponentL.Description := Calc_DescriptionL;
+          //03. <-
+          ProdOrderComponentL.VALIDATE("Unit of Measure Code", ItemCalcLineL."Unit of Measure");
+          ProdOrderComponentL.VALIDATE("Quantity per",ItemCalcLineL.Quantity);
+          ProdOrderComponentL.GetDefaultBin;
+          ProdOrderComponentL.INSERT(TRUE);
+      UNTIL ItemCalcLineL.NEXT = 0;
+    END;
+    [EventSubscriber(Table,37,OnAfterValidateEvent,"Calculation No.")]
+    LOCAL PROCEDURE TAB37OnAfterValidateEventCalculationNo@1101103000(VAR Rec@1101103000 : Record 37;VAR xRec@1101103001 : Record 37;CurrFieldNo@1101103002 : Integer);
+    VAR
+      TXT001L@1101103003 : TextConst 'ENU=Transfer calculation price to sales line?;NOR=Vil du overf›re kalkylepris til salgslinje?';
+      SalesHeaderL@1101103004 : Record 36;
+      PriceCalcHeadL@1101103005 : Record 73051;
+    BEGIN
+      IF (Rec."Calculation No." <> '') THEN BEGIN
+        IF CONFIRM(TXT001L) THEN BEGIN
+          GetSalesHeader(Rec, SalesHeaderL);
+          IF PriceCalcHeadL.GET(Rec."Calculation No.") THEN BEGIN
+            IF SalesHeaderL."Currency Factor" = 0 THEN
+              Rec.VALIDATE("Unit Price", PriceCalcHeadL."Sales Price")
+            ELSE
+              Rec.VALIDATE("Unit Price", ROUND((PriceCalcHeadL."Sales Price" * SalesHeaderL."Currency Factor"),1));
+          END;
+        END;
+      END;
+    END;
+
+    [EventSubscriber(Page,46,OnAfterActionEvent,"Item Calculation")]
+    LOCAL PROCEDURE PAG46OnAfterActionEventItemCalculation@1101103001(VAR Rec@1101103000 : Record 37);
+    BEGIN
+      RunPriceCalculationPage(Rec);
+    END;
+
+    [EventSubscriber(Page,95,OnAfterActionEvent,"Item Calculation")]
+    LOCAL PROCEDURE PAG95OnAfterActionEventItemCalculation@1101103003(VAR Rec@1101103000 : Record 37);
+    BEGIN
+      RunPriceCalculationPage(Rec);
+    END;
+
+    [EventSubscriber(Codeunit,99000773,OnTransferRoutingCalc)]
+    LOCAL PROCEDURE COD99000773OnTransferRoutingCalc@1101103002(VAR Sender@1101103000 : Codeunit 99000773;VAR ProdOrderLineP@1101103001 : Record 5406);
+    BEGIN
+      TransferRoutingCalc(Sender, ProdOrderLineP);
+    END;
+
+    [EventSubscriber(Codeunit,99000773,OnTransferComponents)]
+    LOCAL PROCEDURE COD99000773OnTransferComponents@1101103010(VAR Sender@1101103000 : Codeunit 99000773;VAR ProdOrderLineP@1101103001 : Record 5406;QuanityP@1101103002 : Decimal;BlockedP@1101103003 : Boolean);
+    BEGIN
+      TransferComponents(ProdOrderLineP, QuanityP, BlockedP);
+    END;
+    [EventSubscriber(Codeunit,99000787,OnBeforeUpdateDatetime)]
+    LOCAL PROCEDURE COD99000787OnBeforeUpdateDatetime@1101103004(VAR ProdOrderLineP@1101103000 : Record 5406;VAR SalesLineP@1101103001 : Record 37);
+    BEGIN
+      //hhe 23.06.05->
+      IF SalesLineP."Calculation No." <>'' THEN
+        ProdOrderLineP."Calculation No." := SalesLineP."Calculation No.";
+      //hhe 23.06.05<-
+    END;
+
+    [EventSubscriber(Page,73056,OnAfterActionEvent,"Indent Lines")]
+    LOCAL PROCEDURE PAG73056OnAfterActionEventIndentLines@1101103008(VAR Rec@1101103000 : Record 73051);
+    BEGIN
+      IndentItemCalculation(Rec);
+    END;
+
+    PROCEDURE Indent@1101103005(CalculationNoP@1000 : Code[20]);
+    VAR
+      ItemCalcLineL@1101103003 : Record 73052;
+      WindowL@1101103002 : Dialog;
+      SequenceNoL@1101103001 : ARRAY [10] OF Integer;
+      iL@1101103000 : Integer;
+    BEGIN
+      WindowL.OPEN(Text004);
+      ItemCalcLineL.SETRANGE("Calc. No.", CalculationNoP);
+      IF ItemCalcLineL.FINDFIRST THEN
+        REPEAT
+          WindowL.UPDATE(1, ItemCalcLineL."Line No.");
+          IF ItemCalcLineL."Line Type" = ItemCalcLineL."Line Type"::"End-Total" THEN BEGIN
+            IF iL < 1 THEN
+              ERROR(Text005, ItemCalcLineL."Line No.");
+            ItemCalcLineL.Totaling := FORMAT(SequenceNoL[iL]) + '..' + FORMAT(ItemCalcLineL."Line No.");
+            iL := iL - 1;
+          END;
+          ItemCalcLineL.Indentation := iL;
+          ItemCalcLineL.MODIFY;
+          IF ItemCalcLineL."Line Type" = ItemCalcLineL."Line Type"::"Begin-Total" THEN BEGIN
+            iL := iL + 1;
+            SequenceNoL[iL] := ItemCalcLineL."Line No.";
+          END;
+        UNTIL ItemCalcLineL.NEXT = 0;
+
+      WindowL.CLOSE;
+    END;
+
+    LOCAL PROCEDURE IndentItemCalculation@1101103007(VAR ItemCalcHeaderP@1101103000 : Record 73051);
+    BEGIN
+      ItemCalcHeaderP.TESTFIELD("No.");
+      IF NOT
+         CONFIRM(
+           Text000 +
+           Text001 +
+           Text002 +
+           Text003,TRUE)
+      THEN
+        EXIT;
+      Indent(ItemCalcHeaderP."No.");
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 08.02.17 JAL Events for Price Calculation
+      02. 15.09.17 JAL Added option for Indenting lines
+      03. 26.10.17 JAL Changed design and Field ID of Item Calc. Line table
+	  04. 02.01.17 JAL Added OnTransferComponents subscriber and TransferComponents function
+    }
+    END.
+  }
+}
+

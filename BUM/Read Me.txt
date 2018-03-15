@@ -1,0 +1,6 @@
+Version 1.01
+	The COD50000 NOBI.txt file has updated methods to support EHF invoice.
+	Bug fix for testing if mail dialog should be showed.
+	Bug fix to send mail via Outlook.
+Version 1.02
+	TAB60 02. 03.04.17 JAL Added the event OnLookupProfileBeforeShowDialog because of changes in standard object.

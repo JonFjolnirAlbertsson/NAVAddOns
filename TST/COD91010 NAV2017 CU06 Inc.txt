@@ -1,0 +1,135 @@
+OBJECT Codeunit 91010 Library - Sales Inc.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=13.09.17;
+    Time=13:16:52;
+    Modified=Yes;
+    Version List=TST1.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      LibraryUtilityG@1101103000 : Codeunit 131000;
+      LibrarySalesG@1101103001 : Codeunit 130509;
+      LibraryRandomG@1101103003 : Codeunit 130440;
+      LibraryERMG@1101103004 : Codeunit 131300;
+      AssertG@1101103002 : Codeunit 130000;
+      LibraryItemIncG@1101103005 : Codeunit 91008;
+      LibraryProductionIncG@1101103006 : Codeunit 91062;
+
+    PROCEDURE CreateCustomer@1() : Code[20];
+    VAR
+      Customer@1001 : Record 18;
+      VATPostingSetup@1000 : Record 325;
+    BEGIN
+      LibraryERMG.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      LibrarySalesG.CreateCustomer(Customer);
+      Customer.VALIDATE("VAT Bus. Posting Group",VATPostingSetup."VAT Bus. Posting Group");
+      Customer.MODIFY(TRUE);
+      EXIT(Customer."No.");
+    END;
+
+    PROCEDURE CreateSalesLines@1101103002(VAR SalesLine@1000 : Record 37;SalesHeader@1002 : Record 36);
+    VAR
+      VATPostingSetup@1003 : Record 325;
+      Counter@1001 : Integer;
+    BEGIN
+      // Using random value because value is not important.
+      FOR Counter := 1 TO 1 + LibraryRandomG.RandInt(5) DO BEGIN
+        VATPostingSetup.SETRANGE("Unrealized VAT Type",VATPostingSetup."Unrealized VAT Type"::" ");
+        LibraryERMG.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+        LibrarySalesG.CreateSalesLine(
+          SalesLine,SalesHeader,SalesLine.Type::Item,
+          LibraryItemIncG.CreateItemByVATProdPostingGroup(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandomG.RandDec(10,2));
+      END;
+    END;
+
+    PROCEDURE CreateSalesOrder@10(VAR SalesHeader@1000 : Record 36;VAR SalesLine@1001 : Record 37);
+    VAR
+      VATPostingSetup@1003 : Record 325;
+      Counter@1002 : Integer;
+    BEGIN
+      // Set Stock out Warnings to No in Sales and Receivables Setup.
+      LibrarySalesG.SetStockoutWarning(FALSE);
+      VATPostingSetup.SETRANGE("Unrealized VAT Type",VATPostingSetup."Unrealized VAT Type"::" ");
+      LibraryERMG.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      // Create Sales Order.
+      LibrarySalesG.CreateSalesHeader(SalesHeader,SalesHeader."Document Type"::Order,CreateCustomer);
+
+      // Create Random Sales Lines. Make sure that No. of Sales Lines always more than 1.
+      FOR Counter := 1 TO 1 + LibraryRandomG.RandInt(8) DO
+        LibrarySalesG.CreateSalesLine(
+          SalesLine,SalesHeader,SalesLine.Type::Item,
+          LibraryItemIncG.CreateItemByVATProdPostingGroup(VATPostingSetup."VAT Prod. Posting Group"),LibraryRandomG.RandInt(10));
+    END;
+
+    PROCEDURE CreateSalesOrderWithProdItems@1101103000(VAR SalesHeaderP@1000 : Record 36;VAR SalesLineP@1001 : Record 37);
+    VAR
+      VATPostingSetup@1003 : Record 325;
+      Counter@1002 : Integer;
+      ProductionBOMHeaderL@1101103000 : Record 99000771;
+      ItemL@1101103001 : Record 27;
+    BEGIN
+      // Set Stock out Warnings to No in Sales and Receivables Setup.
+      LibrarySalesG.SetStockoutWarning(FALSE);
+      VATPostingSetup.SETRANGE("Unrealized VAT Type",VATPostingSetup."Unrealized VAT Type"::" ");
+      LibraryERMG.FindVATPostingSetup(VATPostingSetup,VATPostingSetup."VAT Calculation Type"::"Normal VAT");
+      // Create Sales Order.
+      LibrarySalesG.CreateSalesHeader(SalesHeaderP,SalesHeaderP."Document Type"::Order,CreateCustomer);
+      // Create Random Sales Lines. Make sure that No. of Sales Lines always more than 1.
+      FOR Counter := 1 TO 1 + LibraryRandomG.RandInt(8) DO
+        BEGIN
+          SalesLineP.INIT;
+          LibrarySalesG.CreateSalesLine(
+            SalesLineP,SalesHeaderP,SalesLineP.Type::Item,
+            LibraryProductionIncG.CreateProdItemAndBOM(ItemL),LibraryRandomG.RandIntInRange(1, 10));
+        END;
+    END;
+
+    PROCEDURE OpenSalesOrderPlanning@135(No@1001 : Code[20]);
+    VAR
+      SalesOrderPlanning@1000 : Page 99000883;
+    BEGIN
+      // Open Sales Order Planning page for required Sales Order.
+      SalesOrderPlanning.SetSalesOrder(No);
+      SalesOrderPlanning.RUNMODAL;
+    END;
+
+    PROCEDURE SetFilterOnSalesLinesFromHeader@1101103001(SalesHeaderP@1002 : Record 36;VAR SalesLineP@1101103000 : Record 37);
+    BEGIN
+      SalesLineP.RESET;
+      SalesLineP.SETRANGE("Document Type", SalesHeaderP."Document Type");
+      SalesLineP.SETRANGE("Document No.", SalesHeaderP."No.");
+    END;
+
+    PROCEDURE SetFilterOnSalesLinesFromLine@1101103003(SalesLineFromP@1002 : Record 37;VAR SalesLineP@1101103000 : Record 37);
+    BEGIN
+      SalesLineP.RESET;
+      SalesLineP.SETRANGE("Document Type", SalesLineFromP."Document Type");
+      SalesLineP.SETRANGE("Document No.", SalesLineFromP."Document No.");
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 06.09.17 JAL Common Incadea functions for testing Sales functionality
+                       Functions copied from COD134378 "ERM Sales Order"
+                        CreateItem
+                        CreateSalesLines
+                        CreateSalesOrder
+                        CreateCustomer
+    }
+    END.
+  }
+}
+

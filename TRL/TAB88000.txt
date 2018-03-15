@@ -1,0 +1,45 @@
+OBJECT Table 88000 Translation Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01.09.17;
+    Time=14:16:15;
+    Modified=Yes;
+    Version List=TRL1.01;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Translation Setup;
+               NOR=Oversettelse oppsett];
+    LookupPageID=Page88000;
+    DrillDownPageID=Page88000;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Primary Key         ;Code10        ;CaptionML=[ENU=Primary Key;
+                                                              NOR=Prim‘rn›kkel] }
+    { 2   ;   ;Use Page Filter in OMA;Boolean     ;CaptionML=[ENU=Use Page Filter when"Write Changed Captions to Database" in OMA;
+                                                              NOR=Bruk Side-filter  n†r du kj›rer "Write Changed Capton to Database" i OMA] }
+  }
+  KEYS
+  {
+    {    ;Primary Key                             ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Incadea Translation Tool
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,150 @@
+OBJECT Codeunit 91008 Library - Item Inc.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=13.09.17;
+    Time=10:14:04;
+    Modified=Yes;
+    Version List=TST1.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      LibraryUtilityG@1101103000 : Codeunit 131000;
+      LibraryInventoryG@1101103001 : Codeunit 132201;
+      AssertG@1101103002 : Codeunit 130000;
+      LibraryRandomG@1101103003 : Codeunit 130440;
+      LibraryProductionIncG@1101103004 : Codeunit 91062;
+
+    PROCEDURE CreateItemByVATProdPostingGroup@9(VATProdPostingGroup@1005 : Code[10]) : Code[20];
+    VAR
+      Item@1000 : Record 27;
+      LibraryInventory@1001 : Codeunit 132201;
+    BEGIN
+      LibraryInventory.CreateItem(Item);
+      Item.VALIDATE("VAT Prod. Posting Group",VATProdPostingGroup);
+
+      // Using RANDOM value for Unit Price.
+      Item.VALIDATE("Unit Price",LibraryRandomG.RandInt(100));
+      Item.MODIFY(TRUE);
+      EXIT(Item."No.");
+    END;
+
+    PROCEDURE CreateItemByCostingAndReplenishment@1102601007(VAR Item@1001 : Record 27;CostingMethod@1000 : Option;ReplenishmentMethod@1002 : Option) : Code[20];
+    VAR
+      UnitCost@1003 : Decimal;
+    BEGIN
+      // Create item.
+      LibraryInventoryG.CreateItem(Item);
+
+      // Set desired costing method and unit cost.
+      UnitCost := LibraryRandomG.RandInt(100);
+      Item.VALIDATE("Costing Method",CostingMethod);
+      Item.VALIDATE("Replenishment System",ReplenishmentMethod);
+      Item.VALIDATE("Unit Cost",UnitCost);
+      Item.VALIDATE("Last Direct Cost",Item."Unit Cost");
+
+      IF CostingMethod = Item."Costing Method"::Standard THEN
+        Item.VALIDATE("Standard Cost",UnitCost);
+
+      Item.MODIFY(TRUE);
+
+      EXIT(Item."No.");
+    END;
+
+    PROCEDURE CreateProdItem@18(VAR Item@1001 : Record 27;ProductionBOMNo@1000 : Code[20]) : Code[20];
+    BEGIN
+      LibraryInventoryG.CreateItem(Item);
+      Item.VALIDATE("Production BOM No.",ProductionBOMNo);
+      Item.VALIDATE("Replenishment System",Item."Replenishment System"::"Prod. Order");
+      Item.MODIFY(TRUE);
+      EXIT(Item."No.");
+    END;
+
+    PROCEDURE CreateItemWithBOM@1101103028(VAR ItemP@1101103000 : Record 27);
+    VAR
+      ItemTemplateL@1101103001 : Record 1301;
+      ConfigTemplateHeaderL@1101103007 : Record 8618;
+      ItemDiscountGroupL@1101103002 : Record 341;
+      RoutingHeaderL@1101103004 : Record 99000763;
+      RoutingLineL@1101103005 : Record 99000764;
+      ProductionBOMHeaderL@1101103006 : Record 99000771;
+      CodeL@1101103009 : Code[10];
+      DescriptionL@1101103003 : Text;
+      NumberOfBOMLinesL@1101103008 : Integer;
+    BEGIN
+      CodeL := LibraryUtilityG.GenerateRandomCode(ItemP.FIELDNO("Shelf No."),DATABASE::Item);
+      DescriptionL := LibraryUtilityG.GenerateRandomText(MAXSTRLEN(ItemP.Description));
+      CreateItemDiscountGroup(ItemDiscountGroupL, '', '');
+      //Verify record exists
+      AssertG.RecordIsNotEmpty(ItemDiscountGroupL);
+      CreateItemFromTemplate('VARE000001', ItemP);//'Vare DETALJ'
+      ItemP.VALIDATE(Description, DescriptionL);
+      ItemP.VALIDATE("Shelf No.", CodeL);
+      ItemP.VALIDATE("Item Disc. Group", ItemDiscountGroupL.Code);
+      ItemP.VALIDATE("Replenishment System", ItemP."Replenishment System"::"Prod. Order");
+      ItemP.VALIDATE("Flushing Method", ItemP."Flushing Method"::Manual);
+      LibraryProductionIncG.CreateRoutings(RoutingHeaderL, RoutingLineL);
+      //Verify record exists
+      AssertG.RecordIsNotEmpty(RoutingHeaderL);
+      ItemP.VALIDATE("Routing No.",RoutingHeaderL."No.");
+      NumberOfBOMLinesL := LibraryRandomG.RandInt(20);
+      LibraryProductionIncG.CreateMultiLineBOM(ProductionBOMHeaderL, ItemP."Base Unit of Measure", NumberOfBOMLinesL );
+      //Verify record exists
+      AssertG.RecordIsNotEmpty(ProductionBOMHeaderL);
+      ItemP.VALIDATE("Production BOM No.", ProductionBOMHeaderL."No.");
+      ItemP.VALIDATE("Reordering Policy", ItemP."Reordering Policy"::"Fixed Reorder Qty.");
+      ItemP.VALIDATE("Reorder Quantity", LibraryRandomG.RandInt(1000));
+      ItemP.MODIFY(TRUE);
+      //Verify record exists
+      AssertG.RecordIsNotEmpty(ItemP);
+      //Verify number of lines in BOM Item.
+      AssertG.AreEqual(NumberOfBOMLinesL, LibraryProductionIncG.VerifyBOMLinesForItem(ItemP), '');
+    END;
+
+    PROCEDURE CreateItemDiscountGroup@1101103000(VAR ItemDiscountGroupP@1101103000 : Record 341;CodeP@1101103001 : Code[20];DescriptionP@1101103002 : Text[50]) : Code[20];
+    BEGIN
+      IF CodeP = '' THEN
+        CodeP := LibraryUtilityG.GenerateRandomCode(ItemDiscountGroupP.FIELDNO(Code),DATABASE::"Item Discount Group");
+      IF DescriptionP = '' THEN
+        DescriptionP := LibraryUtilityG.GenerateRandomText(MAXSTRLEN(ItemDiscountGroupP.Description));
+      ItemDiscountGroupP.INIT;
+      ItemDiscountGroupP.VALIDATE(Code, CodeP);
+      ItemDiscountGroupP.VALIDATE(Description, DescriptionP);
+      ItemDiscountGroupP.INSERT();
+      AssertG.RecordIsNotEmpty(ItemDiscountGroupP);
+      EXIT(ItemDiscountGroupP.Code);
+    END;
+
+    PROCEDURE CreateItemFromTemplate@1101103001(ConfigTemplateHeaderCodeP@1101103000 : Code[10];VAR ItemP@1101103002 : Record 27) : Code[20];
+    VAR
+      ItemTemplateL@1101103001 : Record 1301;
+      ConfigTemplateHeaderL@1101103003 : Record 8618;
+    BEGIN
+      IF ConfigTemplateHeaderCodeP = '' THEN
+        ConfigTemplateHeaderL.SETRANGE("Table ID",  DATABASE::Item)
+      ELSE
+        ConfigTemplateHeaderL.SETRANGE(Code, ConfigTemplateHeaderCodeP);
+      ConfigTemplateHeaderL.FINDFIRST();
+      ItemTemplateL.InsertItemFromTemplate(ConfigTemplateHeaderL, ItemP);
+      EXIT(ItemP."No.")
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 06.09.17 JAL Common Incadea functions for testing Item functionality
+    }
+    END.
+  }
+}
+

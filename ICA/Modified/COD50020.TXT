@@ -1,0 +1,61 @@
+OBJECT Codeunit 50020 Price Calculation
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09.02.17;
+    Time=11.35.00;
+    Modified=Yes;
+    Version List=INC1.0;
+  }
+  PROPERTIES
+  {
+    OnRun=VAR
+            Salgslinjen@1101103000 : Record 37;
+          BEGIN
+          END;
+
+  }
+  CODE
+  {
+
+    [EventSubscriber(Table,37,OnAfterValidateEvent,"Calulation No.")]
+    LOCAL PROCEDURE TAB37OnAfterValidateEventCalculationNo@1101103000(VAR Rec@1101103000 : Record 37;VAR xRec@1101103001 : Record 37;CurrFieldNo@1101103002 : Integer);
+    VAR
+      TXT001L@1101103003 : TextConst 'ENU=Transfer calculation price to sales line?;NOR=Vil du overf›re kalkylepris til salgslinje?';
+      SalesHeaderL@1101103004 : Record 36;
+      PriceCalcHeadL@1101103005 : Record 50008;
+    BEGIN
+      IF CONFIRM(TXT001L) THEN BEGIN
+        GetSalesHeader(Rec, SalesHeaderL);
+        IF PriceCalcHeadL.GET(Rec."Calulation No.") THEN BEGIN
+          IF SalesHeaderL."Currency Factor" = 0 THEN
+            Rec.VALIDATE("Unit Price", PriceCalcHeadL."Sales price")
+          ELSE
+            Rec.VALIDATE("Unit Price", ROUND((PriceCalcHeadL."Sales price" * SalesHeaderL."Currency Factor"),1));
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE GetSalesHeader@1(VAR SalesLineP@1101103001 : Record 37;VAR SalesHeaderP@1101103000 : Record 36);
+    BEGIN
+      //Function is copied from TAB37.
+      SalesLineP.TESTFIELD("Document No.");
+      IF (SalesLineP ."Document Type" <> SalesHeaderP."Document Type") OR (SalesLineP."Document No." <> SalesHeaderP."No.") THEN BEGIN
+        SalesHeaderP.GET(SalesLineP."Document Type",SalesLineP."Document No.");
+        IF SalesHeaderP."Currency Code" <> '' THEN
+          SalesHeaderP.TESTFIELD("Currency Factor");
+      END;
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 08.02.17 JAL Events for Price Calculation
+    }
+    END.
+  }
+}
+

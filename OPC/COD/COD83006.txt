@@ -1,0 +1,331 @@
+OBJECT Codeunit 83006 Mõnstre av_stopp op.tid
+{
+  OBJECT-PROPERTIES
+  {
+    Date=21.04.17;
+    Time=15.32.58;
+    Modified=Yes;
+    Version List=OPC;
+  }
+  PROPERTIES
+  {
+    TableNo=83010;
+    OnRun=BEGIN
+            LineNo_OPC := 10000; //hhe 21.09.10
+
+            //hhe 16.06.06->  Sletter blanke linjer fõr bokfõring for Ü unngÜ feilmelding
+            recOperasjonstider.RESET;
+            recOperasjonstider.SETCURRENTKEY("Machine Center","Starting Date","Ending Date");
+            recOperasjonstider.SETRANGE("Machine Center",'');
+            IF recOperasjonstider.FIND('-') THEN
+              recOperasjonstider.DELETEALL;
+            //hhe 16.06.06<-
+
+
+            // Setter inn sluttdato og sluttid  for ALLE operasjoner til denne prod.ressurs
+            recOperasjonstider.RESET;
+            recOperasjonstider.SETCURRENTKEY("Machine Center","Starting Date","Ending Date"); //03. lagt til
+            recOperasjonstider.SETRANGE("Machine Center","Machine Center"); //03. lagt til
+            recOperasjonstider.SETRANGE(recOperasjonstider."Finish Now",  TRUE);
+            recOperasjonstider.SETRANGE(recOperasjonstider.Post,  FALSE);
+            IF recOperasjonstider.FIND('-') THEN
+            REPEAT
+              IF (recOperasjonstider."Starting Date" <> 0D) AND
+                 (recOperasjonstider."Ending Date" = 0D) THEN
+                recOperasjonstider."Ending Date" := TODAY;
+              IF (recOperasjonstider."Starting Time" <> 0T) AND
+                 (recOperasjonstider."Ending Time" = 0T)THEN
+                recOperasjonstider."Ending Time" := TIME;
+              recOperasjonstider.MODIFY;
+
+              SearchDeductions( recOperasjonstider );
+
+            UNTIL recOperasjonstider.NEXT = 0;
+
+            // Bokfõrer tidlinjer
+            //SID11.OJO 290813 ---------------->
+            recOperasjonstider.SETCURRENTKEY("Prod. Order No.","Routing No.","Operation No.","Machine Center","Finish Now",Post,
+            "Starting Time","Starting Date","Ending Time","Ending Date");
+            //<--------------- SID11.OJO 290813
+            recOperasjonstider.RESET;
+            recOperasjonstider.SETRANGE(recOperasjonstider."Prod. Order No.",  "Prod. Order No.");
+            recOperasjonstider.SETRANGE(recOperasjonstider."Routing No.",  "Routing No.");
+            recOperasjonstider.SETRANGE(recOperasjonstider."Operation No.",  "Operation No.");
+            recOperasjonstider.SETRANGE(recOperasjonstider."Machine Center","Machine Center"); //ny hhe 17.09.10    04.
+            recOperasjonstider.SETRANGE(recOperasjonstider."Finish Now",  TRUE);
+            recOperasjonstider.SETRANGE(recOperasjonstider.Post,  FALSE);
+            recOperasjonstider.SETFILTER(recOperasjonstider."Starting Date", '<>%1', 0D);
+            recOperasjonstider.SETFILTER(recOperasjonstider."Starting Time", '<>%1', 0T);
+            recOperasjonstider.SETFILTER(recOperasjonstider."Ending Date", '<>%1', 0D);
+            recOperasjonstider.SETFILTER(recOperasjonstider."Ending Time", '<>%1', 0T);
+
+            IF recOperasjonstider.FIND('-') THEN BEGIN            //hvis det finnes linjer i RunTime for denne
+              OPCOppsett.GET();                                   //prod.ressurs med Bokfõrt = Nei
+              OPCOppsett.TESTFIELD("Output Batch Name Time");     //og Avlutt nÜ =ja,  sÜ...
+              OPCOppsett.TESTFIELD("Output Jrn Name Time");
+              OPCOppsett.TESTFIELD("Cap. Journal Batch Name OPC");
+              OPCOppsett.TESTFIELD("Cap. Journal Name OPC");
+              FerdigMeldKladdLinje.SETRANGE(FerdigMeldKladdLinje."Journal Template Name", OPCOppsett."Output Batch Name Time");
+              FerdigMeldKladdLinje.SETRANGE(FerdigMeldKladdLinje."Journal Batch Name", OPCOppsett."Output Jrn Name Time");
+              IF FerdigMeldKladdLinje.FIND('+') THEN
+                  LineNo_OPC := FerdigMeldKladdLinje."Line No.";
+
+              ProdOrdreLinje.SETRANGE(ProdOrdreLinje.Status, ProdOrdreLinje.Status::Released);
+              ProdOrdreLinje.SETRANGE(ProdOrdreLinje."Prod. Order No.", "Prod. Order No.");
+              ProdOrdreLinje.SETRANGE(ProdOrdreLinje."Routing No.", "Routing No.");
+              IF ProdOrdreLinje.FIND('-') THEN
+                IF Vare.GET(ProdOrdreLinje."Item No.") THEN
+                  ProdOrdreLinje.TESTFIELD(ProdOrdreLinje."Routing No.")
+                ELSE ERROR('Fant ikke vare %1!', ProdOrdreLinje."Item No.");
+              REPEAT
+                IF (ProdOrdreLinje."Prod. Order No." <> '') AND       //dette skjer ved mõnstring ut fra REELL OPERASJON (ikke Ind.tid)
+                   (GetHours(recOperasjonstider."Starting Date",     //dersom Ant.timer <>0
+                   recOperasjonstider."Starting Time", recOperasjonstider."Ending Date",
+                   recOperasjonstider."Ending Time") <>0) THEN BEGIN
+                      FerdigMeldKladdLinje.INIT;
+                      FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje."Journal Template Name", OPCOppsett."Output Batch Name Time");
+                      FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje."Journal Batch Name", OPCOppsett."Output Jrn Name Time");
+                      LineNo_OPC := LineNo_OPC +10000; //21.09.10
+                      FerdigMeldKladdLinje."Line No." := LineNo_OPC;
+                      FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje."Entry Type",
+                      FerdigMeldKladdLinje."Entry Type"::Output);
+                      FerdigMeldKladdLinje.INSERT(TRUE);
+                      FerdigMeldKladdLinje.VALIDATE("Order Type", FerdigMeldKladdLinje."Order Type"::Production);
+                      FerdigMeldKladdLinje.VALIDATE("Order No.", "Prod. Order No.");
+                      FerdigMeldKladdLinje.VALIDATE("Item No.", Vare."No.");
+                      FerdigMeldKladdLinje.VALIDATE("Operation No.","Operation No.");
+                      FerdigMeldKladdLinje."Posting Date" := recOperasjonstider."Ending Date";
+                      FerdigMeldKladdLinje."Document Date" := TODAY;
+                      FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje.Type,
+                      FerdigMeldKladdLinje.Type::"Machine Center");
+                      FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje."No.", recOperasjonstider."Machine Center");
+                      FerdigMeldKladdLinje."Order Line No." :=  ProdOrdreLinje."Line No.";
+                      FerdigMeldKladdLinje."Starting Time" := recOperasjonstider."Starting Time";
+                      FerdigMeldKladdLinje."Ending Time" := recOperasjonstider."Ending Time";
+                      FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje."Run Time",GetHours(recOperasjonstider."Starting Date",
+                        recOperasjonstider."Starting Time", recOperasjonstider."Ending Date", recOperasjonstider."Ending Time"));
+                      FerdigMeldKladdLinje.MODIFY(TRUE);
+                      recOperasjonstider.Post := TRUE;
+                      recOperasjonstider.MODIFY;
+
+                      //Her skjer BOKFùRING dersom mõnstring av en REELL operasjon (ikke ind.tid):
+                      FerdigMeldKladdLinje.RESET;
+                      FerdigMeldKladdLinje.SETRANGE("Journal Template Name",OPCOppsett."Output Batch Name Time");
+                      FerdigMeldKladdLinje.SETRANGE("Journal Batch Name",OPCOppsett."Output Jrn Name Time");
+                      IF FerdigMeldKladdLinje.FIND('-') THEN BEGIN
+                        CODEUNIT.RUN(CODEUNIT::"Item Jnl.-Post",FerdigMeldKladdLinje);
+                      END;
+
+                      //17.09.10<-
+                      END ELSE BEGIN      //her kommer det som skjer dersom det mõnstres ut av INDIREKTE TID...
+                       IF (ProdOrdreLinje."Prod. Order No." = '') AND (GetHours(recOperasjonstider."Starting Date",
+                          recOperasjonstider."Starting Time", recOperasjonstider."Ending Date",
+                          recOperasjonstider."Ending Time") <>0) THEN BEGIN
+                            FerdigMeldKladdLinje.SETRANGE(FerdigMeldKladdLinje."Journal Template Name",
+                            OPCOppsett."Cap. Journal Batch Name OPC");
+                            FerdigMeldKladdLinje.SETRANGE(FerdigMeldKladdLinje."Journal Batch Name",
+                            OPCOppsett."Cap. Journal Name OPC");
+                            IF FerdigMeldKladdLinje.FIND('+') THEN
+                              LineNo_OPC := FerdigMeldKladdLinje."Line No.";
+                            FerdigMeldKladdLinje.INIT;
+                            FerdigMeldKladdLinje.VALIDATE("Journal Template Name", OPCOppsett."Cap. Journal Batch Name OPC");
+                            FerdigMeldKladdLinje.VALIDATE("Journal Batch Name", OPCOppsett."Cap. Journal Name OPC");
+                            FerdigMeldKladdLinje."Document No." := OPCOppsett."Document No. Ind.Time";
+                            LineNo_OPC := LineNo_OPC + 10000;
+                            FerdigMeldKladdLinje."Line No." := LineNo_OPC;
+                            FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje."Entry Type",
+                            FerdigMeldKladdLinje."Entry Type"::Output);
+                            FerdigMeldKladdLinje.INSERT(TRUE);
+                            FerdigMeldKladdLinje."Posting Date" := recOperasjonstider."Ending Date";
+                            FerdigMeldKladdLinje."Document Date" := TODAY;
+                            FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje.Type,
+                            FerdigMeldKladdLinje.Type::"Machine Center");
+                            FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje."No.", recOperasjonstider."Machine Center");
+                            FerdigMeldKladdLinje."Starting Time" := recOperasjonstider."Starting Time";
+                            FerdigMeldKladdLinje."Ending Time" := recOperasjonstider."Ending Time";
+                            FerdigMeldKladdLinje.VALIDATE(FerdigMeldKladdLinje."Stop Time",GetHours(recOperasjonstider."Starting Date",
+                            recOperasjonstider."Starting Time", recOperasjonstider."Ending Date", recOperasjonstider."Ending Time"));
+                            FerdigMeldKladdLinje."Stop Code" := recOperasjonstider."Stop Code";
+                            FerdigMeldKladdLinje.MODIFY(TRUE);
+                            recOperasjonstider.Post := TRUE; //20.09.10 hentet inn hit fra kode lenger ned
+                            recOperasjonstider.MODIFY;       //20.09.10 hentet inn hit fra kode lenger ned
+                          END;
+                       //Her skjer bokfõring dersom mõnstring av Indirekte tid:
+                       FerdigMeldKladdLinje.RESET;
+                       FerdigMeldKladdLinje.SETRANGE("Journal Template Name",OPCOppsett."Cap. Journal Batch Name OPC");
+                       FerdigMeldKladdLinje.SETRANGE("Journal Batch Name",OPCOppsett."Cap. Journal Name OPC");
+                       IF FerdigMeldKladdLinje.FIND('-') THEN
+                         CODEUNIT.RUN(CODEUNIT::"Item Jnl.-Post",FerdigMeldKladdLinje);
+                      END;
+              UNTIL recOperasjonstider.NEXT = 0;
+            END;
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      recOperasjonstider@1080006 : Record 83010;
+      OPCOppsett@1080005 : Record 83001;
+      ProdOrdreLinje@1080004 : Record 5406;
+      Vare@1080003 : Record 27;
+      FerdigMeldKladdLinje@1080002 : Record 83;
+      StemplTid@1080001 : Record 83009;
+      ProdO_ruteLinje@1080000 : Record 5409;
+      FirstRecOpLine@1080007 : Boolean;
+      OutPutQty@1080008 : Decimal;
+      ScrapQty@1080009 : Decimal;
+      ScrapCode@1080010 : Code[20];
+      ScrapComment@1080011 : Text[50];
+      ScrapQty2@1080012 : Decimal;
+      ScrapCode2@1080017 : Code[20];
+      ScrapQty3@1080016 : Decimal;
+      ScrapCode3@1080015 : Code[20];
+      ScrapComment2@1080014 : Text[50];
+      ScrapComment3@1080013 : Text[50];
+      LineNo_OPC@1080018 : Integer;
+
+    PROCEDURE SearchDeductions@1000000003(VAR RunTimes@1000000000 : Record 83010);
+    VAR
+      RunTimeDeduction@1000000003 : Record 83012;
+      RunTimes2@1000000002 : Record 83010;
+      NewEntryNo@1000000001 : Integer;
+    BEGIN
+      RunTimeDeduction.RESET;
+      IF RunTimeDeduction.FIND('-') THEN
+        REPEAT
+          RunTimes2.RESET;
+          RunTimes2.SETRANGE("Prod. Order No.",  RunTimes."Prod. Order No.");
+          RunTimes2.SETRANGE("Routing No.",  RunTimes."Routing No.");
+          RunTimes2.SETRANGE("Operation No.",  RunTimes."Operation No.");
+          //hhe 12.10.06->
+          RunTimes2.SETRANGE("Machine Center",  RunTimes."Machine Center");
+          //hhe 12.10.06<-
+          RunTimes2.SETRANGE("Finish Now",  TRUE);
+          RunTimes2.SETRANGE(Post,  FALSE);
+          RunTimes2.SETRANGE("Starting Date", RunTimes."Starting Date");
+          RunTimes2.SETFILTER("Starting Time", '<=%1', RunTimeDeduction."From Time");
+          //hhe 28.09.06->  //dersom man avslutter jobben over midnatt
+          IF RunTimes."Ending Date" > RunTimes."Starting Date" THEN
+            RunTimes2.SETRANGE("Ending Date", RunTimes."Starting Date")
+          ELSE
+          //hhe 28.09.06<-
+          RunTimes2.SETRANGE("Ending Date", RunTimes."Ending Date");
+          RunTimes2.SETFILTER("Ending Time", '>=%1', RunTimeDeduction."To Time");
+          IF RunTimes2.FIND('-') THEN
+            //IF NOT ExisitingDeductionLine(RunTimes, RunTimeDeduction)
+            IF (NOT ExisitingDeductionLine(RunTimes, RunTimeDeduction)) AND (DATE2DWY(RunTimes."Starting Date",1) < 6)  // XX BVM
+            THEN
+             InsertDeductionLine(RunTimes, RunTimeDeduction);
+         UNTIL RunTimeDeduction.NEXT = 0;
+    END;
+
+    PROCEDURE ExisitingDeductionLine@1000000002(VAR RunTimes@1000000001 : Record 83010;VAR RunTimeDeduction@1000000000 : Record 83012) : Boolean;
+    VAR
+      RunTimes2@1000000002 : Record 83010;
+    BEGIN
+      RunTimes2.RESET;
+      RunTimes2.SETRANGE("Prod. Order No.",  RunTimes."Prod. Order No.");
+      RunTimes2.SETRANGE("Routing No.",  RunTimes."Routing No.");
+      RunTimes2.SETRANGE("Operation No.",  RunTimes."Operation No.");
+      //hhe 12.10.06->
+      RunTimes2.SETRANGE("Machine Center",  RunTimes."Machine Center");
+      //hhe 12.10.06<-
+      RunTimes2.SETRANGE("Finish Now", RunTimes."Finish Now");
+      RunTimes2.SETRANGE(Post,  RunTimes.Post);
+      RunTimes2.SETRANGE("Starting Date", RunTimes."Starting Date");
+      RunTimes2.SETRANGE("Starting Time", RunTimeDeduction."To Time");
+      RunTimes2.SETRANGE("Ending Date", RunTimes."Ending Date");
+      RunTimes2.SETRANGE("Ending Time", RunTimeDeduction."From Time");
+      EXIT(RunTimes2.FIND('-'));
+    END;
+
+    PROCEDURE InsertDeductionLine@1000000000(VAR RunTimes@1000000000 : Record 83010;VAR RunTimeDeduction@1000000004 : Record 83012);
+    VAR
+      RunTimes2@1000000001 : Record 83010;
+      NewEntryNo@1000000002 : Integer;
+    BEGIN
+      RunTimes2.RESET;
+      IF RunTimes2.FIND('+') THEN
+        NewEntryNo := RunTimes2."Entry No." + 1
+      ELSE
+        NewEntryNo := 1;
+
+      RunTimes2.INIT;
+      RunTimes2."Entry No." := NewEntryNo;
+      RunTimes2."Prod. Order No." := RunTimes."Prod. Order No.";
+      RunTimes2."Routing No." := RunTimes."Routing No.";
+      RunTimes2."Operation No." := RunTimes."Operation No.";
+      RunTimes2."Machine Center" := RunTimes."Machine Center";
+      RunTimes2.Description := RunTimes.Description;
+      RunTimes2."Starting Date" := RunTimes."Starting Date";
+      RunTimes2."Starting Time" := RunTimeDeduction."To Time";
+      RunTimes2."Ending Date" := RunTimes."Starting Date";
+      RunTimes2."Ending Time" := RunTimeDeduction."From Time";
+      RunTimes2."Finish Now" := TRUE;
+      RunTimes2.Post := FALSE;
+      RunTimes2."Work done at M.C." := RunTimes."Work done at M.C.";
+      //hhe 21.09.10->
+      RunTimes2."Stop Code" :=   RunTimes."Stop Code";
+      //hhe 21.09.10<-
+      RunTimes2.INSERT;
+    END;
+
+    PROCEDURE DeleteBlankRunTimes@1000000004(RunTimes@1080000 : Record 83010);
+    VAR
+      RunTimes3@1000000000 : Record 83010;
+    BEGIN
+      ////010 BVM-->
+      RunTimes3.RESET;
+      RunTimes3.SETRANGE("Prod. Order No.",RunTimes."Prod. Order No.");
+      RunTimes3.SETRANGE("Routing No.",RunTimes."Routing No.");
+      RunTimes3.SETRANGE("Starting Date",0D);
+      RunTimes3.SETRANGE("Starting Time",0T);
+      RunTimes3.SETRANGE("Ending Date",0D);
+      RunTimes3.SETRANGE("Ending Time",0T);
+      IF RunTimes3.FIND('-') THEN BEGIN
+       RunTimes3.DELETEALL;
+      END;
+      //010 BVM--<
+    END;
+
+    PROCEDURE GetHours@1101104001(StartDate@1101104003 : Date;StartTime@1101104002 : Time;EndDate@1101104001 : Date;EndTime@1101104000 : Time) : Decimal;
+    VAR
+      StartDateTime@1101104004 : DateTime;
+      EndDateTime@1101104005 : DateTime;
+    BEGIN
+      StartDateTime := CREATEDATETIME(StartDate, StartTime);
+      EndDateTime := CREATEDATETIME(EndDate, EndTime);
+      EXIT( ((EndDateTime - StartDateTime) / 3600000) );
+    END;
+
+    BEGIN
+    {
+      01. 2009      OJO :Opprettet denne Codeunit med kopiering av programkode fra Elas sin OPC.
+                         Koden er hentet fra knappen "Registrer". Elas brukte denne bÜde til Ü sette start- og slutttid
+
+      02. 17.09.10  HHE :Sette starttidspunkter i.f.m. Mõnstre av....
+                         Jfr. OJO-avsnitt (01.) det skal vi ikke gjõre pÜ ùAS (med denne CU). Denne CU brukes kun for Ü Mõnstre av &
+                         stoppe operasjontid. Jeg har derfor kommentert ut et helt avsnitt
+
+      03. 17.09.10  HHE :Sette slutttidspunkter i.f.m. Mõnstre av....
+                         Jfr. OJO-avsnitt (01.)
+                         Dette var nok mer riktig Ü kopiere inn, men en ting blir feil:
+                         Inn i denne CU fÜr vi KUN Prod.ressursnr., (ikke hverken Prod.o.nr. og op. nr.)
+                         Har derfor skrevet om koden.
+
+      04. 17.09.10  HHE Kun linjer vedr. denne prod.ressurs overfõres til Bokf. i kladden
+      05. 17.09.10  HHE Jfr. 01 - OJO: programkode vedr. bokf. av Vrak, ferdig antall m.m. skal ikke kopieres over
+                        Er derfor kommentert ut
+      06. 20.09.10  HHE Jfr. 01.: Kommentert ut programkode som vedr. bokfõring av Ferdig- og vrakkantall
+      07. 20.09.10  HHE Ind.tid: Setter poster som "Post" tidligere i programkoden
+      08. 20.09.10  HHE Sjekker at kladdemal &-navn finnes for Indirekte tid
+      09. 20.09.10  HHE Dersom posten = INDIREKTE TID -> bokfõres i egen kladd
+      10. 21.09.10  HHE Forbedret tildeling av Linjenr -> Ferdigmeldingskladd
+                        Tar med Stop Code pÜ Fratrekk Lunch/Middag (Deductions)
+      11. 29.08.13  OJO Lagt til bruk av ny nõkkel ved bokfõring av tidslinjer.
+    }
+    END.
+  }
+}
+

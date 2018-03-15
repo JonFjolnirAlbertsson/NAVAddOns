@@ -1,0 +1,322 @@
+OBJECT Codeunit 70000 Compello Integr. Log Mgt.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09.06.17;
+    Time=10:58:15;
+    Modified=Yes;
+    Version List=CMP2.04;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      IntegrationIsActive@1000 : Boolean;
+      IntegrRecRead@1001 : Boolean;
+
+    PROCEDURE OnDatabaseInsert@2(RecRef@1000 : RecordRef);
+    VAR
+      TimeStamp@1001 : DateTime;
+    BEGIN
+      IF NOT GetIntegrationActivated THEN
+        EXIT;
+
+      TimeStamp := CURRENTDATETIME;
+      InsertUpdateIntegrationRecord(RecRef, TimeStamp, 0);
+    END;
+
+    PROCEDURE OnDatabaseModify@3(RecRef@1000 : RecordRef);
+    VAR
+      TimeStamp@1001 : DateTime;
+    BEGIN
+      IF NOT GetIntegrationActivated THEN
+        EXIT;
+
+      TimeStamp := CURRENTDATETIME;
+      InsertUpdateIntegrationRecord(RecRef, TimeStamp, 1);
+    END;
+
+    PROCEDURE OnDatabaseDelete@4(RecRef@1000 : RecordRef);
+    VAR
+      IntegrationRecord@1001 : Record 70001;
+      TimeStamp@1003 : DateTime;
+    BEGIN
+      IF NOT GetIntegrationActivated THEN
+        EXIT;
+
+      TimeStamp := CURRENTDATETIME;
+      InsertUpdateIntegrationRecord(RecRef,TimeStamp, 2);
+    END;
+
+    PROCEDURE OnDatabaseRename@5(RecRef@1000 : RecordRef;XRecRef@1001 : RecordRef);
+    VAR
+      IntegrationRecord@1003 : Record 5151;
+      TimeStamp@1002 : DateTime;
+    BEGIN
+      IF NOT GetIntegrationActivated THEN
+        EXIT;
+
+      TimeStamp := CURRENTDATETIME;
+      InsertUpdateIntegrationRecord(XRecRef, TimeStamp, 2);
+      InsertUpdateIntegrationRecord(RecRef, TimeStamp, 0);
+    END;
+
+    PROCEDURE CollectFieldValuesForExport@6(IntegrTable@1002 : Record 70003;VAR IntegrationRecord@1001 : Record 70001;TableRef@1005 : RecordRef);
+    VAR
+      IntegrTableFields@1000 : Record 70004;
+      FieldRef@1004 : FieldRef;
+      FieldValue@1003 : Text[100];
+    BEGIN
+      IntegrTableFields.SETRANGE("Table Code", IntegrTable.Code);
+      IF NOT IntegrTableFields.FINDSET THEN BEGIN
+        EXIT;
+      END;
+
+      REPEAT
+        IF TableRef.FIELDEXIST(IntegrTableFields."Field ID") THEN BEGIN
+          FieldRef := TableRef.FIELD(IntegrTableFields."Field ID");
+          FieldValue := COPYSTR(FORMAT(FieldRef.VALUE), 1, 100);
+          CASE IntegrTableFields."Map-to Field No." OF
+            1 : BEGIN
+              IntegrationRecord.Value := COPYSTR(FieldValue, 1, 20);
+            END;
+            2 : BEGIN
+              IntegrationRecord.Description := COPYSTR(FieldValue, 1, 50);
+            END;
+            3 : BEGIN
+              IntegrationRecord."Description 2" := FieldValue;
+            END;
+            4 : BEGIN
+              IntegrationRecord."Description 3" := FieldValue;
+            END;
+          END;
+        END;
+      UNTIL IntegrTableFields.NEXT = 0;
+
+      IF IntegrTable."Filter Field 1" <> 0 THEN BEGIN
+        IF TableRef.FIELDEXIST(IntegrTable."Filter Field 1") THEN BEGIN
+          FieldRef := TableRef.FIELD(IntegrTable."Filter Field 1");
+          FieldValue := COPYSTR(FORMAT(FieldRef.VALUE), 1, 100);
+          IntegrationRecord."Filter Field 1" := FieldValue;
+        END;
+      END;
+      IF IntegrTable."Filter Field 2" <> 0 THEN BEGIN
+        IF TableRef.FIELDEXIST(IntegrTable."Filter Field 2") THEN BEGIN
+          FieldRef := TableRef.FIELD(IntegrTable."Filter Field 2");
+          FieldValue := COPYSTR(FORMAT(FieldRef.VALUE), 1, 100);
+          IntegrationRecord."Filter Field 2" := FieldValue;
+        END;
+      END;
+      IF IntegrTable."Filter Field 3" <> 0 THEN BEGIN
+        IF TableRef.FIELDEXIST(IntegrTable."Filter Field 3") THEN BEGIN
+          FieldRef := TableRef.FIELD(IntegrTable."Filter Field 3");
+          FieldValue := COPYSTR(FORMAT(FieldRef.VALUE), 1, 100);
+          IntegrationRecord."Filter Field 3" := FieldValue;
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE InsertUpdateIntegrationRecord@16(RecRef@1000 : RecordRef;IntegrationLastModified@1001 : DateTime;AfterAction@1004 : 'Insert,Modify,Delete');
+    VAR
+      CurrLanguage@1000000000 : Integer;
+      IntegrationRecord@1002 : Record 70001;
+      IntegrRecArchive@1005 : Record 70002;
+      IntegrTable@1003 : Record 70003;
+      DimValue@1007 : Record 349;
+      SessionIDResult@1006 : Integer;
+      CompelloIntgrExpMgt@1101103000 : Codeunit 70001;
+    BEGIN
+      IntegrTable.SETRANGE("Table ID", RecRef.NUMBER);
+      IntegrTable.SETFILTER(Synchronize, '<>%1', IntegrTable.Synchronize::None);
+      IntegrTable.SETRANGE("Action IO", IntegrTable."Action IO"::Export);
+      IF RecRef.NUMBER = DATABASE::"Dimension Value" THEN BEGIN
+        RecRef.SETTABLE(DimValue);
+        IntegrTable.SETRANGE("Dimension Code", DimValue."Dimension Code");
+      END;
+      IF NOT IntegrTable.FINDSET THEN BEGIN
+        EXIT;
+      END;
+
+      CurrLanguage := GLOBALLANGUAGE;
+      GLOBALLANGUAGE(1033);
+
+      REPEAT
+        IntegrationRecord.INIT;
+        IntegrationRecord.GUID := CREATEGUID;
+        IntegrationRecord."Record ID" := RecRef.RECORDID;
+        IntegrationRecord."Table ID" := RecRef.NUMBER;
+        IntegrationRecord."User Action" := AfterAction;
+        IntegrationRecord.Date := IntegrationLastModified;
+        IntegrationRecord.DataType := IntegrTable."Data Type";
+        CollectFieldValuesForExport(IntegrTable, IntegrationRecord, RecRef);
+        IntegrationRecord.Inactive := (AfterAction = AfterAction::Delete);
+        IntegrationRecord."Table Code" := IntegrTable.Code;
+
+        IF NOT CheckFilterValues(IntegrationRecord, IntegrTable) THEN BEGIN
+          IntegrationRecord.Inactive := TRUE;
+        END;
+
+        IF (CompelloIntgrExpMgt.TableIsPOMatch(IntegrationRecord."Table ID")) AND (RemovePOMatch(RecRef)) THEN BEGIN
+        // Do not insert PO match log lines that have been filtered to inactive
+        END ELSE
+          IntegrationRecord.INSERT;
+
+        IF IntegrTable.Synchronize = IntegrTable.Synchronize::"On-line" THEN BEGIN
+          STARTSESSION(SessionIDResult, CODEUNIT::"Compello Integr. Export Mgt.", COMPANYNAME, IntegrationRecord);
+        END;
+      UNTIL IntegrTable.NEXT = 0;
+
+      GLOBALLANGUAGE(CurrLanguage);
+    END;
+
+    PROCEDURE IsIntegrationRecord@1(TableID@1000 : Integer) : Boolean;
+    VAR
+      IntegrTable@1001 : Record 70003;
+    BEGIN
+      IntegrTable.SETRANGE("Table ID", TableID);
+      IntegrTable.SETFILTER(Synchronize, '<>%1', IntegrTable.Synchronize::None);
+      IntegrTable.SETRANGE("Action IO", IntegrTable."Action IO"::Export);
+      EXIT(IntegrTable.FINDFIRST);
+    END;
+
+    LOCAL PROCEDURE GetIntegrationActivated@20() : Boolean;
+    VAR
+      IntegrTable@1000 : Record 70003;
+    BEGIN
+      IF NOT IntegrRecRead THEN BEGIN
+        IntegrRecRead := TRUE;
+
+        IntegrTable.SETFILTER(Synchronize, '<>%1', IntegrTable.Synchronize::None);
+        IntegrTable.SETRANGE("Action IO", IntegrTable."Action IO"::Export);
+        IntegrationIsActive := IntegrTable.FINDFIRST;
+      END;
+
+      EXIT(IntegrationIsActive);
+    END;
+
+    PROCEDURE CheckFilterValues@1000000001(VAR IntegrationRecord@1000000001 : Record 70001;VAR IntegrTable@1000000000 : Record 70003) : Boolean;
+    VAR
+      IntegrationRecordTemp@1000000002 : TEMPORARY Record 70001;
+    BEGIN
+      IntegrationRecordTemp.DELETEALL;
+      IntegrationRecordTemp.TRANSFERFIELDS(IntegrationRecord);
+      IntegrationRecordTemp.INSERT;
+
+      IF IntegrTable."Filter Value 1" <> '' THEN BEGIN
+        IntegrationRecordTemp.SETFILTER("Filter Field 1", IntegrTable."Filter Value 1");
+      END;
+
+      IF IntegrTable."Filter Value 2" <> '' THEN BEGIN
+        IntegrationRecordTemp.SETFILTER("Filter Field 2", IntegrTable."Filter Value 2");
+      END;
+
+      IF IntegrTable."Filter Value 3" <> '' THEN BEGIN
+        IntegrationRecordTemp.SETFILTER("Filter Field 3", IntegrTable."Filter Value 3");
+      END;
+
+      IF IntegrationRecordTemp.ISEMPTY THEN BEGIN
+        EXIT(FALSE);
+      END;
+
+      EXIT(TRUE);
+    END;
+
+    PROCEDURE RemovePOMatch@1101103000(VAR RecRef@1000000001 : RecordRef) : Boolean;
+    VAR
+      OrderNoFieldRef@1101103000 : FieldRef;
+      PurchaseHeader@1101103001 : Record 38;
+    BEGIN
+
+      IF RecRef.NUMBER = DATABASE::"Purch. Rcpt. Header" THEN
+      BEGIN
+        OrderNoFieldRef := RecRef.FIELD(44);
+
+        IF NOT PurchaseHeader.GET(PurchaseHeader."Document Type"::Order, OrderNoFieldRef) THEN
+          EXIT(TRUE);
+
+        IF FORMAT(OrderNoFieldRef.VALUE) = '' THEN
+          EXIT(TRUE);
+      END;
+
+      EXIT(FALSE);
+    END;
+
+    PROCEDURE ResendReceipt@1101103001(ReceiptNo@1101103003 : Code[20]);
+    VAR
+      TimeStamp@1001 : DateTime;
+      RecRef@1101103000 : RecordRef;
+      IntegrationRecord@1101103002 : Record 70001;
+      PurchRcptHeader@1101103001 : Record 120;
+      CurrLanguage@1101103010 : Integer;
+      IntegrRecArchive@1101103008 : Record 70002;
+      IntegrTable@1101103007 : Record 70003;
+      DimValue@1101103006 : Record 349;
+      SessionIDResult@1101103005 : Integer;
+      CompelloIntgrExpMgt@1101103004 : Codeunit 70001;
+    BEGIN
+
+      PurchRcptHeader.SETRANGE("No.", ReceiptNo);
+
+      IF PurchRcptHeader.FINDFIRST THEN BEGIN
+        RecRef.OPEN(120);
+        RecRef.SETPOSITION(PurchRcptHeader.GETPOSITION);
+
+        TimeStamp := CURRENTDATETIME;
+        IntegrTable.SETRANGE("Table ID", RecRef.NUMBER);
+        IntegrTable.SETFILTER(Synchronize, '<>%1', IntegrTable.Synchronize::None);
+        IntegrTable.SETRANGE("Action IO", IntegrTable."Action IO"::Export);
+        IF RecRef.NUMBER = DATABASE::"Dimension Value" THEN BEGIN
+          RecRef.SETTABLE(DimValue);
+          IntegrTable.SETRANGE("Dimension Code", DimValue."Dimension Code");
+        END;
+
+        IF NOT IntegrTable.FINDSET THEN BEGIN
+          EXIT;
+        END;
+
+        CurrLanguage := GLOBALLANGUAGE;
+        GLOBALLANGUAGE(1033);
+
+          IntegrationRecord.INIT;
+          IntegrationRecord.GUID := CREATEGUID;
+          IntegrationRecord."Record ID" := RecRef.RECORDID;
+          IntegrationRecord."Table ID" := RecRef.NUMBER;
+          IntegrationRecord."User Action" := IntegrationRecord."User Action"::Insert;//02. 09.06.17 JAL
+          IntegrationRecord.Date := TimeStamp;
+          IntegrationRecord.DataType := IntegrTable."Data Type";
+          CollectFieldValuesForExport(IntegrTable, IntegrationRecord, RecRef);
+          IntegrationRecord.Inactive := FALSE;
+          IntegrationRecord."Table Code" := IntegrTable.Code;
+
+          IF NOT CheckFilterValues(IntegrationRecord, IntegrTable) THEN BEGIN
+            IntegrationRecord.Inactive := TRUE;
+          END;
+
+         IntegrationRecord.INSERT;
+
+
+        GLOBALLANGUAGE(CurrLanguage);
+        InsertUpdateIntegrationRecord(RecRef, TimeStamp, 1);
+
+       RecRef.CLOSE;
+      END;
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 24.04.15 JAL Exclude inactive Purchase Orders Reiceipt Lines
+      02. 09.06.17 JAL Only the Insert trigger for Purchase Orders Reiceipts sends records to Compello.
+    }
+    END.
+  }
+}
+

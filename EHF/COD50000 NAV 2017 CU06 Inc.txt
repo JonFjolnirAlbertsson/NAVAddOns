@@ -1,0 +1,36 @@
+OBJECT Codeunit 50000 EHF Event subscribers
+{
+  OBJECT-PROPERTIES
+  {
+    Date=28.08.17;
+    Time=14.40.56;
+    Modified=Yes;
+    Version List=INCBF1.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+
+    [EventSubscriber(Codeunit,1620,OnAfterCheckSalesDocument)]
+    LOCAL PROCEDURE COD1620OnAfterCheckSalesDocument@1101103000(VAR Sender@1101103000 : Codeunit 1620;VAR SalesHeaderP@1101103001 : Record 36);
+    BEGIN
+      SalesHeaderP.TESTFIELD("External Document No.");
+    END;
+
+    BEGIN
+    {
+      "+--------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 25.05.17 JAL Event subscribers for EHF Bugfix.
+    }
+    END.
+  }
+}
+

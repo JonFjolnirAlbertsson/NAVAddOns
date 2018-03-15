@@ -1,0 +1,855 @@
+OBJECT Codeunit 70003 Compello Create Document
+{
+  OBJECT-PROPERTIES
+  {
+    Date=19.01.17;
+    Time=12:33:51;
+    Modified=Yes;
+    Version List=CMP2.01;
+  }
+  PROPERTIES
+  {
+    TableNo=70008;
+    OnRun=BEGIN
+            CreatePurchaseHeader(Rec);
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      Text001@1000 : TextConst 'ENU=Field type "%1" is not supported;NOR=Felt type "%1" er ikke st›ttet';
+      ErrorText@1001 : Text[250];
+      Text002@1002 : TextConst 'ENU=Cannot be added dimension %1 with value %2;NOR=Dimensjon %1 kan ikke bli lagt til med verdi %2';
+      Text003@1003 : TextConst 'ENU=Dimension Set ID field should have field ID 480 in table %1;NOR=Dimension Set ID feltet skal ha verdi i felt ID 480 in table %1';
+      ErrorsExist@1004 : Boolean;
+      CompelloSetup@1101103000 : Record 70000;
+      Text004@1101103001 : TextConst 'ENU=Rounding cannot be more than 1,00. Rounding amount is %1.;NOR=Avrunding kan ikke v‘re mer enn 1,00. Avrunding er %1.';
+      Text005@1101103002 : TextConst 'ENU=The %1 on the %2 %3 and the %4 %5 must be the same.;NOR=%1 p† %2 %3 og %4 %5 m† v‘re lik.';
+      Test006@1101103003 : TextConst 'ENU=Header setup not found for %1;NOR=Oppsett for Hode finnes ikke for %1';
+      Test007@1101103004 : TextConst 'ENU=Line is not found for %1 and  Credit Type %2;NOR=Linje finnes ikke for %1 og Credit Type %2';
+
+    PROCEDURE CreatePurchaseHeader@1101103001(VAR ImportHdr@1101103000 : Record 70008) : Boolean;
+    VAR
+      PurchaseRcptLine@1101103004 : Record 121;
+      CompelloSetup@1101103001 : Record 70000;
+      errorNoVoucerType@1101103002 : TextConst 'ENU=Voucher type in Navision does not correspond with the document type in Compello;NOR=Dokumentypen i Navision stemmer ikke overens med dokumenttypen i Compello';
+      Created@1101103003 : Boolean;
+    BEGIN
+      ErrorText := '';
+      ErrorsExist := FALSE;
+
+      CompelloSetup.GET;
+      CompelloSetup.TESTFIELD("Doc. Type Item Invoice");
+      CompelloSetup.TESTFIELD("Doc. Type Item Credit");
+      CompelloSetup.TESTFIELD("Doc. Type Journal Invoice");
+      CompelloSetup.TESTFIELD("Doc. Type Journal Credit");
+
+      Created := FALSE;
+
+      IF (ImportHdr."Voucher Type" = CompelloSetup."Doc. Type Item Credit") OR
+         (ImportHdr."Voucher Type" = CompelloSetup."Doc. Type Journal Credit") THEN
+        Created := CreatePurchCrMemo(ImportHdr)
+      ELSE IF (ImportHdr."Voucher Type" = CompelloSetup."Doc. Type Item Invoice") OR
+         (ImportHdr."Voucher Type" = CompelloSetup."Doc. Type Journal Invoice") THEN
+        Created := CreatePurchInvoice(ImportHdr)
+      ELSE
+        ErrorText := errorNoVoucerType;
+
+      EXIT(Created);
+    END;
+
+    LOCAL PROCEDURE CreatePurchInvoice@1(VAR ImportHdr@1000 : Record 70008) : Boolean;
+    VAR
+      ImportSetupHdr@1001 : Record 70003;
+      ImportSetupHdr2@1004 : Record 70003;
+      ImportLine@1002 : Record 70009;
+      ImportMgt@1006 : Codeunit 70002;
+      HeaderRecRef@1003 : RecordRef;
+      LineNo@1005 : Integer;
+      DocumentType@1000000000 : ' ,Invoice,Credit Memo';
+      POHeaderAmount@1101103000 : Decimal;
+      CompelloMgt@1101103001 : Codeunit 70005;
+    BEGIN
+      ErrorText := '';
+      LineNo := 0;
+
+      IF NOT GetPurchHdrSetup(ImportSetupHdr, ImportSetupHdr2, FALSE) THEN BEGIN
+        ErrorText := STRSUBSTNO(Test006, ImportSetupHdr.Code);
+        EXIT(FALSE);
+      END;
+      IF NOT GetPurchHdrLine(ImportHdr, ImportLine, 'L', '') THEN BEGIN
+        ErrorText := STRSUBSTNO(Test007, ImportHdr.GUID, 'L');
+        EXIT(FALSE);
+      END;
+
+      HeaderRecRef.OPEN(ImportSetupHdr."Table ID");
+
+      IF NOT CreatePurchInvHeader(ImportHdr, ImportLine, ImportSetupHdr, ImportSetupHdr2, HeaderRecRef) THEN BEGIN
+        HeaderRecRef.CLOSE;
+        EXIT(FALSE);
+      END;
+
+      POHeaderAmount := ImportLine.Amount;
+
+      ImportLine.SETRANGE("Header GUID", ImportHdr.GUID);
+      ImportLine.SETFILTER("Credit Type", '<>%1', 'L');
+      ImportLine.SETFILTER("Debet Type", '<>%1', 'L');
+      IF ImportLine.FINDSET THEN BEGIN
+        REPEAT
+          ErrorsExist := ErrorsExist OR CreatePurchInvLine(ImportHdr,ImportLine, ImportSetupHdr2, HeaderRecRef, LineNo);
+        UNTIL (ImportLine.NEXT = 0) OR (ErrorsExist);
+      END;
+
+      IF NOT ErrorsExist THEN BEGIN
+        SaveLinkToPurchaseHeader(ImportHdr, HeaderRecRef, DocumentType::Invoice);
+        CreatePurchInvComment(ImportHdr, HeaderRecRef);
+      END;
+      ImportLine.RESET;
+      GetPurchHdrLine(ImportHdr, ImportLine, 'L', '');
+      UpdateVAT(ImportLine, HeaderRecRef);
+
+      IF ErrorsExist THEN BEGIN
+        HeaderRecRef.DELETE(TRUE);
+        HeaderRecRef.CLOSE;
+        EXIT(FALSE);
+      END;
+
+      CompelloMgt.CreateGenJnlLine(ImportHdr, HeaderRecRef, POHeaderAmount);
+
+      HeaderRecRef.CLOSE;
+      ImportMgt.ArchiveImport(ImportHdr, FALSE);
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreatePurchCrMemo@4(VAR ImportHdr@1000 : Record 70008) : Boolean;
+    VAR
+      ImportSetupHdr@1001 : Record 70003;
+      ImportSetupHdr2@1004 : Record 70003;
+      ImportLine@1002 : Record 70009;
+      ImportMgt@1006 : Codeunit 70002;
+      HeaderRecRef@1003 : RecordRef;
+      LineNo@1005 : Integer;
+      DocumentType@1000000000 : ' ,Invoice,Credit Memo';
+      POHeaderAmount@1101103001 : Decimal;
+      CompelloMgt@1101103000 : Codeunit 70005;
+    BEGIN
+      ErrorText := '';
+      LineNo := 0;
+      IF NOT GetPurchHdrSetup(ImportSetupHdr, ImportSetupHdr2, TRUE) THEN BEGIN
+        EXIT(FALSE);
+      END;
+      IF NOT GetPurchHdrLine(ImportHdr, ImportLine, '', 'L') THEN BEGIN
+        EXIT(FALSE);
+      END;
+
+      HeaderRecRef.OPEN(ImportSetupHdr."Table ID");
+
+      IF NOT CreatePurchInvHeader(ImportHdr, ImportLine, ImportSetupHdr, ImportSetupHdr2, HeaderRecRef) THEN BEGIN
+        EXIT(FALSE);
+      END;
+
+      POHeaderAmount := ImportLine.Amount;
+
+      ImportLine.SETRANGE("Header GUID", ImportHdr.GUID);
+      ImportLine.SETFILTER("Credit Type", '<>%1', 'L');
+      ImportLine.SETFILTER("Debet Type", '<>%1', 'L');
+      IF ImportLine.FINDSET THEN BEGIN
+        REPEAT
+          CreatePurchInvLine(ImportHdr, ImportLine, ImportSetupHdr2, HeaderRecRef, LineNo);
+        UNTIL ImportLine.NEXT = 0;
+      END;
+
+      IF NOT ErrorsExist THEN BEGIN
+        SaveLinkToPurchaseHeader(ImportHdr, HeaderRecRef, DocumentType::"Credit Memo");
+        CreatePurchInvComment(ImportHdr, HeaderRecRef);
+      END;
+
+      CompelloMgt.CreateGenJnlLine(ImportHdr, HeaderRecRef, POHeaderAmount);
+
+      HeaderRecRef.CLOSE;
+      ImportMgt.ArchiveImport(ImportHdr, FALSE);
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreatePurchInvHeader@16(VAR ImportHdr@1000 : Record 70008;ImportLine@1001 : Record 70009;ImportSetupHdr@1003 : Record 70003;ImportSetupHdr2@1002 : Record 70003;VAR HeaderRecRef@1005 : RecordRef) : Boolean;
+    VAR
+      ImportSetupLine@1004 : Record 70004;
+      DimMgt@1012 : Codeunit 408;
+      PrimaryKeyRef@1006 : KeyRef;
+      HdrFieldRef@1007 : FieldRef;
+      KeyFieldRef@1009 : FieldRef;
+      i@1008 : Integer;
+      DimSetID@1011 : Integer;
+      ExistingDimSetID@1013 : Integer;
+      PrimaryKeyField@1010 : Boolean;
+      PurchaseHeader@1101103000 : Record 38;
+      DueDate@1101103001 : Date;
+      DocDate@1101103002 : Date;
+      PostingDate@1101103007 : Date;
+      NoSeriesFieldRef@1101103003 : FieldRef;
+      PostingNoSeriesFieldRef@1101103004 : FieldRef;
+      NoFieldRef@1101103005 : FieldRef;
+      CompelloMgt@1101103006 : Codeunit 70005;
+      CurrFactor@1101103008 : Decimal;
+    BEGIN
+      CompelloSetup.GET;
+
+      ImportSetupLine.SETFILTER("Table Code", '%1|%2', ImportSetupHdr.Code, ImportSetupHdr2.Code);
+      ImportSetupLine.SETRANGE("Table ID", ImportSetupHdr."Table ID");
+
+      PrimaryKeyRef := HeaderRecRef.KEYINDEX(1);
+      HeaderRecRef.INIT;
+
+      //Insert primary key field values
+      FOR i := 1 TO PrimaryKeyRef.FIELDCOUNT DO BEGIN
+        KeyFieldRef := PrimaryKeyRef.FIELDINDEX(i);
+        HdrFieldRef := HeaderRecRef.FIELD(KeyFieldRef.NUMBER);
+        ImportSetupLine.SETRANGE("Field ID", KeyFieldRef.NUMBER);
+        IF ImportSetupLine.FINDFIRST THEN BEGIN
+          IF ImportSetupLine."Use Default Value" <> '' THEN BEGIN
+            SetDefValueToField(ImportSetupLine, HdrFieldRef);
+          END ELSE BEGIN
+            IF ImportSetupLine."Map To Table Data Type" = 101 THEN BEGIN
+              SetValueToFieldFromHdr(ImportHdr, HdrFieldRef, ImportSetupLine);
+            END ELSE BEGIN
+              SetValueToFieldFromLine(ImportLine, HdrFieldRef, ImportSetupLine);
+            END;
+          END;
+        END;
+      END;
+      ImportSetupLine.SETRANGE("Field ID");
+
+      //Set other fields than primary key
+      ImportSetupLine.SETCURRENTKEY("Sequence No.");
+      IF ImportSetupLine.FINDSET THEN BEGIN
+        REPEAT
+          IF ImportSetupLine."Field ID" <> 0 THEN BEGIN
+            IF (ImportSetupLine."Field ID" = 15) THEN MESSAGE(FORMAT(ImportLine.Volume));
+            //Normal fields management
+            PrimaryKeyField := FALSE;
+            FOR i := 1 TO PrimaryKeyRef.FIELDCOUNT DO BEGIN
+              KeyFieldRef := PrimaryKeyRef.FIELDINDEX(i);
+              IF KeyFieldRef.NUMBER = ImportSetupLine."Field ID" THEN BEGIN
+                PrimaryKeyField := TRUE;
+              END;
+            END;
+            IF NOT PrimaryKeyField THEN BEGIN
+              HdrFieldRef := HeaderRecRef.FIELD(ImportSetupLine."Field ID");
+              IF ImportSetupLine."Use Default Value" <> '' THEN BEGIN
+                SetDefValueToField(ImportSetupLine, HdrFieldRef);
+              END ELSE BEGIN
+                IF ImportSetupLine."Map To Table Data Type" = 101 THEN BEGIN
+                  SetValueToFieldFromHdr(ImportHdr, HdrFieldRef, ImportSetupLine);
+                END ELSE BEGIN
+                  SetValueToFieldFromLine(ImportLine, HdrFieldRef, ImportSetupLine);
+                END;
+              END;
+            END;
+          END ELSE BEGIN
+            //Dimension management
+            IF ImportSetupLine."Dimension Code" <> '' THEN BEGIN
+              IF ImportSetupLine."Use Default Value" <> '' THEN BEGIN
+                IF NOT DimMgt.AddDimToDimSet(DimSetID, ImportSetupLine."Dimension Code", ImportSetupLine."Use Default Value") THEN BEGIN
+                  ErrorText := STRSUBSTNO(Text002, ImportSetupLine."Dimension Code", ImportSetupLine."Use Default Value");
+                  EXIT(FALSE);
+                END;
+              END ELSE BEGIN
+                IF ImportSetupLine."Map To Table Data Type" = 101 THEN BEGIN
+                  IF NOT DimMgt.AddDimToDimSet(DimSetID, ImportSetupLine."Dimension Code", GetDimValueFromHdr(ImportHdr, HdrFieldRef, ImportSetupLine)) THEN BEGIN
+                    ErrorText := STRSUBSTNO(Text002, ImportSetupLine."Dimension Code", GetDimValueFromHdr(ImportHdr, HdrFieldRef, ImportSetupLine));
+                    EXIT(FALSE);
+                  END;
+                END ELSE BEGIN
+                  IF NOT DimMgt.AddDimToDimSet(DimSetID, ImportSetupLine."Dimension Code", GetDimValueFromLine(ImportLine, HdrFieldRef, ImportSetupLine)) THEN BEGIN
+                    ErrorText := STRSUBSTNO(Text002, ImportSetupLine."Dimension Code", GetDimValueFromLine(ImportLine, HdrFieldRef, ImportSetupLine));
+                    EXIT(FALSE);
+                  END;
+                END;
+              END;
+            END;
+          END;
+        UNTIL ImportSetupLine.NEXT = 0;
+
+        IF DimSetID <> 0 THEN BEGIN
+          IF HeaderRecRef.FIELDEXIST(480) THEN BEGIN
+            HdrFieldRef := HeaderRecRef.FIELD(480);
+            IF UPPERCASE(FORMAT(HdrFieldRef.TYPE)) = 'INTEGER' THEN BEGIN
+              EVALUATE(ExistingDimSetID, FORMAT(HdrFieldRef.VALUE));
+              HdrFieldRef.VALUE(DimMgt.CopyDimSetToDimSet(DimSetID, ExistingDimSetID));
+            END ELSE BEGIN
+              ErrorText := STRSUBSTNO(Text003, HdrFieldRef.NUMBER);
+              EXIT(FALSE);
+            END;
+          END ELSE BEGIN
+            ErrorText := STRSUBSTNO(Text003, HdrFieldRef.NUMBER);
+            EXIT(FALSE);
+          END;
+        END;
+
+        IF CompelloMgt.CheckVoucherType(ImportHdr) THEN BEGIN
+          NoSeriesFieldRef := HeaderRecRef.FIELD(107);
+          NoSeriesFieldRef.VALUE := '';
+          PostingNoSeriesFieldRef := HeaderRecRef.FIELD(108);
+          PostingNoSeriesFieldRef.VALUE :='';
+          NoFieldRef := HeaderRecRef.FIELD(3);
+          NoFieldRef.VALUE := '1';
+        END;
+
+        HeaderRecRef.INSERT(TRUE);
+
+        IF ImportSetupHdr."Table ID" = DATABASE::"Purchase Header" THEN BEGIN
+          PurchaseHeader.GET(HeaderRecRef.RECORDID);
+          PurchaseHeader.SetHideValidationDialog(TRUE);
+          DocDate := PurchaseHeader."Document Date";
+          DueDate := PurchaseHeader."Due Date";
+          PostingDate := PurchaseHeader."Posting Date";
+          IF (PurchaseHeader."Posting Date" = 0D) THEN
+            PurchaseHeader.VALIDATE("Posting Date", DocDate)
+          ELSE
+            PurchaseHeader.VALIDATE("Posting Date", PostingDate);
+
+          IF ImportLine."Currency Value" <> '' THEN
+            PurchaseHeader.VALIDATE("Currency Code", ImportLine."Currency Value")
+          ELSE
+           PurchaseHeader.VALIDATE("Currency Code", '');
+
+          IF ImportLine."User Defined 14" <> '' THEN BEGIN
+            EVALUATE(CurrFactor, ImportLine."User Defined 14");
+            PurchaseHeader.VALIDATE("Currency Factor", CurrFactor);
+          END;
+
+          PurchaseHeader.VALIDATE("Document Date", DocDate);
+          PurchaseHeader.VALIDATE("Due Date", DueDate);
+          PurchaseHeader.MODIFY(TRUE);
+
+          ImportHdr."Vendor No." := PurchaseHeader."Buy-from Vendor No.";
+        END;
+      END;
+
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE CreatePurchInvLine@5(ImportHdr@1101103000 : Record 70008;ImportLine@1001 : Record 70009;ImportSetupHdr@1003 : Record 70003;VAR HeaderRecRef@1005 : RecordRef;VAR LineNo@1000 : Integer) : Boolean;
+    VAR
+      ImportSetupLine@1004 : Record 70004;
+      HeaderLineRelation@1011 : Record 70013;
+      DimMgt@1013 : Codeunit 408;
+      LineRecRef@1002 : RecordRef;
+      LineRecRef2@1000000000 : RecordRef;
+      PrimaryKeyRef@1012 : KeyRef;
+      HdrFieldRef@1007 : FieldRef;
+      LineFieldRef@1006 : FieldRef;
+      KeyFieldRef@1009 : FieldRef;
+      i@1008 : Integer;
+      DimSetID@1014 : Integer;
+      ExistingDimSetID@1015 : Integer;
+      PrimaryKeyField@1010 : Boolean;
+      CreatedRcpLine@1101103003 : Boolean;
+      PurchaseRcptLine@1101103001 : Record 121;
+      PurchaseLine@1101103004 : Record 39;
+      CompelloMgt@1101103002 : Codeunit 70005;
+    BEGIN
+      LineRecRef.OPEN(ImportSetupHdr."Table ID");
+      LineRecRef.INIT;
+
+      CLEAR(PurchaseLine);
+      LineNo := LineNo + 10000;
+      CreatedRcpLine := FALSE;
+      IF (ImportSetupHdr."Table ID" = DATABASE::"Purchase Line") THEN BEGIN
+          CreatedRcpLine := CreatePurchInvLineFromReceipt(ImportSetupHdr, ImportLine, HeaderRecRef, PurchaseLine);
+          IF CreatedRcpLine THEN BEGIN
+            LineRecRef.GETTABLE(PurchaseLine);
+            LineNo :=  PurchaseLine."Line No.";
+          END;
+      END;
+
+      IF (NOT CreatedRcpLine) THEN BEGIN
+        HeaderLineRelation.SETRANGE("Table Code", ImportSetupHdr.Code);
+        IF HeaderLineRelation.FINDSET THEN BEGIN
+          REPEAT
+            IF (HeaderLineRelation."Header Field No." <> 0) AND (HeaderLineRelation."Line Field No." <> 0) THEN BEGIN
+              HdrFieldRef := HeaderRecRef.FIELD(HeaderLineRelation."Header Field No.");
+              LineFieldRef := LineRecRef.FIELD(HeaderLineRelation."Line Field No.");
+              IF HeaderLineRelation.Validate THEN BEGIN
+                LineFieldRef.VALIDATE(HdrFieldRef.VALUE);
+              END ELSE BEGIN
+                LineFieldRef.VALUE(HdrFieldRef.VALUE);
+              END;
+            END;
+          UNTIL HeaderLineRelation.NEXT = 0;
+        END;
+
+        PrimaryKeyRef := LineRecRef.KEYINDEX(1);
+        KeyFieldRef := PrimaryKeyRef.FIELDINDEX(PrimaryKeyRef.FIELDCOUNT);
+        IF FORMAT(KeyFieldRef.TYPE)= 'Integer' THEN BEGIN
+          LineFieldRef := LineRecRef.FIELD(KeyFieldRef.NUMBER);
+          LineFieldRef.VALUE(LineNo);
+        END;
+
+        LineFieldRef := LineRecRef.FIELD(5);
+        LineFieldRef.VALIDATE(PurchaseRcptLine.Type::"G/L Account");
+        LineFieldRef := LineRecRef.FIELD(6);
+        IF ImportLine."Debet Value" <> '' THEN
+          LineFieldRef.VALIDATE(ImportLine."Debet Value")
+        ELSE
+          LineFieldRef.VALIDATE(ImportLine."Credit Value");
+      END;
+
+      ImportSetupLine.SETRANGE("Table Code", ImportSetupHdr.Code);
+      ImportSetupLine.SETRANGE("Table ID", ImportSetupHdr."Table ID");
+      ImportSetupLine.SETCURRENTKEY("Sequence No.");
+
+      //Set other fields than primary key
+      IF ImportSetupLine.FINDSET THEN BEGIN
+        PrimaryKeyRef := LineRecRef.KEYINDEX(1);
+        REPEAT
+          IF ImportSetupLine."Field ID" <> 0 THEN BEGIN
+            //normal field management
+            PrimaryKeyField := FALSE;
+            FOR i := 1 TO PrimaryKeyRef.FIELDCOUNT DO BEGIN
+              KeyFieldRef := PrimaryKeyRef.FIELDINDEX(i);
+              IF KeyFieldRef.NUMBER = ImportSetupLine."Field ID" THEN BEGIN
+                PrimaryKeyField := TRUE;
+              END;
+            END;
+            IF ((NOT PrimaryKeyField) AND (NOT CreatedRcpLine)) THEN BEGIN
+              LineFieldRef := LineRecRef.FIELD(ImportSetupLine."Field ID");
+              IF ImportSetupLine."Use Default Value" <> '' THEN BEGIN
+                SetDefValueToField(ImportSetupLine, LineFieldRef);
+              END ELSE BEGIN
+                SetValueToFieldFromLine(ImportLine, LineFieldRef, ImportSetupLine);
+              END;
+            END;
+          ImportSetupLine.CALCFIELDS("Field Name","Map-to Field Name");
+          END ELSE BEGIN
+            //Dimension management
+            IF ImportSetupLine."Dimension Code" <> '' THEN BEGIN
+              IF ImportSetupLine."Use Default Value" <> '' THEN BEGIN
+                IF NOT DimMgt.AddDimToDimSet(DimSetID, ImportSetupLine."Dimension Code", ImportSetupLine."Use Default Value") THEN BEGIN
+                  ErrorText := STRSUBSTNO(Text002, ImportSetupLine."Dimension Code", ImportSetupLine."Use Default Value");
+                  EXIT(FALSE);
+                END;
+              END ELSE BEGIN
+                IF NOT DimMgt.AddDimToDimSet(DimSetID, ImportSetupLine."Dimension Code", GetDimValueFromLine(ImportLine, HdrFieldRef, ImportSetupLine)) THEN BEGIN
+                  ErrorText := STRSUBSTNO(Text002, ImportSetupLine."Dimension Code", GetDimValueFromLine(ImportLine, HdrFieldRef, ImportSetupLine));
+                  EXIT(FALSE);
+                END;
+              END;
+            END;
+          END;
+        UNTIL ImportSetupLine.NEXT = 0;
+
+        IF DimSetID <> 0 THEN BEGIN
+          IF LineRecRef.FIELDEXIST(480) THEN BEGIN
+            LineFieldRef := LineRecRef.FIELD(480);
+            IF UPPERCASE(FORMAT(LineFieldRef.TYPE)) = 'INTEGER' THEN BEGIN
+              EVALUATE(ExistingDimSetID, FORMAT(LineFieldRef.VALUE));
+              LineFieldRef.VALUE(DimMgt.CopyDimSetToDimSet(DimSetID, ExistingDimSetID));
+            END ELSE BEGIN
+              ErrorText := STRSUBSTNO(Text003, LineFieldRef.NUMBER);
+              EXIT(FALSE);
+            END;
+          END ELSE BEGIN
+            ErrorText := STRSUBSTNO(Text003, LineFieldRef.NUMBER);
+            EXIT(FALSE);
+          END;
+        END;
+
+        IF LineRecRef.INSERT(TRUE) THEN;
+        IF CreatedRcpLine THEN BEGIN
+          LineRecRef.MODIFY(TRUE);
+        END;
+
+      END;
+
+      LineRecRef.CLOSE;
+    END;
+
+    LOCAL PROCEDURE CreatePurchInvComment@2(ImportHdr@1001 : Record 70008;VAR HeaderRecRef@1000 : RecordRef);
+    VAR
+      ImportComment@1002 : Record 70014;
+      PurchaseHeader@1003 : Record 38;
+      PurchCommentLine@1004 : Record 43;
+    BEGIN
+      HeaderRecRef.SETTABLE(PurchaseHeader);
+
+      ImportComment.RESET;
+      ImportComment.SETRANGE(GUID, ImportHdr.GUID);
+      IF ImportComment.FINDSET THEN BEGIN
+        REPEAT
+          PurchCommentLine.INIT;
+          PurchCommentLine.VALIDATE("Document Type", PurchaseHeader."Document Type");
+          PurchCommentLine.VALIDATE("No.", PurchaseHeader."No.");
+          PurchCommentLine.Date := WORKDATE;
+          PurchCommentLine."Line No." := ImportComment."Line No.";
+          PurchCommentLine.Comment := ImportComment.Comment;
+          PurchCommentLine.INSERT;
+        UNTIL ImportComment.NEXT = 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE CreatePurchInvLineFromReceipt@1101103000(VAR ImportSetupHdr@1101103000 : Record 70003;VAR ImportLine@1001 : Record 70009;VAR HeaderRecRef@1005 : RecordRef;VAR PurchaseLine@1101103005 : Record 39) Result : Boolean;
+    VAR
+      CompelloSetup@1101103008 : Record 70000;
+      PurchaseHeader@1101103003 : Record 38;
+      GetReceipts@1101103002 : Codeunit 74;
+      CompelloMgt@1101103004 : Codeunit 70005;
+      PurchaseRcptLineTmp@1101103001 : Record 121;
+      LineNumber@1101103006 : Integer;
+      PurchaseRcptLine@1101103007 : Record 121;
+    BEGIN
+      CompelloSetup.GET;
+
+      Result := FALSE;
+      IF (ImportSetupHdr."Table ID" = DATABASE::"Purchase Line") THEN BEGIN
+        IF CompelloMgt.GetReceiptFromImportLine(ImportLine, PurchaseRcptLine) THEN BEGIN
+          PurchaseHeader.GET(HeaderRecRef.RECORDID);
+          GetReceipts.SetPurchHeader(PurchaseHeader);
+          PurchaseRcptLineTmp.RESET;
+          PurchaseRcptLineTmp.SETRANGE("Document No.", PurchaseRcptLine."Document No.");
+          PurchaseRcptLineTmp.SETRANGE("Line No.", PurchaseRcptLine."Line No.");
+          GetReceipts.CreateInvLines(PurchaseRcptLineTmp);
+
+          CheckCurrency(PurchaseHeader, PurchaseRcptLine);
+
+          PurchaseLine.SETRANGE("Document Type", PurchaseLine."Document Type"::Invoice);
+          PurchaseLine.SETRANGE("Document No.", PurchaseHeader."No.");
+          PurchaseLine.SETRANGE("Receipt No.", PurchaseRcptLine."Document No.");
+          PurchaseLine.SETRANGE("Receipt Line No.", PurchaseRcptLine."Line No.");
+          PurchaseLine.FINDFIRST;
+          PurchaseLine.VALIDATE(Quantity, ImportLine.Volume);
+          PurchaseLine.VALIDATE("Direct Unit Cost", ImportLine.UnitPrice);
+
+          IF ImportLine."No VAT" THEN
+            PurchaseLine.VALIDATE(PurchaseLine."VAT Prod. Posting Group", CompelloSetup."Default Free VAT Code");
+
+          Result := TRUE;
+        END;
+      END;
+
+      EXIT(Result);
+    END;
+
+    LOCAL PROCEDURE SaveLinkToPurchaseHeader@1000000004(VAR ImportHdr@1000000001 : Record 70008;VAR HeaderRecRef@1000000000 : RecordRef;DocumentType@1000000003 : ' ,Invoice,Credit Memo');
+    VAR
+      PurchaseHeader@1000000002 : Record 38;
+    BEGIN
+      HeaderRecRef.SETTABLE(PurchaseHeader);
+
+      ImportHdr."Created Document Type" := DocumentType;
+      ImportHdr."Created Document No." := PurchaseHeader."No.";
+      ImportHdr.MODIFY;
+    END;
+
+    LOCAL PROCEDURE GetPurchHdrSetup@3(VAR ImportSetupHdr@1000 : Record 70003;VAR ImportSetupHdr2@1002 : Record 70003;CreditMemo@1001 : Boolean) : Boolean;
+    BEGIN
+      ImportSetupHdr.SETRANGE("Data Type", 101);
+      ImportSetupHdr.SETRANGE("Action IO", ImportSetupHdr."Action IO"::Import);
+      ImportSetupHdr.SETRANGE("Credit Document", CreditMemo);
+      IF NOT ImportSetupHdr.FINDFIRST THEN BEGIN
+        EXIT(FALSE);
+      END;
+
+      ImportSetupHdr2.SETRANGE("Related to Header", ImportSetupHdr.Code);
+      EXIT(ImportSetupHdr2.FINDFIRST);
+    END;
+
+    LOCAL PROCEDURE GetPurchHdrLine@11(ImportHdr@1001 : Record 70008;VAR ImportLine@1000 : Record 70009;CreditType@1002 : Text[10];DebetType@1003 : Text[10]) : Boolean;
+    BEGIN
+      ImportLine.SETRANGE("Header GUID", ImportHdr.GUID);
+      IF CreditType <> '' THEN BEGIN
+        ImportLine.SETRANGE("Credit Type", CreditType);
+      END;
+      IF DebetType <> '' THEN BEGIN
+        ImportLine.SETRANGE("Debet Type", DebetType);
+      END;
+      EXIT(ImportLine.FINDFIRST);
+    END;
+
+    LOCAL PROCEDURE SetDefValueToField@6(ImportSetupLine@1000 : Record 70004;VAR MyFieldRef@1001 : FieldRef);
+    VAR
+      MyInteger@1002 : Integer;
+      MyDecimal@1003 : Decimal;
+      MyDate@1101103000 : Date;
+      MYTime@1101103001 : Time;
+    BEGIN
+      CASE UPPERCASE(FORMAT(MyFieldRef.TYPE)) OF
+        'OPTION', 'INTEGER' : BEGIN
+          EVALUATE(MyInteger, ImportSetupLine."Use Default Value");
+          IF ImportSetupLine.Validate THEN BEGIN
+            MyFieldRef.VALIDATE(MyInteger);
+          END ELSE BEGIN
+            MyFieldRef.VALUE(MyInteger);
+          END;
+        END;
+        'DECIMAL' : BEGIN
+          EVALUATE(MyDecimal, ImportSetupLine."Use Default Value");
+          IF ImportSetupLine.Validate THEN BEGIN
+            MyFieldRef.VALIDATE(MyDecimal);
+          END ELSE BEGIN
+            MyFieldRef.VALUE(MyDecimal);
+          END;
+        END;
+        'TEXT', 'CODE' : BEGIN
+          IF ImportSetupLine.Validate THEN BEGIN
+            MyFieldRef.VALIDATE(ImportSetupLine."Use Default Value");
+          END ELSE BEGIN
+            MyFieldRef.VALUE(ImportSetupLine."Use Default Value");
+          END;
+        END;
+        ELSE BEGIN
+          ERROR(Text001, FORMAT(MyFieldRef.TYPE));
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE SetValueToFieldFromHdr@13(ImportHdr@1000 : Record 70008;VAR HdrFieldRef@1001 : FieldRef;ImportSetupLine@1002 : Record 70004);
+    VAR
+      MyRecRef@1003 : RecordRef;
+      MyFieldRef@1004 : FieldRef;
+      Dec@1005 : Decimal;
+      Text1@1006 : Text[250];
+    BEGIN
+      MyRecRef.GETTABLE(ImportHdr);
+      MyFieldRef := MyRecRef.FIELD(ImportSetupLine."Map-to Field No.");
+      IF ImportSetupLine."Only If Not Blank" THEN BEGIN
+        CASE UPPERCASE(FORMAT(MyFieldRef.TYPE)) OF
+          'OPTION', 'INTEGER', 'DECIMAL' : BEGIN
+            Dec := MyFieldRef.VALUE;
+            IF (Dec = 0) THEN BEGIN
+              MyRecRef.CLOSE;
+              EXIT;
+            END;
+          END;
+          'TEXT', 'CODE' : BEGIN
+            Text1 := MyFieldRef.VALUE;
+            IF (Text1 = '') THEN BEGIN
+              MyRecRef.CLOSE;
+              EXIT;
+            END;
+          END;
+        END;
+      END;
+      IF ImportSetupLine.Validate THEN BEGIN
+        HdrFieldRef.VALIDATE(MyFieldRef.VALUE);
+      END ELSE BEGIN
+        HdrFieldRef.VALUE(MyFieldRef.VALUE);
+      END;
+      MyRecRef.CLOSE;
+    END;
+
+    LOCAL PROCEDURE SetValueToFieldFromLine@14(ImportLine@1000 : Record 70009;VAR HdrFieldRef@1001 : FieldRef;ImportSetupLine@1002 : Record 70004);
+    VAR
+      MyRecRef@1004 : RecordRef;
+      MyFieldRef@1003 : FieldRef;
+      Dec@1006 : Decimal;
+      Text1@1005 : Text[250];
+    BEGIN
+      MyRecRef.GETTABLE(ImportLine);
+      MyFieldRef := MyRecRef.FIELD(ImportSetupLine."Map-to Field No.");
+      IF ImportSetupLine."Only If Not Blank" THEN BEGIN
+        CASE UPPERCASE(FORMAT(MyFieldRef.TYPE)) OF
+          'OPTION', 'INTEGER', 'DECIMAL' : BEGIN
+            Dec := MyFieldRef.VALUE;
+            IF (Dec = 0) THEN BEGIN
+              MyRecRef.CLOSE;
+              EXIT;
+            END;
+          END;
+          'TEXT', 'CODE' : BEGIN
+            Text1 := MyFieldRef.VALUE;
+            IF (Text1 = '') THEN BEGIN
+              MyRecRef.CLOSE;
+              EXIT;
+            END;
+          END;
+        END;
+      END;
+      IF ImportSetupLine.Validate THEN BEGIN
+        HdrFieldRef.VALIDATE(MyFieldRef.VALUE);
+      END ELSE BEGIN
+        HdrFieldRef.VALUE(MyFieldRef.VALUE);
+      END;
+      MyRecRef.CLOSE;
+    END;
+
+    LOCAL PROCEDURE GetDimValueFromHdr@7(ImportHdr@1000 : Record 70008;VAR HdrFieldRef@1001 : FieldRef;ImportSetupLine@1002 : Record 70004) FieldValue : Text[20];
+    VAR
+      MyRecRef@1003 : RecordRef;
+      MyFieldRef@1004 : FieldRef;
+    BEGIN
+      MyRecRef.GETTABLE(ImportHdr);
+      MyFieldRef := MyRecRef.FIELD(ImportSetupLine."Map-to Field No.");
+      FieldValue := FORMAT(MyFieldRef.VALUE);
+      MyRecRef.CLOSE;
+    END;
+
+    LOCAL PROCEDURE GetDimValueFromLine@8(ImportLine@1000 : Record 70009;VAR HdrFieldRef@1001 : FieldRef;ImportSetupLine@1002 : Record 70004) FieldValue : Text[20];
+    VAR
+      MyRecRef@1004 : RecordRef;
+      MyFieldRef@1003 : FieldRef;
+    BEGIN
+      MyRecRef.GETTABLE(ImportLine);
+      MyFieldRef := MyRecRef.FIELD(ImportSetupLine."Map-to Field No.");
+      FieldValue := FORMAT(MyFieldRef.VALUE);
+      MyRecRef.CLOSE;
+    END;
+
+    PROCEDURE GetErrorText@10() : Text[250];
+    BEGIN
+      EXIT(ErrorText);
+    END;
+
+    PROCEDURE UpdateVAT@1000000000(ImportLine@1000000000 : Record 70009;VAR HeaderRecRef@1000000006 : RecordRef);
+    VAR
+      PurchaseHeader@1000000007 : Record 38;
+      PurchLine@1000000005 : Record 39;
+      TempPurchLine@1000000004 : TEMPORARY Record 39;
+      TotalPurchLine@1000000009 : Record 39;
+      TotalPurchLineLCY@1000000008 : Record 39;
+      TempVATAmountLine@1000000012 : TEMPORARY Record 290;
+      PurchSetup@1000000002 : Record 312;
+      PurchPost@1000000003 : Codeunit 90;
+      TotalVATRecieved@1000000001 : Decimal;
+      VATAmount@1000000010 : Decimal;
+      VATDif@1000000013 : Decimal;
+      VATAmountText@1000000011 : Text[30];
+      VATDifOneLine@1000000014 : Decimal;
+      VATDifTotal@1000000015 : Decimal;
+      CompelloSetup@1101103000 : Record 70000;
+      PurchLineRounding@1101103001 : Record 39;
+    BEGIN
+      TotalVATRecieved := ImportLine."VAT Amount";
+      IF TotalVATRecieved = 0 THEN BEGIN
+        EXIT;
+      END;
+
+      HeaderRecRef.SETTABLE(PurchaseHeader);
+      CLEAR(PurchPost);
+      PurchPost.GetPurchLines(PurchaseHeader,TempPurchLine,0);
+      CLEAR(PurchPost);
+      PurchPost.SumPurchLinesTemp(
+        PurchaseHeader,TempPurchLine,0,TotalPurchLine,TotalPurchLineLCY,VATAmount,VATAmountText);
+
+      PurchLine.CalcVATAmountLines(0,PurchaseHeader,TempPurchLine,TempVATAmountLine);
+      TempVATAmountLine.MODIFYALL(Modified,FALSE);
+
+      VATDif := TotalVATRecieved - VATAmount;
+      IF VATDif <> 0 THEN BEGIN
+
+
+        //Insert extra rounding amount. Due to how Compello/Navision handles VAT on Total/Lines
+        IF ABS(VATDif) > 1 THEN BEGIN
+          ErrorText := STRSUBSTNO(Text004, VATDif);
+          ErrorsExist := TRUE;
+          EXIT;
+        END;
+        CompelloSetup.GET;
+        CompelloSetup.TESTFIELD("Rounding account");
+        CompelloSetup.TESTFIELD("Default Free VAT Code");
+        PurchLine.SETRANGE("Document Type",PurchaseHeader."Document Type");
+        PurchLine.SETRANGE("Document No.",PurchaseHeader."No.");
+        PurchLine.SETRANGE("Buy-from Vendor No.",PurchaseHeader."Buy-from Vendor No.");
+        IF PurchLine.FINDLAST THEN BEGIN
+          PurchLineRounding.INIT;
+          PurchLineRounding.VALIDATE("Document Type",PurchLine."Document Type");
+          PurchLineRounding.VALIDATE("Document No.",PurchLine."Document No.");
+          PurchLineRounding."Line No." := PurchLine."Line No." + 10000;
+          PurchLineRounding.VALIDATE("Buy-from Vendor No.",PurchLine."Buy-from Vendor No.");
+          PurchLineRounding.VALIDATE(Type,PurchLineRounding.Type::"G/L Account");
+          PurchLineRounding.VALIDATE("No.",CompelloSetup."Rounding account");
+          IF VATDif > 0 THEN
+            PurchLineRounding.VALIDATE(Quantity,1)
+          ELSE
+            PurchLineRounding.VALIDATE(Quantity,-1);
+          PurchLineRounding.VALIDATE("Direct Unit Cost",ABS(VATDif));
+          PurchLineRounding.VALIDATE("VAT Prod. Posting Group",CompelloSetup."Default Free VAT Code");
+          PurchLineRounding.INSERT(TRUE);
+
+          //Do not proceed with rest of VAT differnce code, as total now is correct based on Navision calculation of VAT
+          EXIT;
+        END;
+
+
+        PurchSetup.GET;
+        PurchSetup.TESTFIELD("Allow VAT Difference");
+        IF TempVATAmountLine.FINDSET THEN BEGIN
+          REPEAT
+            VATDifOneLine := (TempVATAmountLine."VAT Amount" / VATAmount) * VATDif;
+            TempVATAmountLine.VALIDATE("VAT Amount", TempVATAmountLine."VAT Amount" + VATDifOneLine);
+            IF PurchaseHeader."Prices Including VAT" THEN
+              TempVATAmountLine."VAT Base" := TempVATAmountLine."Amount Including VAT" - TempVATAmountLine."VAT Amount"
+            ELSE
+              TempVATAmountLine."Amount Including VAT" := TempVATAmountLine."VAT Amount" + TempVATAmountLine."VAT Base";
+            VATDifTotal += VATDifOneLine;
+            TempVATAmountLine.CheckVATDifference(PurchaseHeader."Currency Code",PurchSetup."Allow VAT Difference",PurchaseHeader."Prices Including VAT");
+            TempVATAmountLine.Modified := TRUE;
+            TempVATAmountLine.MODIFY;
+          UNTIL TempVATAmountLine.NEXT = 0;
+
+          IF VATDifTotal <> VATDif THEN BEGIN
+            TempVATAmountLine.FINDFIRST;
+            TempVATAmountLine.VALIDATE("VAT Amount", VATDif - VATDifTotal);
+            IF PurchaseHeader."Prices Including VAT" THEN
+              TempVATAmountLine."VAT Base" := TempVATAmountLine."Amount Including VAT" - TempVATAmountLine."VAT Amount"
+            ELSE
+              TempVATAmountLine."Amount Including VAT" := TempVATAmountLine."VAT Amount" + TempVATAmountLine."VAT Base";
+            TempVATAmountLine.CheckVATDifference(PurchaseHeader."Currency Code",PurchSetup."Allow VAT Difference",PurchaseHeader."Prices Including VAT");
+            TempVATAmountLine.Modified := TRUE;
+            TempVATAmountLine.MODIFY;
+          END;
+        END;
+
+        PurchLine.UpdateVATOnLines(0,PurchaseHeader,PurchLine,TempVATAmountLine);
+        PurchLine.UpdateVATOnLines(1,PurchaseHeader,PurchLine,TempVATAmountLine);
+      END;
+    END;
+
+    PROCEDURE CreatePurchDoc@1101103002(VAR Rec@1101103002 : Record 70008);
+    VAR
+      Text002@1101103001 : TextConst 'ENU=Do you want to create Purchase Invoice document?;NOR=Vil du opprette Innkj›psfaktura?';
+      Text003@1101103000 : TextConst 'ENU=Document created;NOR=Dokument opprettet';
+    BEGIN
+      IF CONFIRM(Text002, TRUE) THEN BEGIN
+        IF CreatePurchaseHeader(Rec) THEN
+          MESSAGE(Text003)
+        ELSE
+          MESSAGE(GetErrorText);
+      END;
+    END;
+
+    LOCAL PROCEDURE CheckCurrency@1101103003(VAR PurchaseHeader@1101103002 : Record 38;VAR PurchaseRcptLine@1101103000 : Record 121) RetValue : Boolean;
+    VAR
+      PurchaseRcptHeader@1101103001 : Record 120;
+    BEGIN
+      RetValue := TRUE;
+      IF PurchaseRcptHeader.GET(PurchaseRcptLine."Document No.") THEN BEGIN
+        IF PurchaseRcptHeader."Currency Code" <> PurchaseHeader."Currency Code" THEN BEGIN
+         ErrorText := STRSUBSTNO(
+            Text005,
+            PurchaseHeader.FIELDCAPTION("Currency Code"),
+            PurchaseHeader.TABLECAPTION,PurchaseHeader."No.",
+            PurchaseRcptHeader.TABLECAPTION,PurchaseRcptHeader."No.");
+            RetValue := FALSE;
+          ERROR(ErrorText);
+        END;
+      END;
+      EXIT(RetValue);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | SI-Data                                     |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 24.04.15 JAL Handle creation of journal lines
+                       First create Purchase Invoice with "No." = 1
+                       then create journal lines from the Purhcae Invoice
+                       Delete the Purchase Invoice after the lines have been created.
+    }
+    END.
+  }
+}
+

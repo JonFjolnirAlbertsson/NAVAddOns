@@ -1,0 +1,2965 @@
+OBJECT Table 60 Document Sending Profile
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26.01.17;
+    Time=15.31.40;
+    Modified=Yes;
+    Version List=NAVW110.00;
+  }
+  PROPERTIES
+  {
+    OnInsert=VAR
+               DocumentSendingProfile@1000 : Record 60;
+             BEGIN
+               DocumentSendingProfile.SETRANGE(Default,TRUE);
+               IF NOT DocumentSendingProfile.FINDFIRST THEN
+                 Default := TRUE;
+             END;
+
+    OnDelete=VAR
+               Customer@1000 : Record 18;
+             BEGIN
+               IF Default THEN
+                 ERROR(CannotDeleteDefaultRuleErr);
+
+               Customer.SETRANGE("Document Sending Profile",Code);
+               IF Customer.FINDFIRST THEN BEGIN
+                 IF CONFIRM(UpdateAssCustomerQst,FALSE,Code) THEN
+                   Customer.MODIFYALL("Document Sending Profile",'')
+                 ELSE
+                   ERROR(CannotDeleteErr);
+               END;
+             END;
+
+    CaptionML=[ENU=Document Sending Profile;
+               NOR=Profil for dokumentsending];
+    LookupPageID=Page359;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Code                ;Code20        ;CaptionML=[ENU=Code;
+                                                              NOR=Kode];
+                                                   NotBlank=Yes }
+    { 2   ;   ;Description         ;Text50        ;CaptionML=[ENU=Description;
+                                                              NOR=Beskrivelse] }
+    { 10  ;   ;Printer             ;Option        ;CaptionML=[ENU=Printer;
+                                                              NOR=Skriver];
+                                                   OptionCaptionML=[ENU=No,Yes (Prompt for Settings),Yes (Use Default Settings);
+                                                                    NOR=Nei,Ja (spõr om innstillinger),Ja (bruk standardinnstillinger)];
+                                                   OptionString=No,Yes (Prompt for Settings),Yes (Use Default Settings) }
+    { 11  ;   ;E-Mail              ;Option        ;CaptionML=[ENU=Email;
+                                                              NOR=E-post];
+                                                   OptionCaptionML=[ENU=No,Yes (Prompt for Settings),Yes (Use Default Settings);
+                                                                    NOR=Nei,Ja (spõr om innstillinger),Ja (bruk standardinnstillinger)];
+                                                   OptionString=No,Yes (Prompt for Settings),Yes (Use Default Settings) }
+    { 12  ;   ;E-Mail Attachment   ;Option        ;CaptionML=[ENU=Email Attachment;
+                                                              NOR=E-postvedlegg];
+                                                   OptionCaptionML=[ENU=PDF,Electronic Document,PDF & Electronic Document;
+                                                                    NOR=PDF,elektronisk dokument,PDF og elektronisk dokument];
+                                                   OptionString=PDF,Electronic Document,PDF & Electronic Document }
+    { 13  ;   ;E-Mail Format       ;Code20        ;TableRelation="Electronic Document Format".Code;
+                                                   CaptionML=[ENU=Email Format;
+                                                              NOR=E-postformat] }
+    { 15  ;   ;Disk                ;Option        ;CaptionML=[ENU=Disk;
+                                                              NOR=Disk];
+                                                   OptionCaptionML=[ENU=No,PDF,Electronic Document,PDF & Electronic Document;
+                                                                    NOR=Ingen,PDF,Elektronisk dokument,PDF og elektronisk dokument];
+                                                   OptionString=No,PDF,Electronic Document,PDF & Electronic Document }
+    { 16  ;   ;Disk Format         ;Code20        ;TableRelation="Electronic Document Format".Code;
+                                                   CaptionML=[ENU=Disk Format;
+                                                              NOR=Diskformat] }
+    { 20  ;   ;Electronic Document ;Option        ;CaptionML=[ENU=Electronic Document;
+                                                              NOR=Elektronisk dokument];
+                                                   OptionCaptionML=[ENU=No,Through Document Exchange Service;
+                                                                    NOR=Nei,Gjennom dokumentutvekslingstjeneste];
+                                                   OptionString=No,Through Document Exchange Service }
+    { 21  ;   ;Electronic Format   ;Code20        ;TableRelation="Electronic Document Format".Code;
+                                                   CaptionML=[ENU=Electronic Format;
+                                                              NOR=Elektronisk format] }
+    { 30  ;   ;Default             ;Boolean       ;OnValidate=VAR
+                                                                DocumentSendingProfile@1001 : Record 60;
+                                                              BEGIN
+                                                                IF (xRec.Default = TRUE) AND (Default = FALSE) THEN
+                                                                  ERROR(CannotRemoveDefaultRuleErr);
+
+                                                                DocumentSendingProfile.SETRANGE(Default,TRUE);
+                                                                DocumentSendingProfile.MODIFYALL(Default,FALSE,FALSE);
+                                                              END;
+
+                                                   CaptionML=[ENU=Default;
+                                                              NOR=Standard] }
+    { 50  ;   ;Send To             ;Option        ;CaptionML=[ENU=Send To;
+                                                              NOR=Send til];
+                                                   OptionCaptionML=[ENU=Disk,Email,Print,Electronic Document;
+                                                                    NOR=Disk,E-post,Utskrift,Elektronisk dokument];
+                                                   OptionString=Disk,Email,Print,Electronic Document }
+    { 51  ;   ;Usage               ;Option        ;CaptionML=[ENU=Usage;
+                                                              NOR=Forbruk];
+                                                   OptionCaptionML=[ENU=Sales Invoice,Sales Credit Memo,,Service Invoice,Service Credit Memo,Job Quote;
+                                                                    NOR=Salgsfaktura,Salgskreditnota,,Servicefaktura,Servicekreditnota,Prosjekttilbud];
+                                                   OptionString=Sales Invoice,Sales Credit Memo,,Service Invoice,Service Credit Memo,Job Quote }
+    { 52  ;   ;One Related Party Selected;Boolean ;InitValue=Yes;
+                                                   OnValidate=BEGIN
+                                                                IF NOT "One Related Party Selected" THEN BEGIN
+                                                                  "Electronic Document" := "Electronic Document"::No;
+                                                                  "Electronic Format" := '';
+                                                                END;
+                                                              END;
+
+                                                   CaptionML=[ENU=One Related Party Selected;
+                                                              NOR=ên relatert part valgt] }
+    { 50000;  ;Hide Sending Profile Dialog;Boolean;CaptionML=[ENU=Hide Sending Profile Dialog;
+                                                              NOR=Skul dokumentsending dialog] }
+  }
+  KEYS
+  {
+    {    ;Code                                    ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      DefaultCodeTxt@1000 : TextConst '@@@=Translate as we translate default term in local languages;ENU=DEFAULT;NOR=STANDARD';
+      DefaultDescriptionTxt@1001 : TextConst 'ENU=Default rule used if no other provided;NOR=Standardregel brukes hvis ikke annet er angitt';
+      RecordAsTextFormatterTxt@1002 : TextConst 'ENU="%1 ; %2";NOR="%1 ; %2"';
+      FieldCaptionContentFormatterTxt@1007 : TextConst '@@@="%1=Field Caption (e.g. Email), %2=Field Content (e.g. PDF) so for example ''Email (PDF)''";ENU=%1 (%2);NOR=%1 (%2)';
+      CannotDeleteDefaultRuleErr@1003 : TextConst 'ENU=You cannot delete the default rule. Assign other rule to be default first.;NOR=Du kan ikke slette standardregelen. Tilordne fõrst en annen regel til Ü vëre standard.';
+      CannotRemoveDefaultRuleErr@1004 : TextConst 'ENU=There must be one default rule in the system. To remove the default property from this rule, assign default to another rule.;NOR=Det mÜ vëre Çn standardregel i systemet. Hvis du vil fjerne standardegenskapen fra regelen, tilordner du standard til en annen regel.';
+      UpdateAssCustomerQst@1005 : TextConst 'ENU=If you delete document sending profile %1, it will also be deleted on customer cards that use the profile.\\Do you want to continue?;NOR=Hvis du sletter profilen %1 for dokumentsending, slettes den ogsÜ pÜ kundekort som bruker profilen.\\Vil du fortsette?';
+      CannotDeleteErr@1006 : TextConst 'ENU=Cannot delete the document sending profile.;NOR=Kan ikke slette profilen for dokumentsending.';
+      CannotSendMultipleSalesDocsErr@1008 : TextConst 'ENU=You can only send one electronic sales document at a time.;NOR=Du kan bare sende ett elektronisk salgsdokument om gangen.';
+      InvoicesTxt@1009 : TextConst 'ENU=Invoices;NOR=Fakturaer';
+      ShipmentsTxt@1010 : TextConst 'ENU=Shipments;NOR=Fõlgesedler';
+      CreditMemosTxt@1011 : TextConst 'ENU=Credit Memos;NOR=Kreditnotaer';
+      ReceiptsTxt@1012 : TextConst 'ENU=Receipts;NOR=Mottak';
+      JobQuotesTxt@1013 : TextConst 'ENU=Job Quotes;NOR=Prosjekttilbud';
+      PurchaseOrdersTxt@1014 : TextConst 'ENU=Purchase Orders;NOR=Bestillinger';
+
+    PROCEDURE GetDefaultForCustomer@4(CustomerNo@1000 : Code[20];VAR DocumentSendingProfile@1002 : Record 60);
+    VAR
+      Customer@1001 : Record 18;
+    BEGIN
+      IF Customer.GET(CustomerNo) THEN
+        IF DocumentSendingProfile.GET(Customer."Document Sending Profile") THEN
+          EXIT;
+
+      GetDefault(DocumentSendingProfile);
+    END;
+
+    PROCEDURE GetDefaultForVendor@27(VendorNo@1001 : Code[20];VAR DocumentSendingProfile@1000 : Record 60);
+    VAR
+      Vendor@1002 : Record 23;
+    BEGIN
+      IF Vendor.GET(VendorNo) THEN
+        IF DocumentSendingProfile.GET(Vendor."Document Sending Profile") THEN
+          EXIT;
+
+      GetDefault(DocumentSendingProfile);
+    END;
+
+    PROCEDURE GetDefault@1(VAR DefaultDocumentSendingProfile@1000 : Record 60);
+    VAR
+      DocumentSendingProfile@1001 : Record 60;
+    BEGIN
+      DocumentSendingProfile.SETRANGE(Default,TRUE);
+      IF NOT DocumentSendingProfile.FINDFIRST THEN BEGIN
+        DocumentSendingProfile.INIT;
+        DocumentSendingProfile.VALIDATE(Code,DefaultCodeTxt);
+        DocumentSendingProfile.VALIDATE(Description,DefaultDescriptionTxt);
+        DocumentSendingProfile.VALIDATE("E-Mail","E-Mail"::"Yes (Prompt for Settings)");
+        DocumentSendingProfile.VALIDATE("E-Mail Attachment","E-Mail Attachment"::PDF);
+        DocumentSendingProfile.VALIDATE(Default,TRUE);
+        DocumentSendingProfile.INSERT(TRUE);
+      END;
+
+      DefaultDocumentSendingProfile := DocumentSendingProfile;
+    END;
+
+    PROCEDURE GetRecordAsText@2() : Text;
+    VAR
+      RecordAsText@1000 : Text;
+    BEGIN
+      RecordAsText := '';
+
+      IF ("Electronic Document" <> "Electronic Document"::No) AND ("Electronic Format" <> '') THEN
+        RecordAsText := STRSUBSTNO(
+            RecordAsTextFormatterTxt,
+            STRSUBSTNO(FieldCaptionContentFormatterTxt,FIELDCAPTION("Electronic Document"),"Electronic Document"),RecordAsText);
+
+      IF "E-Mail" <> "E-Mail"::No THEN
+        RecordAsText := STRSUBSTNO(
+            RecordAsTextFormatterTxt,
+            STRSUBSTNO(FieldCaptionContentFormatterTxt,FIELDCAPTION("E-Mail"),"E-Mail Attachment"),RecordAsText);
+      IF Printer <> Printer::No THEN
+        RecordAsText := STRSUBSTNO(RecordAsTextFormatterTxt,FIELDCAPTION(Printer),RecordAsText);
+
+      IF Disk <> Disk::No THEN
+        RecordAsText := STRSUBSTNO(
+            RecordAsTextFormatterTxt,STRSUBSTNO(FieldCaptionContentFormatterTxt,FIELDCAPTION(Disk),Disk),RecordAsText);
+
+      EXIT(RecordAsText);
+    END;
+
+    PROCEDURE WillUserBePrompted@5() : Boolean;
+    BEGIN
+      EXIT(
+        (Printer = Printer::"Yes (Prompt for Settings)") OR
+        ("E-Mail" = "E-Mail"::"Yes (Prompt for Settings)"));
+    END;
+
+    PROCEDURE SetDocumentUsage@3(DocumentVariant@1000 : Variant);
+    VAR
+      ElectronicDocumentFormat@1001 : Record 61;
+      DocumentUsage@1002 : Option;
+    BEGIN
+      ElectronicDocumentFormat.GetDocumentUsage(DocumentUsage,DocumentVariant);
+      VALIDATE(Usage,DocumentUsage);
+    END;
+
+    PROCEDURE VerifySelectedOptionsValid@6();
+    BEGIN
+      IF "One Related Party Selected" THEN
+        EXIT;
+
+      IF "E-Mail Attachment" > "E-Mail Attachment"::PDF THEN
+        ERROR(CannotSendMultipleSalesDocsErr);
+
+      IF "Electronic Document" > "Electronic Document"::No THEN
+        ERROR(CannotSendMultipleSalesDocsErr);
+    END;
+
+    PROCEDURE LookupProfile@7(CustNo@1000 : Code[20];Multiselection@1002 : Boolean) : Boolean;
+    VAR
+      DocumentSendingProfile@1001 : Record 60;
+      TempDocumentSendingProfile@1003 : TEMPORARY Record 60;
+      OfficeMgt@1004 : Codeunit 1630;
+      ConfirmProfileL@1101103000 : Boolean;
+    BEGIN
+      IF OfficeMgt.IsAvailable THEN BEGIN
+        GetOfficeAddinDefault(Rec,OfficeMgt.AttachAvailable);
+        EXIT(TRUE);
+      END;
+
+      DocumentSendingProfile.GetDefaultForCustomer(CustNo,DocumentSendingProfile);
+      COMMIT;
+
+      WITH TempDocumentSendingProfile DO BEGIN
+        INIT;
+        Code := DocumentSendingProfile.Code;
+        VALIDATE("One Related Party Selected",Multiselection);
+        // SetDocumentUsage(Rec);
+        INSERT;
+        //01. 26.01.17 JAL -->
+        IF DocumentSendingProfile."Hide Sending Profile Dialog" THEN BEGIN
+          Rec := DocumentSendingProfile;
+          EXIT(TRUE);
+        END ELSE
+        //01. 26.01.17 JAL <--
+        IF PAGE.RUNMODAL(PAGE::"Select Sending Options",TempDocumentSendingProfile) = ACTION::LookupOK THEN BEGIN
+          Rec := TempDocumentSendingProfile;
+          EXIT(TRUE);
+        END;
+      END;
+    END;
+
+    PROCEDURE LookUpProfileVendor@18(VendorNo@1001 : Code[20];Multiselection@1000 : Boolean) : Boolean;
+    VAR
+      DocumentSendingProfile@1004 : Record 60;
+      TempDocumentSendingProfile@1003 : TEMPORARY Record 60;
+      OfficeMgt@1002 : Codeunit 1630;
+    BEGIN
+      IF OfficeMgt.IsAvailable THEN BEGIN
+        GetOfficeAddinDefault(Rec,OfficeMgt.AttachAvailable);
+        EXIT(TRUE);
+      END;
+
+      DocumentSendingProfile.GetDefaultForVendor(VendorNo,DocumentSendingProfile);
+      COMMIT;
+
+      WITH TempDocumentSendingProfile DO BEGIN
+        INIT;
+        Code := DocumentSendingProfile.Code;
+        Description := 'Vendor';
+        VALIDATE("One Related Party Selected",Multiselection);
+        // SetDocumentUsage(Rec);
+        INSERT;
+
+        IF PAGE.RUNMODAL(PAGE::"Select Sending Options",TempDocumentSendingProfile) = ACTION::LookupOK THEN BEGIN
+          Rec := TempDocumentSendingProfile;
+          EXIT(TRUE);
+        END;
+      END;
+    END;
+
+    PROCEDURE Send@11(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;DocNo@1003 : Code[20];ToCust@1002 : Code[20];DocName@1001 : Text[150];CustomerFieldNo@1000 : Integer;DocumentNoFieldNo@1006 : Integer);
+    BEGIN
+      SendToVAN(RecordVariant);
+      SendToPrinter(ReportUsage,RecordVariant,ToCust);
+      TrySendToEMailGroupedMultipleSelection(ReportUsage,RecordVariant,DocumentNoFieldNo,DocName,CustomerFieldNo);
+      SendToDisk(ReportUsage,RecordVariant,DocNo,DocName,ToCust);
+    END;
+
+    PROCEDURE SendVendor@20(ReportUsage@1006 : Integer;RecordVariant@1005 : Variant;DocNo@1004 : Code[20];ToVendor@1003 : Code[20];DocName@1002 : Text[150];VendorFieldNo@1001 : Integer;DocumentNoFieldNo@1000 : Integer);
+    BEGIN
+      SendToVAN(RecordVariant);
+      SendToPrinterVendor(ReportUsage,RecordVariant,ToVendor);
+      TrySendToEMailGroupedMultipleSelectionVendor(ReportUsage,RecordVariant,DocumentNoFieldNo,DocName,VendorFieldNo);
+      SendToDiskVendor(ReportUsage,RecordVariant,DocNo,DocName,ToVendor);
+    END;
+
+    PROCEDURE TrySendToVAN@13(RecordVariant@1004 : Variant);
+    BEGIN
+      "Electronic Document" := "Electronic Document"::"Through Document Exchange Service";
+      SendToVAN(RecordVariant);
+    END;
+
+    PROCEDURE TrySendToPrinter@14(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;ToCust@1001 : Code[20];ShowDialog@1000 : Boolean);
+    BEGIN
+      IF ShowDialog THEN
+        Printer := Printer::"Yes (Prompt for Settings)"
+      ELSE
+        Printer := Printer::"Yes (Use Default Settings)";
+
+      SendToPrinter(ReportUsage,RecordVariant,ToCust);
+    END;
+
+    PROCEDURE TrySendToPrinterVendor@28(ReportUsage@1003 : Integer;RecordVariant@1002 : Variant;ToVendor@1001 : Code[20];ShowDialog@1000 : Boolean);
+    BEGIN
+      IF ShowDialog THEN
+        Printer := Printer::"Yes (Prompt for Settings)"
+      ELSE
+        Printer := Printer::"Yes (Use Default Settings)";
+
+      SendToPrinterVendor(ReportUsage,RecordVariant,ToVendor);
+    END;
+
+    PROCEDURE TrySendToEMail@15(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;DocumentNoFieldNo@1003 : Integer;DocName@1001 : Text[150];CustomerFieldNo@1002 : Integer;ShowDialog@1000 : Boolean);
+    BEGIN
+      IF ShowDialog THEN
+        "E-Mail" := "E-Mail"::"Yes (Prompt for Settings)"
+      ELSE
+        "E-Mail" := "E-Mail"::"Yes (Use Default Settings)";
+
+      "E-Mail Attachment" := "E-Mail Attachment"::PDF;
+
+      TrySendToEMailGroupedMultipleSelection(ReportUsage,RecordVariant,DocumentNoFieldNo,DocName,CustomerFieldNo);
+    END;
+
+    LOCAL PROCEDURE TrySendToEMailGroupedMultipleSelection@19(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;DocumentNoFieldNo@1003 : Integer;DocName@1001 : Text[150];CustomerFieldNo@1006 : Integer);
+    VAR
+      TempCustomer@1009 : TEMPORARY Record 18;
+      RecRef@1007 : RecordRef;
+      CustomerNoFieldRef@1000 : FieldRef;
+      RecToSend@1011 : Variant;
+    BEGIN
+      RecToSend := RecordVariant;
+      RecRef.GETTABLE(RecordVariant);
+      CustomerNoFieldRef := RecRef.FIELD(CustomerFieldNo);
+      GetDisctinctCustomers(RecRef,CustomerFieldNo,TempCustomer);
+
+      IF TempCustomer.FINDSET THEN
+        REPEAT
+          CustomerNoFieldRef.SETFILTER(TempCustomer."No.");
+          RecRef.FINDFIRST;
+          RecRef.SETTABLE(RecToSend);
+          SendToEMail(
+            ReportUsage,RecToSend,GetMultipleDocumentsTo(RecRef,DocumentNoFieldNo),
+            GetMultipleDocumentsName(DocName,ReportUsage,RecRef),TempCustomer."No.");
+        UNTIL TempCustomer.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE TrySendToEMailGroupedMultipleSelectionVendor@23(ReportUsage@1004 : Integer;RecordVariant@1003 : Variant;DocumentNoFieldNo@1002 : Integer;DocName@1001 : Text[150];VendorFieldNo@1000 : Integer);
+    VAR
+      TempVendor@1008 : TEMPORARY Record 23;
+      RecRef@1007 : RecordRef;
+      VendorNoFieldRef@1006 : FieldRef;
+      RecToSend@1005 : Variant;
+    BEGIN
+      RecToSend := RecordVariant;
+      RecRef.GETTABLE(RecordVariant);
+      VendorNoFieldRef := RecRef.FIELD(VendorFieldNo);
+      GetDistinctVendors(RecRef,VendorFieldNo,TempVendor);
+
+      IF TempVendor.FINDSET THEN
+        REPEAT
+          VendorNoFieldRef.SETFILTER(TempVendor."No.");
+          RecRef.FINDFIRST;
+          RecRef.SETTABLE(RecToSend);
+          SendToEmailVendor(
+            ReportUsage,RecToSend,GetMultipleDocumentsTo(RecRef,DocumentNoFieldNo),
+            GetMultipleDocumentsName(DocName,ReportUsage,RecRef),TempVendor."No.");
+        UNTIL TempVendor.NEXT = 0;
+    END;
+
+    PROCEDURE TrySendToDisk@16(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;DocNo@1003 : Code[20];DocName@1001 : Text[150];ToCust@1000 : Code[20]);
+    BEGIN
+      Disk := Disk::PDF;
+      SendToDisk(ReportUsage,RecordVariant,DocNo,DocName,ToCust);
+    END;
+
+    LOCAL PROCEDURE SendToVAN@8(RecordVariant@1004 : Variant);
+    VAR
+      ReportDistributionManagement@1006 : Codeunit 452;
+    BEGIN
+      IF "Electronic Document" = "Electronic Document"::No THEN
+        EXIT;
+
+      ReportDistributionManagement.VANDocumentReport(RecordVariant,Rec);
+    END;
+
+    LOCAL PROCEDURE SendToPrinter@9(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;ToCust@1001 : Code[20]);
+    VAR
+      ReportSelections@1006 : Record 77;
+      ShowRequestForm@1000 : Boolean;
+    BEGIN
+      IF Printer = Printer::No THEN
+        EXIT;
+
+      ShowRequestForm := Printer = Printer::"Yes (Prompt for Settings)";
+      ReportSelections.PrintWithGUIYesNo(ReportUsage,RecordVariant,ShowRequestForm,ToCust);
+    END;
+
+    LOCAL PROCEDURE SendToPrinterVendor@22(ReportUsage@1000 : Integer;RecordVariant@1001 : Variant;ToVendor@1002 : Code[20]);
+    VAR
+      ReportSelections@1004 : Record 77;
+      ShowRequestForm@1003 : Boolean;
+    BEGIN
+      IF Printer = Printer::No THEN
+        EXIT;
+
+      ShowRequestForm := Printer = Printer::"Yes (Prompt for Settings)";
+      ReportSelections.PrintWithGUIYesNoVendor(ReportUsage,RecordVariant,ShowRequestForm,ToVendor);
+    END;
+
+    LOCAL PROCEDURE SendToEMail@10(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;DocNo@1003 : Code[20];DocName@1016 : Text[150];ToCust@1002 : Code[20]);
+    VAR
+      ReportSelections@1000 : Record 77;
+      ElectronicDocumentFormat@1006 : Record 61;
+      ReportDistributionManagement@1012 : Codeunit 452;
+      DocumentMailing@1007 : Codeunit 260;
+      FileManagement@1011 : Codeunit 419;
+      ShowDialog@1001 : Boolean;
+      ClientFilePath@1013 : Text[250];
+      ServerFilePath@1009 : Text[250];
+      ZipPath@1015 : Text[250];
+      ClientZipFileName@1014 : Text[250];
+      ServerEmailBodyFilePath@1008 : Text[250];
+      SendToEmailAddress@1010 : Text[250];
+    BEGIN
+      IF "E-Mail" = "E-Mail"::No THEN
+        EXIT;
+
+      ShowDialog := "E-Mail" = "E-Mail"::"Yes (Prompt for Settings)";
+
+      CASE "E-Mail Attachment" OF
+        "E-Mail Attachment"::PDF:
+          ReportSelections.SendEmailToCust(ReportUsage,RecordVariant,DocNo,DocName,ShowDialog,ToCust);
+        "E-Mail Attachment"::"Electronic Document":
+          BEGIN
+            ReportSelections.GetEmailBody(ServerEmailBodyFilePath,ReportUsage,RecordVariant,ToCust,SendToEmailAddress);
+            ReportDistributionManagement.SendXmlEmailAttachment(
+              RecordVariant,"E-Mail Format",ServerEmailBodyFilePath,SendToEmailAddress);
+          END;
+        "E-Mail Attachment"::"PDF & Electronic Document":
+          BEGIN
+            ElectronicDocumentFormat.SendElectronically(ServerFilePath,ClientFilePath,RecordVariant,"E-Mail Format");
+            ReportDistributionManagement.CreateOrAppendZipFile(FileManagement,ServerFilePath,ClientFilePath,ZipPath,ClientZipFileName);
+            ReportSelections.SendToZip(ReportUsage,RecordVariant,DocNo,ToCust,FileManagement);
+            FileManagement.CloseZipArchive;
+
+            ReportSelections.GetEmailBody(ServerEmailBodyFilePath,ReportUsage,RecordVariant,ToCust,SendToEmailAddress);
+            DocumentMailing.EmailFile(
+              ZipPath,ClientZipFileName,ServerEmailBodyFilePath,DocNo,SendToEmailAddress,DocName,
+              NOT ShowDialog,ReportUsage);
+          END;
+      END;
+    END;
+
+    LOCAL PROCEDURE SendToEmailVendor@30(ReportUsage@1004 : Integer;RecordVariant@1003 : Variant;DocNo@1002 : Code[20];DocName@1001 : Text[150];ToVendor@1000 : Code[20]);
+    VAR
+      ReportSelections@1016 : Record 77;
+      ElectronicDocumentFormat@1015 : Record 61;
+      ReportDistributionManagement@1014 : Codeunit 452;
+      DocumentMailing@1013 : Codeunit 260;
+      FileManagement@1012 : Codeunit 419;
+      ShowDialog@1011 : Boolean;
+      ClientFilePath@1010 : Text[250];
+      ServerFilePath@1009 : Text[250];
+      ZipPath@1008 : Text[250];
+      ClientZipFileName@1007 : Text[250];
+      ServerEmailBodyFilePath@1006 : Text[250];
+      SendToEmailAddress@1005 : Text[250];
+    BEGIN
+      IF "E-Mail" = "E-Mail"::No THEN
+        EXIT;
+
+      ShowDialog := "E-Mail" = "E-Mail"::"Yes (Prompt for Settings)";
+
+      CASE "E-Mail Attachment" OF
+        "E-Mail Attachment"::PDF:
+          ReportSelections.SendEmailToVendor(ReportUsage,RecordVariant,DocNo,DocName,ShowDialog,ToVendor);
+        "E-Mail Attachment"::"Electronic Document":
+          BEGIN
+            ReportSelections.GetEmailBodyVendor(ServerEmailBodyFilePath,ReportUsage,RecordVariant,ToVendor,SendToEmailAddress);
+            ReportDistributionManagement.SendXmlEmailAttachmentVendor(
+              RecordVariant,"E-Mail Format",ServerEmailBodyFilePath,SendToEmailAddress);
+          END;
+        "E-Mail Attachment"::"PDF & Electronic Document":
+          BEGIN
+            ElectronicDocumentFormat.SendElectronically(ServerFilePath,ClientFilePath,RecordVariant,"E-Mail Format");
+            ReportDistributionManagement.CreateOrAppendZipFile(FileManagement,ServerFilePath,ClientFilePath,ZipPath,ClientZipFileName);
+            ReportSelections.SendToZipVendor(ReportUsage,RecordVariant,DocNo,ToVendor,FileManagement);
+            FileManagement.CloseZipArchive;
+
+            ReportSelections.GetEmailBodyVendor(ServerEmailBodyFilePath,ReportUsage,RecordVariant,ToVendor,SendToEmailAddress);
+            DocumentMailing.EmailFile(
+              ZipPath,ClientZipFileName,ServerEmailBodyFilePath,DocNo,SendToEmailAddress,DocName,
+              NOT ShowDialog,ReportUsage);
+          END;
+      END;
+    END;
+
+    LOCAL PROCEDURE SendToDisk@12(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;DocNo@1002 : Code[20];DocName@1013 : Text;ToCust@1009 : Code[20]);
+    VAR
+      ReportSelections@1001 : Record 77;
+      ElectronicDocumentFormat@1003 : Record 61;
+      ReportDistributionManagement@1000 : Codeunit 452;
+      FileManagement@1010 : Codeunit 419;
+      ServerFilePath@1006 : Text[250];
+      ClientFilePath@1007 : Text[250];
+      ZipPath@1011 : Text[250];
+      ClientZipFileName@1012 : Text[250];
+    BEGIN
+      IF Disk = Disk::No THEN
+        EXIT;
+
+      CASE Disk OF
+        Disk::PDF:
+          ReportSelections.SendToDisk(ReportUsage,RecordVariant,DocNo,DocName,ToCust);
+        Disk::"Electronic Document":
+          BEGIN
+            ElectronicDocumentFormat.SendElectronically(ServerFilePath,ClientFilePath,RecordVariant,"Disk Format");
+            ReportDistributionManagement.SaveFileOnClient(ServerFilePath,ClientFilePath);
+          END;
+        Disk::"PDF & Electronic Document":
+          BEGIN
+            ElectronicDocumentFormat.SendElectronically(ServerFilePath,ClientFilePath,RecordVariant,"Disk Format");
+            ReportDistributionManagement.CreateOrAppendZipFile(FileManagement,ServerFilePath,ClientFilePath,ZipPath,ClientZipFileName);
+            ReportSelections.SendToZip(ReportUsage,RecordVariant,DocNo,ToCust,FileManagement);
+            FileManagement.CloseZipArchive;
+
+            ReportDistributionManagement.SaveFileOnClient(ServerFilePath,ClientFilePath);
+          END;
+      END;
+    END;
+
+    LOCAL PROCEDURE SendToDiskVendor@29(ReportUsage@1004 : Integer;RecordVariant@1003 : Variant;DocNo@1002 : Code[20];DocName@1001 : Text;ToVendor@1000 : Code[20]);
+    VAR
+      ReportSelections@1012 : Record 77;
+      ElectronicDocumentFormat@1011 : Record 61;
+      ReportDistributionManagement@1010 : Codeunit 452;
+      FileManagement@1009 : Codeunit 419;
+      ServerFilePath@1008 : Text[250];
+      ClientFilePath@1007 : Text[250];
+      ZipPath@1006 : Text[250];
+      ClientZipFileName@1005 : Text[250];
+    BEGIN
+      IF Disk = Disk::No THEN
+        EXIT;
+
+      CASE Disk OF
+        Disk::PDF:
+          ReportSelections.SendToDiskVendor(ReportUsage,RecordVariant,DocNo,DocName,ToVendor);
+        Disk::"Electronic Document":
+          BEGIN
+            ElectronicDocumentFormat.SendElectronically(ServerFilePath,ClientFilePath,RecordVariant,"Disk Format");
+            ReportDistributionManagement.SaveFileOnClient(ServerFilePath,ClientFilePath);
+          END;
+        Disk::"PDF & Electronic Document":
+          BEGIN
+            ElectronicDocumentFormat.SendElectronically(ServerFilePath,ClientFilePath,RecordVariant,"Disk Format");
+            ReportDistributionManagement.CreateOrAppendZipFile(FileManagement,ServerFilePath,ClientFilePath,ZipPath,ClientZipFileName);
+            ReportSelections.SendToZipVendor(ReportUsage,RecordVariant,DocNo,ToVendor,FileManagement);
+            FileManagement.CloseZipArchive;
+
+            ReportDistributionManagement.SaveFileOnClient(ServerFilePath,ClientFilePath);
+          END;
+      END;
+    END;
+
+    PROCEDURE GetOfficeAddinDefault@17(VAR TempDocumentSendingProfile@1000 : TEMPORARY Record 60;CanAttach@1001 : Boolean);
+    BEGIN
+      WITH TempDocumentSendingProfile DO BEGIN
+        INIT;
+        Code := DefaultCodeTxt;
+        Description := DefaultDescriptionTxt;
+        IF CanAttach THEN
+          "E-Mail" := "E-Mail"::"Yes (Use Default Settings)"
+        ELSE
+          "E-Mail" := "E-Mail"::"Yes (Prompt for Settings)";
+        "E-Mail Attachment" := "E-Mail Attachment"::PDF;
+        Default := FALSE;
+      END;
+    END;
+
+    LOCAL PROCEDURE GetMultipleDocumentsName@21(DocName@1002 : Text[150];ReportUsage@1000 : Integer;RecRef@1001 : RecordRef) : Text[150];
+    VAR
+      ReportSelections@1011 : Record 77;
+    BEGIN
+      IF RecRef.COUNT > 1 THEN
+        CASE ReportUsage OF
+          ReportSelections.Usage::"S.Invoice":
+            EXIT(InvoicesTxt);
+          ReportSelections.Usage::"S.Shipment":
+            EXIT(ShipmentsTxt);
+          ReportSelections.Usage::"S.Cr.Memo":
+            EXIT(CreditMemosTxt);
+          ReportSelections.Usage::"S.Ret.Rcpt.":
+            EXIT(ReceiptsTxt);
+          ReportSelections.Usage::JQ:
+            EXIT(JobQuotesTxt);
+          ReportSelections.Usage::"P.Order":
+            EXIT(PurchaseOrdersTxt);
+        END;
+
+      EXIT(DocName);
+    END;
+
+    LOCAL PROCEDURE GetMultipleDocumentsTo@25(RecRef@1001 : RecordRef;DocumentNoFieldNo@1000 : Integer) : Code[20];
+    VAR
+      DocumentNoFieldRef@1002 : FieldRef;
+    BEGIN
+      IF RecRef.COUNT > 1 THEN
+        EXIT('');
+
+      DocumentNoFieldRef := RecRef.FIELD(DocumentNoFieldNo);
+      EXIT(DocumentNoFieldRef.VALUE);
+    END;
+
+    LOCAL PROCEDURE GetDisctinctCustomers@24(RecRef@1002 : RecordRef;CustomerFieldNo@1000 : Integer;VAR TempCustomer@1001 : TEMPORARY Record 18);
+    VAR
+      FieldRef@1003 : FieldRef;
+      CustomerNo@1004 : Code[20];
+    BEGIN
+      IF RecRef.FINDSET THEN
+        REPEAT
+          FieldRef := RecRef.FIELD(CustomerFieldNo);
+          CustomerNo := FieldRef.VALUE;
+          IF NOT TempCustomer.GET(CustomerNo) THEN BEGIN
+            TempCustomer."No." := CustomerNo;
+            TempCustomer.INSERT;
+          END;
+        UNTIL RecRef.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE GetDistinctVendors@26(RecRef@1002 : RecordRef;VendorFieldNo@1001 : Integer;VAR TempVendor@1000 : TEMPORARY Record 23);
+    VAR
+      FieldRef@1004 : FieldRef;
+      VendorNo@1003 : Code[20];
+    BEGIN
+      IF RecRef.FINDSET THEN
+        REPEAT
+          FieldRef := RecRef.FIELD(VendorFieldNo);
+          VendorNo := FieldRef.VALUE;
+          IF NOT TempVendor.GET(VendorNo) THEN BEGIN
+            TempVendor."No." := VendorNo;
+            TempVendor.INSERT;
+          END;
+        UNTIL RecRef.NEXT = 0;
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeSend@1101103001(VAR ReportIDP@1101103000 : Integer);
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnAfterSend@1101103002(VAR ReportIDP@1101103000 : Integer);
+    BEGIN
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 26.01.17 JAL Added new field "Show Sending Profile Dialog"
+    }
+    END.
+  }
+}
+
+OBJECT Table 77 Report Selections
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26.01.17;
+    Time=12.49.47;
+    Modified=Yes;
+    Version List=NAVW110.00,NAVNO10.00;
+  }
+  PROPERTIES
+  {
+    OnInsert=BEGIN
+               CheckEmailBodyUsage;
+             END;
+
+    OnModify=BEGIN
+               TESTFIELD("Report ID");
+               CheckEmailBodyUsage;
+             END;
+
+    CaptionML=[ENU=Report Selections;
+               NOR=Rapportvalg];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Usage               ;Option        ;CaptionML=[ENU=Usage;
+                                                              NOR=Forbruk];
+                                                   OptionCaptionML=[ENU=S.Quote,S.Order,S.Invoice,S.Cr.Memo,S.Test,P.Quote,P.Order,P.Invoice,P.Cr.Memo,P.Receipt,P.Ret.Shpt.,P.Test,B.Stmt,B.Recon.Test,B.Check,Reminder,Fin.Charge,Rem.Test,F.C.Test,Prod. Order,S.Blanket,P.Blanket,M1,M2,M3,M4,Inv1,Inv2,Inv3,SM.Quote,SM.Order,SM.Invoice,SM.Credit Memo,SM.Contract Quote,SM.Contract,SM.Test,S.Return,P.Return,S.Shipment,S.Ret.Rcpt.,S.Work Order,Invt. Period Test,SM.Shipment,S.Test Prepmt.,P.Test Prepmt.,S.Arch. Quote,S.Arch. Order,P.Arch. Quote,P.Arch. Order,S. Arch. Return Order,P. Arch. Return Order,Asm. Order,P.Assembly Order,S.Order Pick Instruction,,S.Sales Order Picking List,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,C.Statement,V.Remittance,JQ,S.Invoice Draft;
+                                                                    NOR=S.Quote,S.Order,S.Invoice,S.Cr.Memo,S.Test,P.Quote,P.Order,P.Invoice,P.Cr.Memo,P.Receipt,P.Ret.Shpt.,P.Test,B.Stmt,B.Recon.Test,B.Check,Reminder,Fin.Charge,Rem.Test,F.C.Test,Prod. Order,S.Blanket,P.Blanket,M1,M2,M3,M4,Inv1,Inv2,Inv3,SM.Quote,SM.Order,SM.Invoice,SM.Credit Memo,SM.Contract Quote,SM.Contract,SM.Test,S.Return,P.Return,S.Shipment,S.Ret.Rcpt.,S.Work Order,Invt. Period Test,SM.Shipment,S.Test Prepmt.,P.Test Prepmt.,S.Arch. Quote,S.Arch. Order,P.Arch. Quote,P.Arch. Order,S. Arch. Return Order,P. Arch. Return Order,Asm. Order,P.Assembly Order,S.Order Pick Instruction,,S.Sales Order Picking List,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,C.Statement,V.Remittance,JQ,S.Invoice Draft];
+                                                   OptionString=S.Quote,S.Order,S.Invoice,S.Cr.Memo,S.Test,P.Quote,P.Order,P.Invoice,P.Cr.Memo,P.Receipt,P.Ret.Shpt.,P.Test,B.Stmt,B.Recon.Test,B.Check,Reminder,Fin.Charge,Rem.Test,F.C.Test,Prod. Order,S.Blanket,P.Blanket,M1,M2,M3,M4,Inv1,Inv2,Inv3,SM.Quote,SM.Order,SM.Invoice,SM.Credit Memo,SM.Contract Quote,SM.Contract,SM.Test,S.Return,P.Return,S.Shipment,S.Ret.Rcpt.,S.Work Order,Invt. Period Test,SM.Shipment,S.Test Prepmt.,P.Test Prepmt.,S.Arch. Quote,S.Arch. Order,P.Arch. Quote,P.Arch. Order,S. Arch. Return Order,P. Arch. Return Order,Asm. Order,P.Assembly Order,S.Order Pick Instruction,,S.Sales Order Picking List,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,C.Statement,V.Remittance,JQ,S.Invoice Draft }
+    { 2   ;   ;Sequence            ;Code10        ;CaptionML=[ENU=Sequence;
+                                                              NOR=Rekkefõlge];
+                                                   Numeric=Yes }
+    { 3   ;   ;Report ID           ;Integer       ;TableRelation=AllObjWithCaption."Object ID" WHERE (Object Type=CONST(Report));
+                                                   OnValidate=BEGIN
+                                                                CALCFIELDS("Report Caption");
+                                                                VALIDATE("Use for Email Body",FALSE);
+                                                              END;
+
+                                                   CaptionML=[ENU=Report ID;
+                                                              NOR=Rapport-ID] }
+    { 4   ;   ;Report Caption      ;Text250       ;FieldClass=FlowField;
+                                                   CalcFormula=Lookup(AllObjWithCaption."Object Caption" WHERE (Object Type=CONST(Report),
+                                                                                                                Object ID=FIELD(Report ID)));
+                                                   CaptionML=[ENU=Report Caption;
+                                                              NOR=Rapportoverskrift];
+                                                   Editable=No }
+    { 7   ;   ;Custom Report Layout Code;Code20   ;TableRelation="Custom Report Layout".Code WHERE (Code=FIELD(Custom Report Layout Code));
+                                                   CaptionML=[ENU=Custom Report Layout Code;
+                                                              NOR=Kode for egendefinert rapportoppsett];
+                                                   Editable=No }
+    { 19  ;   ;Use for Email Attachment;Boolean   ;InitValue=Yes;
+                                                   OnValidate=BEGIN
+                                                                IF NOT "Use for Email Body" THEN
+                                                                  VALIDATE("Email Body Layout Code",'');
+                                                              END;
+
+                                                   CaptionML=[ENU=Use for Email Attachment;
+                                                              NOR=Bruk for e-postvedlegg] }
+    { 20  ;   ;Use for Email Body  ;Boolean       ;OnValidate=BEGIN
+                                                                IF NOT "Use for Email Body" THEN
+                                                                  VALIDATE("Email Body Layout Code",'');
+                                                              END;
+
+                                                   CaptionML=[ENU=Use for Email Body;
+                                                              NOR=Bruk for brõdtekst i e-post] }
+    { 21  ;   ;Email Body Layout Code;Code20      ;TableRelation="Custom Report Layout".Code WHERE (Code=FIELD(Email Body Layout Code),
+                                                                                                    Report ID=FIELD(Report ID));
+                                                   OnValidate=BEGIN
+                                                                IF "Email Body Layout Code" <> '' THEN
+                                                                  TESTFIELD("Use for Email Body",TRUE);
+                                                                CALCFIELDS("Email Body Layout Description");
+                                                              END;
+
+                                                   CaptionML=[ENU=Email Body Layout Code;
+                                                              NOR=Oppsettskode for brõdtekst i e-post] }
+    { 22  ;   ;Email Body Layout Description;Text250;
+                                                   FieldClass=FlowField;
+                                                   CalcFormula=Lookup("Custom Report Layout".Description WHERE (Code=FIELD(Email Body Layout Code)));
+                                                   OnLookup=VAR
+                                                              CustomReportLayout@1001 : Record 9650;
+                                                            BEGIN
+                                                              IF CustomReportLayout.LookupLayoutOK("Report ID") THEN
+                                                                VALIDATE("Email Body Layout Code",CustomReportLayout.Code);
+                                                            END;
+
+                                                   CaptionML=[ENU=Email Body Layout Description;
+                                                              NOR=Oppsettbeskrivelse for brõdtekst i e-post];
+                                                   Editable=No }
+  }
+  KEYS
+  {
+    {    ;Usage,Sequence                          ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      ReportSelection2@1000 : Record 77;
+      MustSelectAndEmailBodyOrAttahmentErr@1001 : TextConst '@@@="%1 = Usage, for example Sales Invoice";ENU=You must select an email body or attachment in report selection for %1.;NOR=Du mÜ velge en brõdtekst i e-post eller et vedlegg i rapportvalget for %1.';
+      EmailBodyIsAlreadyDefinedErr@1002 : TextConst '@@@="%1 = Usage, for example Sales Invoice";ENU=An email body is already defined for %1.;NOR=Brõdtekst i e-post er allerede definert for %1.';
+      CannotBeUsedAsAnEmailBodyErr@1003 : TextConst '@@@="%1 = Report ID,%2 = Type";ENU=Report %1 uses the %2 which cannot be used as an email body.;NOR=Rapporten %1 bruker %2, som ikke kan brukes som brõdtekst i e-post.';
+      ReportLayoutSelection@1004 : Record 9651;
+
+    PROCEDURE NewRecord@1();
+    BEGIN
+      ReportSelection2.SETRANGE(Usage,Usage);
+      IF ReportSelection2.FINDLAST AND (ReportSelection2.Sequence <> '') THEN
+        Sequence := INCSTR(ReportSelection2.Sequence)
+      ELSE
+        Sequence := '1';
+    END;
+
+    LOCAL PROCEDURE CheckEmailBodyUsage@19();
+    VAR
+      ReportSelections@1001 : Record 77;
+      ReportLayoutSelection@1000 : Record 9651;
+    BEGIN
+      IF "Use for Email Body" THEN BEGIN
+        ReportSelections.FilterEmailBodyUsage(Usage);
+        ReportSelections.SETFILTER(Sequence,'<>%1',Sequence);
+        IF NOT ReportSelections.ISEMPTY THEN
+          ERROR(EmailBodyIsAlreadyDefinedErr,Usage);
+
+        IF "Email Body Layout Code" = '' THEN
+          IF ReportLayoutSelection.GetDefaultType("Report ID") =
+             ReportLayoutSelection.Type::"RDLC (built-in)"
+          THEN
+            ERROR(CannotBeUsedAsAnEmailBodyErr,"Report ID",ReportLayoutSelection.Type);
+      END;
+    END;
+
+    PROCEDURE FilterPrintUsage@2(ReportUsage@1000 : Integer);
+    BEGIN
+      RESET;
+      SETRANGE(Usage,ReportUsage);
+    END;
+
+    PROCEDURE FilterEmailUsage@3(ReportUsage@1000 : Integer);
+    BEGIN
+      RESET;
+      SETRANGE(Usage,ReportUsage);
+      SETRANGE("Use for Email Body",TRUE);
+    END;
+
+    PROCEDURE FilterEmailBodyUsage@13(ReportUsage@1000 : Integer);
+    BEGIN
+      RESET;
+      SETRANGE(Usage,ReportUsage);
+      SETRANGE("Use for Email Body",TRUE);
+    END;
+
+    PROCEDURE FilterEmailAttachmentUsage@11(ReportUsage@1000 : Integer);
+    BEGIN
+      RESET;
+      SETRANGE(Usage,ReportUsage);
+      SETRANGE("Use for Email Attachment",TRUE);
+    END;
+
+    PROCEDURE FindPrintUsage@4(ReportUsage@1000 : Integer;CustNo@1002 : Code[20];VAR ReportSelections@1001 : Record 77);
+    BEGIN
+      FilterPrintUsage(ReportUsage);
+      SETFILTER("Report ID",'<>0');
+
+      FindReportSelections(ReportSelections,CustNo);
+      ReportSelections.FINDSET;
+    END;
+
+    PROCEDURE FindPrintUsageVendor@33(ReportUsage@1002 : Integer;VendorNo@1001 : Code[20];VAR ReportSelections@1000 : Record 77);
+    BEGIN
+      FilterPrintUsage(ReportUsage);
+      SETFILTER("Report ID",'<>0');
+
+      FindReportSelectionsVendor(ReportSelections,VendorNo);
+      ReportSelections.FINDSET;
+    END;
+
+    PROCEDURE FindEmailAttachmentUsage@10(ReportUsage@1000 : Integer;CustNo@1002 : Code[20];VAR ReportSelections@1001 : Record 77) : Boolean;
+    BEGIN
+      FilterEmailAttachmentUsage(ReportUsage);
+      SETFILTER("Report ID",'<>0');
+      SETRANGE("Use for Email Attachment",TRUE);
+
+      FindReportSelections(ReportSelections,CustNo);
+      EXIT(ReportSelections.FINDSET);
+    END;
+
+    PROCEDURE FindEmailAttachmentUsageVendor@45(ReportUsage@1002 : Integer;VendorNo@1001 : Code[20];VAR ReportSelections@1000 : Record 77) : Boolean;
+    BEGIN
+      FilterEmailAttachmentUsage(ReportUsage);
+      SETFILTER("Report ID",'<>0');
+      SETRANGE("Use for Email Attachment",TRUE);
+
+      FindReportSelectionsVendor(ReportSelections,VendorNo);
+      EXIT(ReportSelections.FINDSET);
+    END;
+
+    PROCEDURE FindEmailBodyUsage@5(ReportUsage@1000 : Integer;CustNo@1002 : Code[20];VAR ReportSelections@1001 : Record 77) : Boolean;
+    BEGIN
+      FilterEmailBodyUsage(ReportUsage);
+      SETFILTER("Report ID",'<>0');
+
+      FindReportSelections(ReportSelections,CustNo);
+      EXIT(ReportSelections.FINDSET);
+    END;
+
+    PROCEDURE FindEmailBodyUsageVendor@42(ReportUsage@1002 : Integer;VendorNo@1001 : Code[20];VAR ReportSelections@1000 : Record 77) : Boolean;
+    BEGIN
+      FilterEmailBodyUsage(ReportUsage);
+      SETFILTER("Report ID",'<>0');
+
+      FindReportSelectionsVendor(ReportSelections,VendorNo);
+      EXIT(ReportSelections.FINDSET);
+    END;
+
+    PROCEDURE PrintWithCheck@6(ReportUsage@1000 : Integer;RecordVariant@1001 : Variant;CustNo@1002 : Code[20]);
+    BEGIN
+      PrintWithGUIYesNoWithCheck(ReportUsage,RecordVariant,TRUE,CustNo);
+    END;
+
+    PROCEDURE PrintWithGUIYesNoWithCheck@12(ReportUsage@1000 : Integer;RecordVariant@1001 : Variant;IsGUI@1002 : Boolean;CustNo@1003 : Code[20]);
+    VAR
+      TempReportSelections@1004 : TEMPORARY Record 77;
+    BEGIN
+      FilterPrintUsage(ReportUsage);
+
+      FindReportSelections(TempReportSelections,CustNo);
+      IF NOT TempReportSelections.FINDSET THEN
+        FINDSET;
+      WITH TempReportSelections DO
+        REPEAT
+          ReportLayoutSelection.SetTempLayoutSelected("Custom Report Layout Code");
+          TESTFIELD("Report ID");
+          REPORT.RUNMODAL("Report ID",IsGUI,FALSE,RecordVariant)
+        UNTIL NEXT = 0;
+      ReportLayoutSelection.SetTempLayoutSelected('');
+    END;
+
+    PROCEDURE Print@7(ReportUsage@1000 : Integer;RecordVariant@1001 : Variant;CustNo@1002 : Code[20]);
+    BEGIN
+      PrintWithGUIYesNo(ReportUsage,RecordVariant,TRUE,CustNo);
+    END;
+
+    PROCEDURE PrintWithGUIYesNo@8(ReportUsage@1000 : Integer;RecordVariant@1001 : Variant;IsGUI@1002 : Boolean;CustNo@1003 : Code[20]);
+    VAR
+      TempReportSelections@1004 : TEMPORARY Record 77;
+    BEGIN
+      FindPrintUsage(ReportUsage,CustNo,TempReportSelections);
+      WITH TempReportSelections DO
+        REPEAT
+          ReportLayoutSelection.SetTempLayoutSelected("Custom Report Layout Code");
+          REPORT.RUNMODAL("Report ID",IsGUI,FALSE,RecordVariant)
+        UNTIL NEXT = 0;
+      ReportLayoutSelection.SetTempLayoutSelected('');
+    END;
+
+    PROCEDURE PrintWithGUIYesNoVendor@32(ReportUsage@1003 : Integer;RecordVariant@1002 : Variant;IsGUI@1001 : Boolean;VendorNo@1000 : Code[20]);
+    VAR
+      TempReportSelections@1004 : TEMPORARY Record 77;
+    BEGIN
+      FindPrintUsageVendor(ReportUsage,VendorNo,TempReportSelections);
+      WITH TempReportSelections DO
+        REPEAT
+          ReportLayoutSelection.SetTempLayoutSelected("Custom Report Layout Code");
+          REPORT.RUNMODAL("Report ID",IsGUI,FALSE,RecordVariant)
+        UNTIL NEXT = 0;
+      ReportLayoutSelection.SetTempLayoutSelected('');
+    END;
+
+    PROCEDURE GetHtmlReport@29(VAR ServerEmailBodyFilePath@1001 : Text[250];ReportUsage@1002 : Integer;RecordVariant@1004 : Variant;CustNo@1003 : Code[20]);
+    VAR
+      TempBodyReportSelections@1000 : TEMPORARY Record 77;
+    BEGIN
+      ServerEmailBodyFilePath := '';
+
+      FindPrintUsage(ReportUsage,CustNo,TempBodyReportSelections);
+
+      ServerEmailBodyFilePath :=
+        SaveReportAsHTML(TempBodyReportSelections."Report ID",RecordVariant,TempBodyReportSelections."Custom Report Layout Code");
+    END;
+
+    PROCEDURE GetEmailBody@20(VAR ServerEmailBodyFilePath@1001 : Text[250];ReportUsage@1002 : Integer;RecordVariant@1004 : Variant;CustNo@1003 : Code[20];VAR CustEmailAddress@1005 : Text[250]) : Boolean;
+    VAR
+      TempBodyReportSelections@1000 : TEMPORARY Record 77;
+    BEGIN
+      ServerEmailBodyFilePath := '';
+
+      CustEmailAddress := GetCustEmailAddress(CustNo);
+
+      IF NOT FindEmailBodyUsage(ReportUsage,CustNo,TempBodyReportSelections) THEN
+        EXIT(FALSE);
+
+      ServerEmailBodyFilePath :=
+        SaveReportAsHTML(TempBodyReportSelections."Report ID",RecordVariant,TempBodyReportSelections."Email Body Layout Code");
+
+      CustEmailAddress := FindEmailAddressForEmailLayout(TempBodyReportSelections."Email Body Layout Code",CustNo,ReportUsage);
+      IF CustEmailAddress = '' THEN
+        CustEmailAddress := GetCustEmailAddress(CustNo);
+
+      EXIT(TRUE);
+    END;
+
+    PROCEDURE GetEmailBodyVendor@40(VAR ServerEmailBodyFilePath@1004 : Text[250];ReportUsage@1003 : Integer;RecordVariant@1002 : Variant;VendorNo@1001 : Code[20];VAR VendorEmailAddress@1000 : Text[250]) : Boolean;
+    VAR
+      TempBodyReportSelections@1005 : TEMPORARY Record 77;
+    BEGIN
+      ServerEmailBodyFilePath := '';
+
+      VendorEmailAddress := GetVendorEmailAddress(VendorNo);
+
+      IF NOT FindEmailBodyUsageVendor(ReportUsage,VendorNo,TempBodyReportSelections) THEN
+        EXIT(FALSE);
+
+      ServerEmailBodyFilePath :=
+        SaveReportAsHTML(TempBodyReportSelections."Report ID",RecordVariant,TempBodyReportSelections."Email Body Layout Code");
+
+      VendorEmailAddress :=
+        FindEmailAddressForEmailLayoutVendor(TempBodyReportSelections."Email Body Layout Code",VendorNo,ReportUsage);
+      IF VendorEmailAddress = '' THEN
+        VendorEmailAddress := GetVendorEmailAddress(VendorNo);
+
+      EXIT(TRUE);
+    END;
+
+    PROCEDURE SendEmailInBackground@30(JobQueueEntry@1000 : Record 472);
+    VAR
+      RecRef@1005 : RecordRef;
+      ReportUsage@1004 : Integer;
+      DocNo@1003 : Code[20];
+      DocName@1002 : Text[150];
+      No@1001 : Code[20];
+      ParamString@1006 : Text;
+    BEGIN
+      // Called from codeunit 260 OnRun trigger - in a background process.
+      RecRef.GET(JobQueueEntry."Record ID to Process");
+      RecRef.LOCKTABLE;
+      RecRef.FIND;
+      RecRef.SETRECFILTER;
+      ParamString := JobQueueEntry."Parameter String";  // Are set in function SendEmailToCust
+      EVALUATE(ReportUsage,GetNextParam(ParamString));
+      EVALUATE(DocNo,GetNextParam(ParamString));
+      EVALUATE(DocName,GetNextParam(ParamString));
+      EVALUATE(No,GetNextParam(ParamString));
+      // EVALUATE(Type,GetNextParam(ParamString));
+      IF ParamString = 'Vendor' THEN
+        SendEmailToVendorDirectly(ReportUsage,RecRef,DocNo,DocName,FALSE,No)
+      ELSE
+        SendEmailToCustDirectly(ReportUsage,RecRef,DocNo,DocName,FALSE,No);
+    END;
+
+    LOCAL PROCEDURE GetNextParam@31(VAR Parameter@1000 : Text) : Text;
+    VAR
+      i@1001 : Integer;
+      Result@1002 : Text;
+    BEGIN
+      i := STRPOS(Parameter,'|');
+      IF i > 0 THEN
+        Result := COPYSTR(Parameter,1,i - 1);
+      IF (i + 1) < STRLEN(Parameter) THEN
+        Parameter := COPYSTR(Parameter,i + 1);
+      EXIT(Result);
+    END;
+
+    PROCEDURE SendEmailToCust@9(ReportUsage@1000 : Integer;RecordVariant@1001 : Variant;DocNo@1006 : Code[20];DocName@1004 : Text[150];ShowDialog@1007 : Boolean;CustNo@1010 : Code[20]);
+    VAR
+      JobQueueEntry@1003 : Record 472;
+      SMTPMail@1002 : Codeunit 400;
+      OfficeMgt@1008 : Codeunit 1630;
+      RecRef@1005 : RecordRef;
+    BEGIN
+      IF ShowDialog OR NOT SMTPMail.IsEnabled OR (GetCustEmailAddress(CustNo) = '') OR OfficeMgt.IsAvailable THEN BEGIN
+        SendEmailToCustDirectly(ReportUsage,RecordVariant,DocNo,DocName,TRUE,CustNo);
+        EXIT;
+      END;
+
+      RecRef.GETTABLE(RecordVariant);
+      JobQueueEntry.INIT;
+      JobQueueEntry."Object Type to Run" := JobQueueEntry."Object Type to Run"::Codeunit;
+      JobQueueEntry."Object ID to Run" := CODEUNIT::"Document-Mailing";
+      JobQueueEntry."Maximum No. of Attempts to Run" := 3;
+      JobQueueEntry."Record ID to Process" := RecRef.RECORDID;
+      JobQueueEntry."Parameter String" := STRSUBSTNO('%1|%2|%3|%4|',ReportUsage,DocNo,DocName,CustNo);
+      JobQueueEntry.Description := COPYSTR(DocName,1,MAXSTRLEN(JobQueueEntry.Description));
+      CODEUNIT.RUN(CODEUNIT::"Job Queue - Enqueue",JobQueueEntry);
+    END;
+
+    PROCEDURE SendEmailToVendor@34(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;DocNo@1003 : Code[20];DocName@1002 : Text[150];ShowDialog@1001 : Boolean;VendorNo@1000 : Code[20]);
+    VAR
+      JobQueueEntry@1008 : Record 472;
+      SMTPMail@1007 : Codeunit 400;
+      OfficeMgt@1009 : Codeunit 1630;
+      RecRef@1006 : RecordRef;
+    BEGIN
+      IF ShowDialog OR NOT SMTPMail.IsEnabled OR (GetVendorEmailAddress(VendorNo) = '') OR OfficeMgt.IsAvailable THEN BEGIN
+        SendEmailToVendorDirectly(ReportUsage,RecordVariant,DocNo,DocName,TRUE,VendorNo);
+        EXIT;
+      END;
+
+      RecRef.GETTABLE(RecordVariant);
+      JobQueueEntry.INIT;
+      JobQueueEntry."Object Type to Run" := JobQueueEntry."Object Type to Run"::Codeunit;
+      JobQueueEntry."Object ID to Run" := CODEUNIT::"Document-Mailing";
+      JobQueueEntry."Maximum No. of Attempts to Run" := 3;
+      JobQueueEntry."Record ID to Process" := RecRef.RECORDID;
+      JobQueueEntry."Parameter String" := STRSUBSTNO('%1|%2|%3|%4|%5',ReportUsage,DocNo,DocName,VendorNo,'Vendor');
+      JobQueueEntry.Description := COPYSTR(DocName,1,MAXSTRLEN(JobQueueEntry.Description));
+      CODEUNIT.RUN(CODEUNIT::"Job Queue - Enqueue",JobQueueEntry);
+    END;
+
+    LOCAL PROCEDURE SendEmailToCustDirectly@28(ReportUsage@1000 : Integer;RecordVariant@1001 : Variant;DocNo@1006 : Code[20];DocName@1004 : Text[150];ShowDialog@1007 : Boolean;CustNo@1010 : Code[20]);
+    VAR
+      TempAttachReportSelections@1008 : TEMPORARY Record 77;
+      CustomReportSelection@1014 : Record 9657;
+      FoundBody@1005 : Boolean;
+      FoundAttachment@1011 : Boolean;
+      ServerEmailBodyFilePath@1009 : Text[250];
+      EmailAddress@1012 : Text[250];
+    BEGIN
+      FoundBody := GetEmailBody(ServerEmailBodyFilePath,ReportUsage,RecordVariant,CustNo,EmailAddress);
+      FoundAttachment := FindEmailAttachmentUsage(ReportUsage,CustNo,TempAttachReportSelections);
+
+      CustomReportSelection.SETRANGE("Source Type",DATABASE::Customer);
+      CustomReportSelection.SETFILTER("Source No.",CustNo);
+      SendEmailDirectly(
+        ReportUsage,RecordVariant,DocNo,DocName,FoundBody,FoundAttachment,ServerEmailBodyFilePath,EmailAddress,ShowDialog,
+        TempAttachReportSelections,CustomReportSelection);
+    END;
+
+    LOCAL PROCEDURE SendEmailToVendorDirectly@37(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;DocNo@1003 : Code[20];DocName@1002 : Text[150];ShowDialog@1001 : Boolean;VendorNo@1000 : Code[20]);
+    VAR
+      TempAttachReportSelections@1014 : TEMPORARY Record 77;
+      CustomReportSelection@1013 : Record 9657;
+      FoundBody@1010 : Boolean;
+      FoundAttachment@1009 : Boolean;
+      ServerEmailBodyFilePath@1007 : Text[250];
+      EmailAddress@1006 : Text[250];
+    BEGIN
+      FoundBody := GetEmailBodyVendor(ServerEmailBodyFilePath,ReportUsage,RecordVariant,VendorNo,EmailAddress);
+      FoundAttachment := FindEmailAttachmentUsageVendor(ReportUsage,VendorNo,TempAttachReportSelections);
+
+      CustomReportSelection.SETRANGE("Source Type",DATABASE::Vendor);
+      CustomReportSelection.SETFILTER("Source No.",VendorNo);
+      SendEmailDirectly(
+        ReportUsage,RecordVariant,DocNo,DocName,FoundBody,FoundAttachment,ServerEmailBodyFilePath,EmailAddress,ShowDialog,
+        TempAttachReportSelections,CustomReportSelection);
+    END;
+
+    LOCAL PROCEDURE SendEmailDirectly@50(ReportUsage@1005 : Integer;RecordVariant@1004 : Variant;DocNo@1003 : Code[20];DocName@1002 : Text[150];FoundBody@1006 : Boolean;FoundAttachment@1007 : Boolean;ServerEmailBodyFilePath@1008 : Text[250];VAR EmailAddress@1010 : Text[250];ShowDialog@1009 : Boolean;VAR TempAttachReportSelections@1020 : TEMPORARY Record 77;VAR CustomReportSelection@1000 : Record 9657);
+    VAR
+      DocumentMailing@1017 : Codeunit 260;
+      OfficeAttachmentManager@1016 : Codeunit 1629;
+      ServerAttachmentFilePath@1013 : Text[250];
+    BEGIN
+      ShowNoBodyNoAttachmentError(ReportUsage,FoundBody,FoundAttachment);
+
+      IF FoundBody AND NOT FoundAttachment THEN
+        DocumentMailing.EmailFile('','',ServerEmailBodyFilePath,DocNo,EmailAddress,DocName,NOT ShowDialog,ReportUsage);
+
+      IF FoundAttachment THEN BEGIN
+        IF ReportUsage = Usage::JQ THEN BEGIN
+          Usage := ReportUsage;
+          CustomReportSelection.SETFILTER(Usage,GETFILTER(Usage));
+          IF CustomReportSelection.FINDFIRST THEN
+            IF CustomReportSelection."Send To Email" <> '' THEN
+              EmailAddress := CustomReportSelection."Send To Email";
+        END;
+
+        WITH TempAttachReportSelections DO BEGIN
+          OfficeAttachmentManager.IncrementCount(COUNT - 1);
+          REPEAT
+            OnBeforeSend("Report ID"); //01. JAL 26.01.17
+            ServerAttachmentFilePath := SaveReportAsPDF("Report ID",RecordVariant,"Custom Report Layout Code");
+            DocumentMailing.EmailFile(
+              ServerAttachmentFilePath,
+              '',
+              ServerEmailBodyFilePath,
+              DocNo,
+              EmailAddress,
+              DocName,
+              NOT ShowDialog,
+              ReportUsage);
+              OnAfterSend("Report ID"); //01. JAL 26.01.17
+          UNTIL NEXT = 0;
+        END;
+      END;
+    END;
+
+    PROCEDURE SendToDisk@17(ReportUsage@1000 : Integer;RecordVariant@1001 : Variant;DocNo@1006 : Code[20];DocName@1007 : Text;CustNo@1004 : Code[20]);
+    VAR
+      TempReportSelections@1005 : TEMPORARY Record 77;
+      ElectronicDocumentFormat@1008 : Record 61;
+      FileManagement@1010 : Codeunit 419;
+      ServerAttachmentFilePath@1002 : Text[250];
+      ClientAttachmentFileName@1009 : Text;
+    BEGIN
+      FindPrintUsage(ReportUsage,CustNo,TempReportSelections);
+      WITH TempReportSelections DO
+        REPEAT
+          ServerAttachmentFilePath := SaveReportAsPDF("Report ID",RecordVariant,"Custom Report Layout Code");
+          ClientAttachmentFileName := ElectronicDocumentFormat.GetAttachmentFileName(DocNo,DocName,'pdf');
+          FileManagement.DownloadHandler(
+            ServerAttachmentFilePath,
+            '',
+            '',
+            FileManagement.GetToFilterText('',ClientAttachmentFileName),
+            ClientAttachmentFileName);
+        UNTIL NEXT = 0;
+    END;
+
+    PROCEDURE SendToDiskVendor@48(ReportUsage@1004 : Integer;RecordVariant@1003 : Variant;DocNo@1002 : Code[20];DocName@1001 : Text;VendorNo@1000 : Code[20]);
+    VAR
+      TempReportSelections@1009 : TEMPORARY Record 77;
+      ElectronicDocumentFormat@1008 : Record 61;
+      FileManagement@1007 : Codeunit 419;
+      ServerAttachmentFilePath@1006 : Text[250];
+      ClientAttachmentFileName@1005 : Text;
+    BEGIN
+      FindPrintUsageVendor(ReportUsage,VendorNo,TempReportSelections);
+      WITH TempReportSelections DO
+        REPEAT
+          ServerAttachmentFilePath := SaveReportAsPDF("Report ID",RecordVariant,"Custom Report Layout Code");
+          ClientAttachmentFileName := ElectronicDocumentFormat.GetAttachmentFileName(DocNo,DocName,'pdf');
+          FileManagement.DownloadHandler(
+            ServerAttachmentFilePath,
+            '',
+            '',
+            FileManagement.GetToFilterText('',ClientAttachmentFileName),
+            ClientAttachmentFileName);
+        UNTIL NEXT = 0;
+    END;
+
+    PROCEDURE SendToZip@18(ReportUsage@1003 : Integer;RecordVariant@1002 : Variant;DocNo@1001 : Code[20];CustNo@1007 : Code[20];VAR FileManagement@1000 : Codeunit 419);
+    VAR
+      TempReportSelections@1006 : TEMPORARY Record 77;
+      ElectronicDocumentFormat@1005 : Record 61;
+      ServerAttachmentFilePath@1004 : Text;
+    BEGIN
+      FindPrintUsage(ReportUsage,CustNo,TempReportSelections);
+      WITH TempReportSelections DO
+        REPEAT
+          ServerAttachmentFilePath := SaveReportAsPDF("Report ID",RecordVariant,"Custom Report Layout Code");
+          FileManagement.AddFileToZipArchive(
+            ServerAttachmentFilePath,
+            ElectronicDocumentFormat.GetAttachmentFileName(DocNo,'Invoice','pdf'));
+        UNTIL NEXT = 0;
+    END;
+
+    PROCEDURE SendToZipVendor@47(ReportUsage@1004 : Integer;RecordVariant@1003 : Variant;DocNo@1002 : Code[20];VendorNo@1001 : Code[20];VAR FileManagement@1000 : Codeunit 419);
+    VAR
+      TempReportSelections@1007 : TEMPORARY Record 77;
+      ElectronicDocumentFormat@1006 : Record 61;
+      ServerAttachmentFilePath@1005 : Text;
+    BEGIN
+      FindPrintUsageVendor(ReportUsage,VendorNo,TempReportSelections);
+      WITH TempReportSelections DO
+        REPEAT
+          ServerAttachmentFilePath := SaveReportAsPDF("Report ID",RecordVariant,"Custom Report Layout Code");
+          FileManagement.AddFileToZipArchive(
+            ServerAttachmentFilePath,
+            ElectronicDocumentFormat.GetAttachmentFileName(DocNo,'Purchase Order','pdf'));
+        UNTIL NEXT = 0;
+    END;
+
+    PROCEDURE GetCustEmailAddress@16(BillToCustomerNo@1000 : Code[20]) : Text[250];
+    VAR
+      Customer@1002 : Record 18;
+      ToAddress@1001 : Text;
+    BEGIN
+      IF Customer.GET(BillToCustomerNo) THEN
+        ToAddress := Customer."E-Mail";
+
+      EXIT(ToAddress);
+    END;
+
+    PROCEDURE GetVendorEmailAddress@35(BuyFromVendorNo@1000 : Code[20]) : Text[250];
+    VAR
+      Vendor@1002 : Record 23;
+      ToAddress@1001 : Text;
+    BEGIN
+      IF Vendor.GET(BuyFromVendorNo) THEN
+        ToAddress := Vendor."E-Mail";
+
+      EXIT(ToAddress);
+    END;
+
+    LOCAL PROCEDURE SaveReportAsPDF@14(ReportID@1000 : Integer;RecordVariant@1002 : Variant;LayoutCode@1003 : Code[20]) FilePath : Text[250];
+    VAR
+      ReportLayoutSelection@1004 : Record 9651;
+      FileMgt@1001 : Codeunit 419;
+    BEGIN
+      FilePath := COPYSTR(FileMgt.ServerTempFileName('pdf'),1,250);
+
+      ReportLayoutSelection.SetTempLayoutSelected(LayoutCode);
+      REPORT.SAVEASPDF(ReportID,FilePath,RecordVariant);
+      ReportLayoutSelection.SetTempLayoutSelected('');
+
+      COMMIT;
+    END;
+
+    LOCAL PROCEDURE SaveReportAsHTML@15(ReportID@1003 : Integer;RecordVariant@1002 : Variant;LayoutCode@1004 : Code[20]) FilePath : Text[250];
+    VAR
+      ReportLayoutSelection@1000 : Record 9651;
+      FileMgt@1001 : Codeunit 419;
+    BEGIN
+      FilePath := COPYSTR(FileMgt.ServerTempFileName('html'),1,250);
+
+      ReportLayoutSelection.SetTempLayoutSelected(LayoutCode);
+      REPORT.SAVEASHTML(ReportID,FilePath,RecordVariant);
+      ReportLayoutSelection.SetTempLayoutSelected('');
+
+      COMMIT;
+    END;
+
+    LOCAL PROCEDURE FindReportSelections@38(VAR ReportSelections@1000 : Record 77;CustNo@1001 : Code[20]) : Boolean;
+    BEGIN
+      IF CopyCustomReportSectionToReportSelection(CustNo,ReportSelections) THEN
+        EXIT(TRUE);
+      EXIT(CopyReportSelectionToReportSelection(ReportSelections));
+    END;
+
+    LOCAL PROCEDURE FindReportSelectionsVendor@36(VAR ReportSelections@1001 : Record 77;VendorNo@1000 : Code[20]) : Boolean;
+    BEGIN
+      IF CopyCustomReportSectionToReportSelectionVendor(VendorNo,ReportSelections) THEN
+        EXIT(TRUE);
+      EXIT(CopyReportSelectionToReportSelection(ReportSelections));
+    END;
+
+    LOCAL PROCEDURE CopyCustomReportSectionToReportSelection@21(CustNo@1002 : Code[20];VAR ToReportSelections@1001 : Record 77) : Boolean;
+    VAR
+      CustomReportSelection@1000 : Record 9657;
+    BEGIN
+      GetCustomReportSelectionByUsageFilter(CustomReportSelection,CustNo,GETFILTER(Usage));
+      CopyToReportSelection(ToReportSelections,CustomReportSelection);
+
+      IF NOT ToReportSelections.FINDSET THEN
+        EXIT(FALSE);
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE CopyCustomReportSectionToReportSelectionVendor@39(VendorNo@1001 : Code[20];VAR ToReportSelections@1000 : Record 77) : Boolean;
+    VAR
+      CustomReportSelection@1002 : Record 9657;
+    BEGIN
+      GetCustomReportSelectionByUsageFilterVendor(CustomReportSelection,VendorNo,GETFILTER(Usage));
+      CopyToReportSelection(ToReportSelections,CustomReportSelection);
+
+      IF NOT ToReportSelections.FINDSET THEN
+        EXIT(FALSE);
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE CopyToReportSelection@49(VAR ToReportSelections@1000 : Record 77;VAR CustomReportSelection@1002 : Record 9657);
+    BEGIN
+      ToReportSelections.RESET;
+      ToReportSelections.DELETEALL;
+      IF CustomReportSelection.FINDSET THEN
+        REPEAT
+          ToReportSelections.Usage := CustomReportSelection.Usage;
+          ToReportSelections.Sequence := FORMAT(CustomReportSelection.Sequence);
+          ToReportSelections."Report ID" := CustomReportSelection."Report ID";
+          ToReportSelections."Custom Report Layout Code" := CustomReportSelection."Custom Report Layout Code";
+          ToReportSelections."Email Body Layout Code" := CustomReportSelection."Email Body Layout Code";
+          ToReportSelections."Use for Email Attachment" := CustomReportSelection."Use for Email Attachment";
+          ToReportSelections."Use for Email Body" := CustomReportSelection."Use for Email Body";
+          ToReportSelections.INSERT;
+        UNTIL CustomReportSelection.NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE CopyReportSelectionToReportSelection@22(VAR ToReportSelections@1000 : Record 77) : Boolean;
+    BEGIN
+      ToReportSelections.RESET;
+      ToReportSelections.DELETEALL;
+      IF FINDSET THEN
+        REPEAT
+          ToReportSelections := Rec;
+          ToReportSelections.INSERT;
+        UNTIL NEXT = 0;
+
+      EXIT(ToReportSelections.FINDSET);
+    END;
+
+    LOCAL PROCEDURE GetCustomReportSelection@23(VAR CustomReportSelection@1000 : Record 9657;CustNo@1001 : Code[20]) : Boolean;
+    BEGIN
+      CustomReportSelection.SETRANGE("Source Type",DATABASE::Customer);
+      CustomReportSelection.SETFILTER("Source No.",CustNo);
+      IF CustomReportSelection.ISEMPTY THEN
+        EXIT(FALSE);
+
+      CustomReportSelection.SETFILTER("Use for Email Attachment",GETFILTER("Use for Email Attachment"));
+      CustomReportSelection.SETFILTER("Use for Email Body",GETFILTER("Use for Email Body"));
+    END;
+
+    LOCAL PROCEDURE GetCustomReportSelectionVendor@44(VAR CustomReportSelection@1001 : Record 9657;VendorNo@1000 : Code[20]) : Boolean;
+    BEGIN
+      CustomReportSelection.SETRANGE("Source Type",DATABASE::Vendor);
+      CustomReportSelection.SETFILTER("Source No.",VendorNo);
+      IF CustomReportSelection.ISEMPTY THEN
+        EXIT(FALSE);
+
+      CustomReportSelection.SETFILTER("Use for Email Attachment",GETFILTER("Use for Email Attachment"));
+      CustomReportSelection.SETFILTER("Use for Email Body",GETFILTER("Use for Email Body"));
+    END;
+
+    LOCAL PROCEDURE GetCustomReportSelectionByUsageFilter@24(VAR CustomReportSelection@1002 : Record 9657;CustNo@1001 : Code[20];ReportUsageFilter@1000 : Text) : Boolean;
+    BEGIN
+      CustomReportSelection.SETFILTER(Usage,ReportUsageFilter);
+      EXIT(GetCustomReportSelection(CustomReportSelection,CustNo));
+    END;
+
+    LOCAL PROCEDURE GetCustomReportSelectionByUsageFilterVendor@41(VAR CustomReportSelection@1002 : Record 9657;VendorNo@1001 : Code[20];ReportUsageFilter@1000 : Text) : Boolean;
+    BEGIN
+      CustomReportSelection.SETFILTER(Usage,ReportUsageFilter);
+      EXIT(GetCustomReportSelectionVendor(CustomReportSelection,VendorNo));
+    END;
+
+    LOCAL PROCEDURE GetCustomReportSelectionByUsageOption@25(VAR CustomReportSelection@1002 : Record 9657;CustNo@1001 : Code[20];ReportUsage@1000 : Integer) : Boolean;
+    BEGIN
+      CustomReportSelection.SETRANGE(Usage,ReportUsage);
+      EXIT(GetCustomReportSelection(CustomReportSelection,CustNo));
+    END;
+
+    LOCAL PROCEDURE GetCustomReportSelectionByUsageOptionVendor@46(VAR CustomReportSelection@1002 : Record 9657;VendorNo@1001 : Code[20];ReportUsage@1000 : Integer) : Boolean;
+    BEGIN
+      CustomReportSelection.SETRANGE(Usage,ReportUsage);
+      EXIT(GetCustomReportSelectionVendor(CustomReportSelection,VendorNo));
+    END;
+
+    PROCEDURE PrintForUsage@26(ReportUsage@1000 : Integer);
+    BEGIN
+      FilterPrintUsage(ReportUsage);
+      IF FINDSET THEN
+        REPEAT
+          REPORT.RUNMODAL("Report ID",TRUE);
+        UNTIL NEXT = 0;
+    END;
+
+    LOCAL PROCEDURE FindEmailAddressForEmailLayout@27(LayoutCode@1002 : Code[20];CustNo@1001 : Code[20];ReportUsage@1000 : Integer) : Text[200];
+    VAR
+      CustomReportSelection@1003 : Record 9657;
+    BEGIN
+      // Search for a potential email address from Custom Report Selections
+      GetCustomReportSelectionByUsageOption(CustomReportSelection,CustNo,ReportUsage);
+      CustomReportSelection.SETFILTER("Send To Email",'<>%1','');
+      CustomReportSelection.SETRANGE("Email Body Layout Code",LayoutCode);
+      IF CustomReportSelection.FINDFIRST THEN
+        EXIT(CustomReportSelection."Send To Email");
+
+      // Relax the filter and search for an email address
+      CustomReportSelection.SETFILTER("Use for Email Body",'');
+      CustomReportSelection.SETRANGE("Email Body Layout Code",'');
+      IF CustomReportSelection.FINDFIRST THEN
+        EXIT(CustomReportSelection."Send To Email");
+      EXIT('');
+    END;
+
+    LOCAL PROCEDURE FindEmailAddressForEmailLayoutVendor@43(LayoutCode@1002 : Code[20];VendorNo@1001 : Code[20];ReportUsage@1000 : Integer) : Text[200];
+    VAR
+      CustomReportSelection@1003 : Record 9657;
+    BEGIN
+      // Search for a potential email address from Custom Report Selections
+      GetCustomReportSelectionByUsageOptionVendor(CustomReportSelection,VendorNo,ReportUsage);
+      CustomReportSelection.SETFILTER("Send To Email",'<>%1','');
+      CustomReportSelection.SETRANGE("Email Body Layout Code",LayoutCode);
+      IF CustomReportSelection.FINDFIRST THEN
+        EXIT(CustomReportSelection."Send To Email");
+
+      // Relax the filter and search for an email address
+      CustomReportSelection.SETFILTER("Use for Email Body",'');
+      CustomReportSelection.SETRANGE("Email Body Layout Code",'');
+      IF CustomReportSelection.FINDFIRST THEN
+        EXIT(CustomReportSelection."Send To Email");
+      EXIT('');
+    END;
+
+    LOCAL PROCEDURE ShowNoBodyNoAttachmentError@51(ReportUsage@1000 : Integer;FoundBody@1001 : Boolean;FoundAttachment@1002 : Boolean);
+    BEGIN
+      IF NOT (FoundBody OR FoundAttachment) THEN BEGIN
+        Usage := ReportUsage;
+        ERROR(MustSelectAndEmailBodyOrAttahmentErr,Usage);
+      END;
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeSend@1101103001(VAR ReportIDP@1101103000 : Integer);
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnAfterSend@1101103002(VAR ReportIDP@1101103000 : Integer);
+    BEGIN
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 26.01.17 JAL Added Event Publishers
+    }
+    END.
+  }
+}
+
+OBJECT Table 50000 User Report Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26.01.17;
+    Time=15.30.33;
+    Modified=Yes;
+    Version List=NAVW110.00,NAVNO10.00;
+  }
+  PROPERTIES
+  {
+    OnDelete=VAR
+               NotificationSetup@1000 : Record 1512;
+             BEGIN
+             END;
+
+    CaptionML=[ENU=User Setup;
+               NOR=Brukeroppsett];
+    LookupPageID=Page119;
+    DrillDownPageID=Page119;
+  }
+  FIELDS
+  {
+    { 10  ;   ;User ID             ;Code50        ;TableRelation=User."User Name";
+                                                   OnValidate=VAR
+                                                                UserMgt@1000 : Codeunit 418;
+                                                              BEGIN
+                                                                UserMgt.ValidateUserID("User ID");
+                                                              END;
+
+                                                   OnLookup=VAR
+                                                              UserMgt@1000 : Codeunit 418;
+                                                            BEGIN
+                                                              UserMgt.LookupUserID("User ID");
+                                                            END;
+
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=[ENU=User ID;
+                                                              NOR=Bruker-ID];
+                                                   NotBlank=Yes }
+    { 20  ;   ;Report ID           ;Integer       ;TableRelation=AllObjWithCaption."Object ID" WHERE (Object Type=CONST(Report));
+                                                   CaptionML=[ENU=Report ID;
+                                                              NOR=Rapport-ID] }
+    { 40  ;   ;Hide Email Dialog   ;Boolean       ;CaptionML=[ENU=Hide Email Dialog;
+                                                              NOR=Skjul epost dialog] }
+    { 50  ;   ;Send Email Automatic;Boolean       ;CaptionML=[ENU=Send Email Automatic;
+                                                              NOR=Send e-post automatisk] }
+    { 60  ;   ;Is Printing Started ;Boolean       ;CaptionML=[ENU=Is Printing Started;
+                                                              NOR=Er utskriften startet] }
+  }
+  KEYS
+  {
+    {    ;User ID,Report ID                       ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+
+OBJECT Codeunit 9520 Mail Management
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26.01.17;
+    Time=15.37.16;
+    Modified=Yes;
+    Version List=NAVW110.00;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+            IF NOT IsEnabled THEN
+              ERROR(MailingNotSupportedErr);
+            IF NOT DoSend THEN
+              ERROR(MailWasNotSendErr);
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      TempEmailItem@1001 : TEMPORARY Record 9500;
+      SMTPMail@1010 : Codeunit 400;
+      FileManagement@1009 : Codeunit 419;
+      InvalidEmailAddressErr@1008 : TextConst 'ENU=The email address "%1" is not valid.;NOR=E-postadressen %1 er ikke gyldig.';
+      DoEdit@1007 : Boolean;
+      HideMailDialog@1011 : Boolean;
+      Cancelled@1016 : Boolean;
+      MailSent@1017 : Boolean;
+      MailingNotSupportedErr@1013 : TextConst 'ENU=The required email is not supported.;NOR=Den nõdvendige e-posten stõttes ikke.';
+      MailWasNotSendErr@1000 : TextConst 'ENU=The email was not sent.;NOR=E-posten ble ikke sendt.';
+      FromAddressWasNotFoundErr@1003 : TextConst 'ENU=An email from address was not found. Contact an administrator.;NOR=Finner ikke en e-post fra adressen. Kontakt systemansvarlig.';
+      SaveFileDialogTitleMsg@1005 : TextConst 'ENU=Save PDF file;NOR=Lagre PDF-fil';
+      SaveFileDialogFilterMsg@1004 : TextConst 'ENU=PDF Files (*.pdf)|*.pdf;NOR=PDF-filer (*.pdf)|*.pdf';
+      OutlookSupported@1014 : Boolean;
+      SMTPSupported@1015 : Boolean;
+      CannotSendMailThenDownloadQst@1012 : TextConst 'ENU=Do you want to download the attachment?;NOR=Vil du laste ned vedlegget?';
+      CannotSendMailThenDownloadErr@1019 : TextConst 'ENU=You cannot send the email.\Verify that the email settings are correct.;NOR=Du kan ikke sende e-postmeldingen.\Kontroller e-postinnstillingene er riktige.';
+      OutlookNotAvailableContinueEditQst@1006 : TextConst 'ENU=Microsoft Outlook is not available.\\Do you want to continue to edit the email?;NOR=Microsoft Outlook er ikke tilgjengelig.\\Vil du fortsette Ü redigere e-posten?';
+      HideSMTPError@1002 : Boolean;
+      EmailAttachmentTxt@1018 : TextConst '@@@={Locked};ENU=Email.html;NOR=Email.html';
+
+    LOCAL PROCEDURE RunMailDialog@7() : Boolean;
+    VAR
+      EmailDialog@1001 : Page 9700;
+      HidePopupEmailDialogL@1101103000 : Boolean;
+    BEGIN
+      EmailDialog.SetValues(TempEmailItem,OutlookSupported,SMTPSupported);
+      //01, JAL 25.01.16 -->
+      OnBeforeRunEmailDialog(HidePopupEmailDialogL, HideMailDialog, DoEdit);
+      //Add if statement to cancel run of EmailDialog page
+      IF HidePopupEmailDialogL THEN
+        EXIT(TRUE)
+      ELSE
+      //01, JAL 25.01.16 <--
+      IF NOT (EmailDialog.RUNMODAL = ACTION::OK) THEN BEGIN
+        Cancelled := TRUE;
+        EXIT(FALSE);
+      END;
+      EmailDialog.GETRECORD(TempEmailItem);
+      DoEdit := EmailDialog.GetDoEdit;
+      EXIT(TRUE);
+    END;
+
+    LOCAL PROCEDURE SendViaSMTP@5() : Boolean;
+    BEGIN
+      WITH TempEmailItem DO BEGIN
+        SMTPMail.CreateMessage("From Name","From Address","Send to",Subject,GetBodyText,NOT "Plaintext Formatted");
+        SMTPMail.AddAttachment("Attachment File Path","Attachment Name");
+        IF "Send CC" <> '' THEN
+          SMTPMail.AddCC("Send CC");
+        IF "Send BCC" <> '' THEN
+          SMTPMail.AddBCC("Send BCC");
+      END;
+      MailSent := SMTPMail.TrySend;
+      IF NOT MailSent AND NOT HideSMTPError THEN
+        ERROR(SMTPMail.GetLastSendMailErrorText);
+      EXIT(MailSent);
+    END;
+
+    PROCEDURE InitializeFrom@10(NewHideMailDialog@1001 : Boolean;NewHideSMTPError@1000 : Boolean);
+    BEGIN
+      HideMailDialog := NewHideMailDialog;
+      HideSMTPError := NewHideSMTPError;
+    END;
+
+    LOCAL PROCEDURE SendMailOnWinClient@3() : Boolean;
+    VAR
+      Mail@1003 : Codeunit 397;
+      FileManagement@1006 : Codeunit 419;
+      ClientAttachmentFilePath@1005 : Text;
+      ClientAttachmentFullName@1009 : Text;
+      BodyText@1000 : Text;
+    BEGIN
+      IF Mail.TryInitializeOutlook THEN
+        WITH TempEmailItem DO BEGIN
+          IF "Attachment File Path" <> '' THEN BEGIN
+            ClientAttachmentFilePath := DownloadPdfOnClient("Attachment File Path");
+            ClientAttachmentFullName := FileManagement.MoveAndRenameClientFile(ClientAttachmentFilePath,"Attachment Name",'');
+          END;
+          BodyText := ImageBase64ToUrl(GetBodyText);
+          IF Mail.NewMessageAsync("Send to","Send CC","Send BCC",Subject,BodyText,ClientAttachmentFullName,NOT HideMailDialog) THEN BEGIN
+            FileManagement.DeleteClientFile(ClientAttachmentFullName);
+            MailSent := TRUE;
+            EXIT(TRUE)
+          END;
+        END;
+      EXIT(FALSE);
+    END;
+
+    LOCAL PROCEDURE DownloadPdfOnClient@1(ServerPdfFilePath@1000 : Text) : Text;
+    VAR
+      FileManagement@1003 : Codeunit 419;
+      ClientPdfFilePath@1002 : Text;
+    BEGIN
+      ClientPdfFilePath := FileManagement.DownloadTempFile(ServerPdfFilePath);
+      ERASE(ServerPdfFilePath);
+      EXIT(ClientPdfFilePath);
+    END;
+
+    PROCEDURE CheckValidEmailAddresses@8(Recipients@1000 : Text);
+    VAR
+      TmpRecipients@1001 : Text;
+    BEGIN
+      IF Recipients = '' THEN
+        ERROR(InvalidEmailAddressErr,Recipients);
+
+      TmpRecipients := DELCHR(Recipients,'<>',';');
+      WHILE STRPOS(TmpRecipients,';') > 1 DO BEGIN
+        CheckValidEmailAddress(COPYSTR(TmpRecipients,1,STRPOS(TmpRecipients,';') - 1));
+        TmpRecipients := COPYSTR(TmpRecipients,STRPOS(TmpRecipients,';') + 1);
+      END;
+      CheckValidEmailAddress(TmpRecipients);
+    END;
+
+    PROCEDURE CheckValidEmailAddress@12(EmailAddress@1000 : Text);
+    VAR
+      i@1001 : Integer;
+      NoOfAtSigns@1002 : Integer;
+    BEGIN
+      EmailAddress := DELCHR(EmailAddress,'<>');
+
+      IF EmailAddress = '' THEN
+        ERROR(InvalidEmailAddressErr,EmailAddress);
+
+      IF (EmailAddress[1] = '@') OR (EmailAddress[STRLEN(EmailAddress)] = '@') THEN
+        ERROR(InvalidEmailAddressErr,EmailAddress);
+
+      FOR i := 1 TO STRLEN(EmailAddress) DO BEGIN
+        IF EmailAddress[i] = '@' THEN
+          NoOfAtSigns := NoOfAtSigns + 1
+        ELSE
+          IF EmailAddress[i] = ' ' THEN
+            ERROR(InvalidEmailAddressErr,EmailAddress);
+      END;
+
+      IF NoOfAtSigns <> 1 THEN
+        ERROR(InvalidEmailAddressErr,EmailAddress);
+    END;
+
+    PROCEDURE IsSMTPEnabled@6() : Boolean;
+    BEGIN
+      EXIT(SMTPMail.IsEnabled);
+    END;
+
+    PROCEDURE IsEnabled@11() : Boolean;
+    BEGIN
+      OutlookSupported := FALSE;
+      SMTPSupported := FALSE;
+      IF IsSMTPEnabled THEN
+        SMTPSupported := TRUE;
+
+      IF NOT FileManagement.CanRunDotNetOnClient THEN
+        EXIT(SMTPSupported);
+
+      // Assume Outlook is supported - a false check takes long time.
+      OutlookSupported := TRUE;
+      EXIT(TRUE);
+    END;
+
+    PROCEDURE IsCancelled@14() : Boolean;
+    BEGIN
+      EXIT(Cancelled);
+    END;
+
+    PROCEDURE IsSent@15() : Boolean;
+    BEGIN
+      EXIT(MailSent);
+    END;
+
+    PROCEDURE Send@4(ParmEmailItem@1000 : Record 9500) : Boolean;
+    BEGIN
+      TempEmailItem := ParmEmailItem;
+      QualifyFromAddress;
+      MailSent := FALSE;
+      EXIT(DoSend);
+    END;
+
+    LOCAL PROCEDURE DoSend@13() : Boolean;
+    BEGIN
+      Cancelled := TRUE;
+      IF NOT HideMailDialog THEN BEGIN
+        IF RunMailDialog THEN
+          Cancelled := FALSE
+        ELSE
+          EXIT(TRUE);
+        IF OutlookSupported THEN
+          IF DoEdit THEN BEGIN
+            IF SendMailOnWinClient THEN
+              EXIT(TRUE);
+            OutlookSupported := FALSE;
+            IF NOT SMTPSupported THEN
+              EXIT(FALSE);
+            IF CONFIRM(OutlookNotAvailableContinueEditQst) THEN
+              EXIT(DoSend);
+          END
+      END;
+      IF SMTPSupported THEN
+        EXIT(SendViaSMTP);
+
+      EXIT(FALSE);
+    END;
+
+    LOCAL PROCEDURE QualifyFromAddress@2();
+    VAR
+      TempPossibleEmailNameValueBuffer@1000 : TEMPORARY Record 823;
+      MailForEmails@1001 : Codeunit 397;
+    BEGIN
+      IF TempEmailItem."From Address" <> '' THEN
+        EXIT;
+
+      MailForEmails.CollectCurrentUserEmailAddresses(TempPossibleEmailNameValueBuffer);
+      IF SMTPSupported THEN BEGIN
+        IF IsConfiguredForO365 THEN
+          IF AssignFromAddressIfExist(TempPossibleEmailNameValueBuffer,'SMTPSetup') THEN
+            EXIT;
+
+        IF AssignFromAddressIfExist(TempPossibleEmailNameValueBuffer,'UserSetup') THEN
+          EXIT;
+        IF AssignFromAddressIfExist(TempPossibleEmailNameValueBuffer,'AuthEmail') THEN
+          EXIT;
+        IF AssignFromAddressIfExist(TempPossibleEmailNameValueBuffer,'AD') THEN
+          EXIT;
+        IF AssignFromAddressIfExist(TempPossibleEmailNameValueBuffer,'SMTPSetup') THEN
+          EXIT;
+      END;
+      IF TempPossibleEmailNameValueBuffer.ISEMPTY THEN BEGIN
+        IF FileManagement.IsWebClient THEN
+          ERROR(FromAddressWasNotFoundErr);
+        TempEmailItem."From Address" := '';
+        EXIT;
+      END;
+
+      IF AssignFromAddressIfExist(TempPossibleEmailNameValueBuffer,'') THEN
+        EXIT;
+    END;
+
+    LOCAL PROCEDURE AssignFromAddressIfExist@9(VAR TempPossibleEmailNameValueBuffer@1000 : TEMPORARY Record 823;FilteredName@1002 : Text) : Boolean;
+    BEGIN
+      IF FilteredName <> '' THEN
+        TempPossibleEmailNameValueBuffer.SETFILTER(Name,FilteredName);
+      IF NOT TempPossibleEmailNameValueBuffer.ISEMPTY THEN BEGIN
+        TempPossibleEmailNameValueBuffer.FINDFIRST;
+        IF TempPossibleEmailNameValueBuffer.Value <> '' THEN BEGIN
+          TempEmailItem."From Address" := TempPossibleEmailNameValueBuffer.Value;
+          EXIT(TRUE);
+        END;
+      END;
+
+      TempPossibleEmailNameValueBuffer.RESET;
+      EXIT(FALSE);
+    END;
+
+    PROCEDURE SendMailOrDownload@17(TempEmailItem@1002 : TEMPORARY Record 9500;HideMailDialog@1000 : Boolean);
+    VAR
+      MailManagement@1001 : Codeunit 9520;
+    BEGIN
+      MailManagement.InitializeFrom(HideMailDialog,CURRENTCLIENTTYPE <> CLIENTTYPE::Background);
+      IF MailManagement.IsEnabled THEN
+        IF MailManagement.Send(TempEmailItem) THEN BEGIN
+          MailSent := MailManagement.IsSent;
+          EXIT;
+        END;
+
+      IF NOT GUIALLOWED THEN
+        ERROR(CannotSendMailThenDownloadErr);
+
+      IF NOT CONFIRM(STRSUBSTNO('%1\\%2',CannotSendMailThenDownloadErr,CannotSendMailThenDownloadQst)) THEN
+        EXIT;
+
+      DownloadPdfAttachment(TempEmailItem);
+    END;
+
+    PROCEDURE DownloadPdfAttachment@16(TempEmailItem@1000 : TEMPORARY Record 9500);
+    VAR
+      FileManagement@1002 : Codeunit 419;
+    BEGIN
+      WITH TempEmailItem DO
+        IF "Attachment File Path" <> '' THEN
+          FileManagement.DownloadHandler("Attachment File Path",SaveFileDialogTitleMsg,'',SaveFileDialogFilterMsg,"Attachment Name")
+        ELSE
+          IF "Body File Path" <> '' THEN
+            FileManagement.DownloadHandler("Body File Path",SaveFileDialogTitleMsg,'',SaveFileDialogFilterMsg,EmailAttachmentTxt);
+    END;
+
+    PROCEDURE ImageBase64ToUrl@18(BodyText@1007 : Text) : Text;
+    VAR
+      Regex@1006 : DotNet "'System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Text.RegularExpressions.Regex";
+      Convert@1005 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Convert";
+      MemoryStream@1004 : DotNet "'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.IO.MemoryStream";
+      SearchText@1003 : Text;
+      Base64@1002 : Text;
+      MediaId@1000 : GUID;
+    BEGIN
+      SearchText := '(.*<img src=\")data:image\/[a-z]+;base64,([a-zA-Z0-9\/+=]+)(\".*)';
+      Regex := Regex.Regex(SearchText);
+      WHILE Regex.IsMatch(BodyText) DO BEGIN
+        Base64 := Regex.Replace(BodyText,'$2',1);
+        MemoryStream := MemoryStream.MemoryStream(Convert.FromBase64String(Base64));
+        MediaId := IMPORTSTREAMWITHURLACCESS(MemoryStream,CREATEGUID,1);
+        BodyText := Regex.Replace(BodyText,'$1' + GETDOCUMENTURL(MediaId) + '$3',1);
+      END;
+      EXIT(BodyText);
+    END;
+
+    LOCAL PROCEDURE IsConfiguredForO365@19() : Boolean;
+    VAR
+      SMTPMailSetup@1000 : Record 409;
+    BEGIN
+      SMTPMailSetup.GET;
+      EXIT(SMTPMail.IsOffice365Setup(SMTPMailSetup));
+    END;
+
+    [Integration(DEFAULT,TRUE)]
+    LOCAL PROCEDURE OnBeforeRunEmailDialog@1101103000(VAR HidePopupEmailDialogP@1101103001 : Boolean;VAR HideMailDialogP@1101103000 : Boolean;VAR DoEditP@1101103002 : Boolean);
+    BEGIN
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
+OBJECT Codeunit 50000 Custom Events
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26.01.17;
+    Time=15.37.45;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+
+    [EventSubscriber(Page,143,OnAfterActionEvent,"Bulk Send")]
+    LOCAL PROCEDURE PAG143OnActionBulkSend@1101103000(VAR Rec@1101103000 : Record 112);
+    VAR
+      SalesInvoiceHeaderL@1101103001 : Record 112;
+      SalesInvoiceHeaderSendL@1101103002 : Record 112;
+      TXT01L@1101103003 : TextConst 'ENU=Do you want to send %1 posted invoices via printer or mail? The documents will be sent based on the sending profile on the customer or vendor.;NOR=Vil du masseutsende %1 bokfõrte salgsfaktura via printer eller e-post? Dokumentene blir sendt ut basert pÜ profil for dokumentsending for kunde eller leverandõr.';
+      ProgressWindowL@1101103004 : Dialog;
+      TXT02L@1101103005 : TextConst 'ENU=Processing #1#######;NOR=Behandler #1#######';
+      RecordCountL@1101103006 : Integer;
+      TXT03L@1101103007 : TextConst 'ENU=%1 lines have been processed.;NOR=%1 linjer har blitt behandlet.';
+    BEGIN
+      SalesInvoiceHeaderL.COPYFILTERS(Rec);
+      RecordCountL := 0;
+      IF (SalesInvoiceHeaderL.FINDFIRST) AND CONFIRM(TXT01L, TRUE, SalesInvoiceHeaderL.COUNT) THEN BEGIN
+        ProgressWindowL.OPEN(TXT02L);
+        REPEAT
+          SalesInvoiceHeaderSendL.RESET();
+          SalesInvoiceHeaderSendL.SETRANGE("No.", SalesInvoiceHeaderL."No.");
+          SalesInvoiceHeaderSendL.FINDFIRST();
+          ProgressWindowL.UPDATE(1,SalesInvoiceHeaderL."No.");
+          SalesInvoiceHeaderSendL.SendRecords();
+          RecordCountL := RecordCountL + 1;
+        UNTIL SalesInvoiceHeaderL.NEXT = 0;
+        ProgressWindowL.CLOSE;
+        MESSAGE(TXT03L, RecordCountL);
+      END;
+    END;
+
+    [EventSubscriber(Table,77,OnBeforeSend)]
+    LOCAL PROCEDURE TAB77OnBeforeSend@1101103004(VAR ReportIDP@1101103000 : Integer);
+    BEGIN
+      UpdateUserReportSetup(ReportIDP, TRUE);
+    END;
+
+    [EventSubscriber(Table,77,OnAfterSend)]
+    LOCAL PROCEDURE TAB77OnAfterSend@1101103003(VAR ReportIDP@1101103000 : Integer);
+    BEGIN
+      UpdateUserReportSetup(ReportIDP, FALSE);
+    END;
+
+    LOCAL PROCEDURE UpdateUserReportSetup@1101103006(VAR ReportIDP@1101103000 : Integer;IsPrintingStarted@1101103001 : Boolean);
+    VAR
+      UserReportSetupL@1101103002 : Record 50000;
+    BEGIN
+      UserReportSetupL.SETRANGE("User ID", USERID);
+      UserReportSetupL.SETRANGE("Report ID", ReportIDP);
+      IF IsPrintingStarted THEN BEGIN
+        IF UserReportSetupL.FINDFIRST THEN
+        BEGIN
+          UserReportSetupL.VALIDATE("Is Printing Started", IsPrintingStarted);
+          UserReportSetupL.MODIFY(TRUE);
+        END;
+      END ELSE BEGIN
+        //Uncheck all lines for user
+        UserReportSetupL.RESET;
+        UserReportSetupL.SETRANGE("User ID", USERID);
+        IF UserReportSetupL.FINDSET THEN
+          UserReportSetupL.MODIFYALL("Is Printing Started", IsPrintingStarted);
+      END;
+    END;
+
+    LOCAL PROCEDURE IsUserReportPrintingStarted@1101103005() : Boolean;
+    VAR
+      UserReportSetupL@1101103000 : Record 50000;
+    BEGIN
+      UserReportSetupL.SETRANGE("User ID", USERID);
+      UserReportSetupL.SETRANGE("Is Printing Started", TRUE);
+      EXIT (UserReportSetupL.FINDFIRST);
+    END;
+
+    LOCAL PROCEDURE UserReportSetupHideEmailDialog@1101103010() : Boolean;
+    VAR
+      UserReportSetupL@1101103000 : Record 50000;
+    BEGIN
+      UserReportSetupL.SETRANGE("User ID", USERID);
+      UserReportSetupL.SETRANGE("Is Printing Started", TRUE);
+      IF UserReportSetupL.FINDFIRST THEN
+        EXIT(UserReportSetupL."Hide Email Dialog")
+      ELSE
+        EXIT (TRUE); //True is standard behaviour
+    END;
+
+    LOCAL PROCEDURE UserReportSetupSendEmailAutomatic@1101103013() : Boolean;
+    VAR
+      UserReportSetupL@1101103000 : Record 50000;
+    BEGIN
+      UserReportSetupL.SETRANGE("User ID", USERID);
+      UserReportSetupL.SETRANGE("Is Printing Started", TRUE);
+      IF UserReportSetupL.FINDFIRST THEN
+        EXIT(UserReportSetupL."Send Email Automatic")
+      ELSE
+        EXIT (FALSE); //false is standard behaviour
+    END;
+
+    [EventSubscriber(Codeunit,9520,OnBeforeRunEmailDialog)]
+    LOCAL PROCEDURE COD9520OnBeforeRunEmailDialog@1101103002(VAR HidePopupEmailDialogP@1101103000 : Boolean;VAR HideMailDialogP@1101103001 : Boolean;VAR DoEditP@1101103002 : Boolean);
+    BEGIN
+      HidePopupEmailDialogP := UserReportSetupHideEmailDialog;
+      IF UserReportSetupSendEmailAutomatic THEN BEGIN
+        HideMailDialogP := TRUE; //Send email without showing the email form in Outlook.
+        //DoEdit must be true to trigger send mail via Outlook
+        DoEditP := TRUE;
+      END;
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
+OBJECT Page 143 Posted Sales Invoices
+{
+  OBJECT-PROPERTIES
+  {
+    Date=25.01.17;
+    Time=08.57.20;
+    Modified=Yes;
+    Version List=NAVW110.00,NAVNO10.00;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=[ENU=Posted Sales Invoices;
+               NOR=Bokfõrte salgsfakturaer];
+    SourceTable=Table112;
+    SourceTableView=SORTING(Posting Date)
+                    ORDER(Descending);
+    PageType=List;
+    CardPageID=Posted Sales Invoice;
+    RefreshOnActivate=Yes;
+    PromotedActionCategoriesML=[ENU=New,Process,Report,Invoice,Navigate,Correct;
+                                NOR=Ny,Prosess,Rapport,Faktura,Naviger,Korriger];
+    OnInit=BEGIN
+             DocExchStatusVisible := FALSE;
+           END;
+
+    OnOpenPage=VAR
+                 CRMIntegrationManagement@1000 : Codeunit 5330;
+                 OfficeMgt@1001 : Codeunit 1630;
+               BEGIN
+                 SetSecurityFilterOnRespCenter;
+                 CRMIntegrationEnabled := CRMIntegrationManagement.IsCRMIntegrationEnabled;
+                 IF FINDFIRST THEN;
+                 IsOfficeAddin := OfficeMgt.IsAvailable;
+               END;
+
+    OnAfterGetRecord=VAR
+                       SalesInvoiceHeader@1000 : Record 112;
+                     BEGIN
+                       DocExchStatusStyle := GetDocExchStatusStyle;
+
+                       SalesInvoiceHeader.COPYFILTERS(Rec);
+                       SalesInvoiceHeader.SETFILTER("Document Exchange Status",'<>%1',"Document Exchange Status"::"Not Sent");
+                       DocExchStatusVisible := NOT SalesInvoiceHeader.ISEMPTY;
+                     END;
+
+    OnAfterGetCurrRecord=VAR
+                           CRMCouplingManagement@1000 : Codeunit 5331;
+                         BEGIN
+                           DocExchStatusStyle := GetDocExchStatusStyle;
+                           CurrPage.IncomingDocAttachFactBox.PAGE.LoadDataFromRecord(Rec);
+                           CRMIsCoupledToRecord := CRMIntegrationEnabled AND CRMCouplingManagement.IsRecordCoupledToCRM(RECORDID);
+                         END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 19      ;1   ;ActionGroup;
+                      CaptionML=[ENU=&Invoice;
+                                 NOR=F&aktura];
+                      Image=Invoice }
+      { 31      ;2   ;Action    ;
+                      Name=Statistics;
+                      ShortCutKey=F7;
+                      CaptionML=[ENU=Statistics;
+                                 NOR=Statistikk];
+                      RunObject=Page 397;
+                      RunPageLink=No.=FIELD(No.);
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Statistics;
+                      PromotedCategory=Category4 }
+      { 32      ;2   ;Action    ;
+                      CaptionML=[ENU=Co&mments;
+                                 NOR=&Merknader];
+                      RunObject=Page 67;
+                      RunPageLink=Document Type=CONST(Posted Invoice),
+                                  No.=FIELD(No.);
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=ViewComments;
+                      PromotedCategory=Category4 }
+      { 1102601000;2 ;Action    ;
+                      AccessByPermission=TableData 348=R;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=[ENU=Dimensions;
+                                 NOR=Dimensjoner];
+                      ToolTipML=[ENU=View or edit dimensions, such as area, project, or department, that you can assign to sales and purchase documents to distribute costs and analyze transaction history.;
+                                 NOR=Vis eller rediger dimensjoner, for eksempel omrÜde, prosjekt eller avdeling, som du kan tilordne til salgs- og kjõpsdokumenter for Ü distribuere kostnader og analysere transaksjonshistorikk.];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Dimensions;
+                      PromotedCategory=Category4;
+                      OnAction=BEGIN
+                                 ShowDimensions;
+                               END;
+                                }
+      { 1080000 ;2   ;Separator  }
+      { 1080001 ;2   ;Action    ;
+                      CaptionML=[ENU=Create Electronic Invoice;
+                                 NOR=Opprett elektronisk faktura];
+                      ApplicationArea=#Basic,#Suite;
+                      Image=CreateDocument;
+                      OnAction=VAR
+                                 SalesInvHeader@1080000 : Record 112;
+                               BEGIN
+                                 SalesInvHeader := Rec;
+                                 SalesInvHeader.SETRECFILTER;
+                                 REPORT.RUNMODAL(REPORT::"Create Electronic Invoices",TRUE,FALSE,SalesInvHeader);
+                               END;
+                                }
+      { 9       ;2   ;Action    ;
+                      Name=IncomingDoc;
+                      AccessByPermission=TableData 130=R;
+                      CaptionML=[ENU=Incoming Document;
+                                 NOR=InngÜende dokument];
+                      Promoted=Yes;
+                      Image=Document;
+                      PromotedCategory=Category4;
+                      OnAction=VAR
+                                 IncomingDocument@1000 : Record 130;
+                               BEGIN
+                                 IncomingDocument.ShowCard("No.","Posting Date");
+                               END;
+                                }
+      { 16      ;1   ;ActionGroup;
+                      Name=ActionGroupCRM;
+                      CaptionML=[ENU=Dynamics CRM;
+                                 NOR=Dynamics CRM];
+                      Visible=CRMIntegrationEnabled }
+      { 14      ;2   ;Action    ;
+                      Name=CRMGotoInvoice;
+                      CaptionML=[ENU=Invoice;
+                                 NOR=Faktura];
+                      ToolTipML=[ENU=Open the coupled Microsoft Dynamics CRM account.;
+                                 NOR=èpne den koblede Microsoft Dynamics CRM-kontoen.];
+                      ApplicationArea=#All;
+                      Enabled=CRMIsCoupledToRecord;
+                      Image=CoupledSalesInvoice;
+                      OnAction=VAR
+                                 CRMIntegrationManagement@1000 : Codeunit 5330;
+                               BEGIN
+                                 CRMIntegrationManagement.ShowCRMEntityFromRecordID(RECORDID);
+                               END;
+                                }
+      { 12      ;2   ;Action    ;
+                      Name=CreateInCRM;
+                      CaptionML=[ENU=Create Invoice in Dynamics CRM;
+                                 NOR=Opprett faktura i Dynamics CRM];
+                      ToolTipML=[ENU=Generate the document in the coupled Microsoft Dynamics CRM account.;
+                                 NOR=Generer dokumentet i den koblede Microsoft Dynamics CRM-kontoen.];
+                      ApplicationArea=#All;
+                      Enabled=NOT CRMIsCoupledToRecord;
+                      Image=NewSalesInvoice;
+                      OnAction=VAR
+                                 SalesInvoiceHeader@1003 : Record 112;
+                                 CRMIntegrationManagement@1000 : Codeunit 5330;
+                                 SalesInvoiceHeaderRecordRef@1002 : RecordRef;
+                               BEGIN
+                                 CurrPage.SETSELECTIONFILTER(SalesInvoiceHeader);
+                                 SalesInvoiceHeader.NEXT;
+
+                                 IF SalesInvoiceHeader.COUNT = 1 THEN
+                                   CRMIntegrationManagement.CreateNewRecordInCRM(RECORDID,FALSE)
+                                 ELSE BEGIN
+                                   SalesInvoiceHeaderRecordRef.GETTABLE(SalesInvoiceHeader);
+                                   CRMIntegrationManagement.CreateNewRecordsInCRM(SalesInvoiceHeaderRecordRef);
+                                 END;
+                               END;
+                                }
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1101103000;1 ;Action    ;
+                      Name=Bulk Send;
+                      CaptionML=[ENU=Bulk Send;
+                                 NOR=Masseutsendelse];
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=SendToMultiple;
+                      PromotedCategory=Process }
+      { 7       ;1   ;Action    ;
+                      Name=SendCustom;
+                      Ellipsis=Yes;
+                      CaptionML=[ENU=Send;
+                                 NOR=Send];
+                      ToolTipML=[ENU=Prepare to send the document according to the customer's sending profile, such as attached to an email. The Send document to window opens where you can confirm or select a sending profile.;
+                                 NOR=Klargjõr for Ü sende dokumentet i henhold til kundens sendingsprofil, for eksempel vedlagt i en e-post. Vinduet Send dokument til Üpnes der du kan bekrefte eller velge en sendingsprofil.];
+                      ApplicationArea=#Basic,#Suite;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=SendToMultiple;
+                      PromotedCategory=Category4;
+                      PromotedOnly=Yes;
+                      OnAction=VAR
+                                 SalesInvHeader@1000 : Record 112;
+                               BEGIN
+                                 SalesInvHeader := Rec;
+                                 CurrPage.SETSELECTIONFILTER(SalesInvHeader);
+                                 SalesInvHeader.SendRecords;
+                               END;
+                                }
+      { 20      ;1   ;Action    ;
+                      Name=Print;
+                      Ellipsis=Yes;
+                      CaptionML=[ENU=&Print;
+                                 NOR=&Skriv ut];
+                      ToolTipML=[ENU=Prepare to print the document. A report request window for the document opens where you can specify what to include on the print-out.;
+                                 NOR=Klargjõr for Ü skrive ut dokumentet. Det vises et rapportforespõrselsvindu for dokumentet der du kan angi hva som skal inkluderes pÜ utskriften.];
+                      ApplicationArea=#Basic,#Suite;
+                      Visible=NOT IsOfficeAddin;
+                      Image=Print;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 SalesInvHeader@1102 : Record 112;
+                               BEGIN
+                                 SalesInvHeader := Rec;
+                                 CurrPage.SETSELECTIONFILTER(SalesInvHeader);
+                                 SalesInvHeader.PrintRecords(TRUE);
+                               END;
+                                }
+      { 3       ;1   ;Action    ;
+                      Name=Email;
+                      CaptionML=[ENU=Send by &Email;
+                                 NOR=Send via &e-post];
+                      ToolTipML=[ENU=Prepare to send the document by email. The Send Email window opens prefilled for the customer where you can add or change information before you send the email.;
+                                 NOR=Klargjõr for Ü sende dokumentet via e-post. Vinduet Send e-post Üpnes forhÜndsutfylt for kunder, der du kan legge til eller endre informasjon fõr du sender e-posten.];
+                      ApplicationArea=#Basic,#Suite;
+                      Image=Email;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 SalesInvHeader@1000 : Record 112;
+                               BEGIN
+                                 SalesInvHeader := Rec;
+                                 CurrPage.SETSELECTIONFILTER(SalesInvHeader);
+                                 SalesInvHeader.EmailRecords(TRUE);
+                               END;
+                                }
+      { 25      ;1   ;Action    ;
+                      Name=Navigate;
+                      CaptionML=[ENU=&Navigate;
+                                 NOR=&Naviger];
+                      ToolTipML=[ENU=Find all entries and documents that exist for the document number and posting date on the selected entry or document.;
+                                 NOR=Finn alle oppfõringer og dokumenter som finnes for dokumentnummeret og bokfõringsdatoen i den valgte oppfõringen eller dokumentet.];
+                      ApplicationArea=#Basic,#Suite;
+                      Visible=NOT IsOfficeAddin;
+                      Image=Navigate;
+                      PromotedCategory=Category5;
+                      OnAction=BEGIN
+                                 Navigate;
+                               END;
+                                }
+      { 10      ;1   ;Action    ;
+                      Name=ActivityLog;
+                      CaptionML=[ENU=Activity Log;
+                                 NOR=Aktivitetslogg];
+                      ToolTipML=[ENU=View the status and any errors if the document was sent as an electronic document or OCR file through the document exchange service.;
+                                 NOR=Vis statusen og eventuelle feilmeldinger hvis dokumentet ble sendt som et elektronisk dokument eller OCR-fil via dokumentutvekslingstjenesten.];
+                      ApplicationArea=#Basic,#Suite;
+                      Image=Log;
+                      OnAction=VAR
+                                 ActivityLog@1002 : Record 710;
+                               BEGIN
+                                 ActivityLog.ShowEntries(RECORDID);
+                               END;
+                                }
+      { 38      ;1   ;ActionGroup;
+                      CaptionML=[ENU=Correct;
+                                 NOR=Korriger] }
+      { 36      ;2   ;Action    ;
+                      Name=CorrectInvoice;
+                      CaptionML=[ENU=Correct;
+                                 NOR=Korriger];
+                      ToolTipML=[ENU=Reverse this posted invoice and automatically create a new invoice with the same information that you can correct before posting. This posted invoice will automatically be canceled.;
+                                 NOR=Tilbakefõr denne bokfõrte fakturaen, og opprett automatisk en ny faktura med den samme informasjonen som du kan korrigere fõr bokfõring. Denne bokfõrte fakturaen annulleres automatisk.];
+                      ApplicationArea=#Basic,#Suite;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Undo;
+                      PromotedCategory=Category6;
+                      PromotedOnly=Yes;
+                      Scope=Repeater;
+                      OnAction=BEGIN
+                                 CODEUNIT.RUN(CODEUNIT::"Correct PstdSalesInv (Yes/No)",Rec);
+                               END;
+                                }
+      { 34      ;2   ;Action    ;
+                      Name=CancelInvoice;
+                      CaptionML=[ENU=Cancel;
+                                 NOR=Annuller];
+                      ToolTipML=[ENU=Create and post a sales credit memo that reverses this posted sales invoice. This posted sales invoice will be canceled.;
+                                 NOR=Opprett og bokfõr en salgskreditnota som tilbakefõrer denne bokfõrte salgsfakturaen. Denne bokfõrte salgsfakturaen vil bli annullert.];
+                      ApplicationArea=#Basic,#Suite;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Cancel;
+                      PromotedCategory=Category6;
+                      PromotedOnly=Yes;
+                      Scope=Repeater;
+                      OnAction=BEGIN
+                                 CODEUNIT.RUN(CODEUNIT::"Cancel PstdSalesInv (Yes/No)",Rec);
+                               END;
+                                }
+      { 30      ;2   ;Action    ;
+                      Name=CreateCreditMemo;
+                      CaptionML=[ENU=Create Corrective Credit Memo;
+                                 NOR=Opprett korrigerende kreditnota];
+                      ToolTipML=[ENU=Create a credit memo for this posted invoice that you complete and post manually to reverse the posted invoice.;
+                                 NOR=Opprett en kreditnota for denne bokfõrte fakturaen som du fullfõrer og bokfõrer manuelt for Ü tilbakefõre den bokfõrte fakturaen.];
+                      ApplicationArea=#Basic,#Suite;
+                      Image=CreateCreditMemo;
+                      PromotedCategory=Category6;
+                      Scope=Repeater;
+                      OnAction=VAR
+                                 SalesHeader@1001 : Record 36;
+                                 CorrectPostedSalesInvoice@1000 : Codeunit 1303;
+                               BEGIN
+                                 CorrectPostedSalesInvoice.CreateCreditMemoCopyDocument(Rec,SalesHeader);
+                                 PAGE.RUN(PAGE::"Sales Credit Memo",SalesHeader);
+                               END;
+                                }
+      { 42      ;1   ;ActionGroup;
+                      CaptionML=[ENU=Invoice;
+                                 NOR=Faktura];
+                      Image=Invoice }
+      { 41      ;2   ;Action    ;
+                      ShortCutKey=Shift+F7;
+                      CaptionML=[ENU=Customer;
+                                 NOR=Kunde];
+                      ToolTipML=[ENU=View or edit detailed information about the customer.;
+                                 NOR=Vis eller rediger detaljert informasjon om kunden.];
+                      ApplicationArea=#Basic,#Suite;
+                      RunObject=Page 21;
+                      RunPageLink=No.=FIELD(Sell-to Customer No.);
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Customer;
+                      PromotedCategory=Category4;
+                      PromotedOnly=Yes;
+                      Scope=Repeater }
+      { 40      ;2   ;Action    ;
+                      Name=ShowCreditMemo;
+                      CaptionML=[ENU=Show Canceled/Corrective Credit Memo;
+                                 NOR=Vis annullert/korrigerende kreditnota];
+                      ToolTipML=[ENU=Open the posted sales credit memo that was created when you canceled the posted sales invoice. If the posted sales invoice is the result of a canceled sales credit memo, then canceled sales credit memo will open.;
+                                 NOR=èpne den bokfõrte salgskreditnotaen som ble opprettet da du kansellerte den bokfõrte salgsfakturaen. Hvis den bokfõrte salgsfakturaen er et resultat av den kansellerte salgskreditnotaen, sÜ vil den kansellerte salgskreditnotaen bli Üpnet.];
+                      ApplicationArea=#Basic,#Suite;
+                      Enabled=Cancelled OR Corrective;
+                      Image=CreditMemo;
+                      PromotedCategory=Category4;
+                      Scope=Repeater;
+                      OnAction=BEGIN
+                                 ShowCanceledOrCorrCrMemo;
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 2   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the posted invoice number.;
+                           NOR=Angir det bokfõrte fakturanummeret.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="No." }
+
+    { 4   ;2   ;Field     ;
+                CaptionML=[ENU=Customer No.;
+                           NOR=Kundenr.];
+                ToolTipML=[ENU=Specifies the number of the customer the invoice concerns.;
+                           NOR=Angir nummeret til kunden som fakturaen gjelder.];
+                SourceExpr="Sell-to Customer No." }
+
+    { 6   ;2   ;Field     ;
+                CaptionML=[ENU=Customer;
+                           NOR=Kunde];
+                ToolTipML=[ENU=Specifies the name of the customer that you shipped the items on the invoice to.;
+                           NOR=Angir navnet pÜ kunden som varene pÜ fakturaen er levert til.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Sell-to Customer Name" }
+
+    { 37  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the currency code of the invoice.;
+                           NOR=Angir valutakoden for fakturaen.];
+                SourceExpr="Currency Code" }
+
+    { 24  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the date on which the invoice is due for payment.;
+                           NOR=Angir datoen da fakturaen mÜ betales.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Due Date" }
+
+    { 13  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the total, in the currency of the invoice, of the amounts on all the invoice lines. The amount does not include VAT.;
+                           NOR=Angir summen av belõpene pÜ alle fakturalinjene i fakturaens valuta. Belõpet er uten mva.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Amount;
+                OnDrillDown=BEGIN
+                              SETRANGE("No.");
+                              PAGE.RUNMODAL(PAGE::"Posted Sales Invoice",Rec)
+                            END;
+                             }
+
+    { 15  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the total of the amounts in all the amount fields on the invoice, in the currency of the invoice. The amount includes VAT.;
+                           NOR=Angir summen av alle belõpene i belõpsfeltene i fakturaen, i valutaen pÜ fakturaen. Belõpet er inkludert mva.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Amount Including VAT";
+                OnDrillDown=BEGIN
+                              SETRANGE("No.");
+                              PAGE.RUNMODAL(PAGE::"Posted Sales Invoice",Rec)
+                            END;
+                             }
+
+    { 22  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the amount that remains to be paid for the posted sales invoice.;
+                           NOR=Angir belõpet som gjenstÜr Ü bli betalt for den bokfõrte salgsfakturaen.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Remaining Amount" }
+
+    { 27  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the postal code of the address.;
+                           NOR=Angir postnummeret for adressen.];
+                SourceExpr="Sell-to Post Code";
+                Visible=FALSE }
+
+    { 23  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the country/region code of the address.;
+                           NOR=Angir lands-/omrÜdekoden for adressen.];
+                SourceExpr="Sell-to Country/Region Code";
+                Visible=FALSE }
+
+    { 35  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the name of the person to contact when you communicate with the customer that you shipped the items to.;
+                           NOR=Angir navnet pÜ personen du kontakter nÜr du kommuniserer med kunden som du sendte varene til.];
+                SourceExpr="Sell-to Contact";
+                Visible=FALSE }
+
+    { 147 ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of the customer the invoice was sent to.;
+                           NOR=Angir nummeret til kunden som fakturaen ble sendt til.];
+                SourceExpr="Bill-to Customer No.";
+                Visible=FALSE }
+
+    { 145 ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the name of the customer that the invoice was sent to.;
+                           NOR=Angir navnet pÜ kunden som fakturaen ble sendt til.];
+                SourceExpr="Bill-to Name";
+                Visible=FALSE }
+
+    { 33  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the postal code of the address.;
+                           NOR=Angir postnummeret for adressen.];
+                SourceExpr="Bill-to Post Code";
+                Visible=FALSE }
+
+    { 29  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the country/region code of the address.;
+                           NOR=Angir lands-/omrÜdekoden for adressen.];
+                SourceExpr="Bill-to Country/Region Code";
+                Visible=FALSE }
+
+    { 129 ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the name of the person you regularly contact when you communicate with the customer to whom the invoice was sent.;
+                           NOR=Angir navnet pÜ personen du vanligvis kontakter nÜr du kommuniserer med kunden som fakturaen ble sendt til.];
+                SourceExpr="Bill-to Contact";
+                Visible=FALSE }
+
+    { 125 ;2   ;Field     ;
+                ToolTipML=[ENU=This field is used with shipments to customers with multiple ship-to addresses.;
+                           NOR=Dette feltet brukes i forbindelse med leveringer til kunder som har flere lever til-adresser.];
+                SourceExpr="Ship-to Code";
+                Visible=FALSE }
+
+    { 123 ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the name of the customer that the items were shipped to.;
+                           NOR=Angir navnet pÜ kunden som varene ble levert til.];
+                SourceExpr="Ship-to Name";
+                Visible=FALSE }
+
+    { 21  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the postal code of the address.;
+                           NOR=Angir postnummeret for adressen.];
+                SourceExpr="Ship-to Post Code";
+                Visible=FALSE }
+
+    { 17  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the country/region code of the address.;
+                           NOR=Angir lands-/omrÜdekoden for adressen.];
+                SourceExpr="Ship-to Country/Region Code";
+                Visible=FALSE }
+
+    { 113 ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the name of the person you regularly contact at the customer to whom the items were shipped.;
+                           NOR=Angir navnet pÜ kontaktpersonen hos kunden som varene er sendt til.];
+                SourceExpr="Ship-to Contact";
+                Visible=FALSE }
+
+    { 109 ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the date when the invoice was posted.;
+                           NOR=Angir datoen da fakturaen ble bokfõrt.];
+                SourceExpr="Posting Date";
+                Visible=FALSE }
+
+    { 69  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies which salesperson is associated with the invoice.;
+                           NOR=Angir hvilken selger som er knyttet til fakturaen.];
+                SourceExpr="Salesperson Code";
+                Visible=FALSE }
+
+    { 91  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the dimension value code associated with the invoice.;
+                           NOR=Angir dimensjonsverdikoden som er knyttet til fakturaen.];
+                SourceExpr="Shortcut Dimension 1 Code";
+                Visible=FALSE }
+
+    { 89  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the dimension value code associated with the invoice.;
+                           NOR=Angir dimensjonsverdikoden som er knyttet til fakturaen.];
+                SourceExpr="Shortcut Dimension 2 Code";
+                Visible=FALSE }
+
+    { 93  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the code for the location from which the items were shipped.;
+                           NOR=Angir koden for lokasjonen som varene ble levert fra.];
+                SourceExpr="Location Code" }
+
+    { 8   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies how many times the invoice has been printed.;
+                           NOR=Angir hvor mange ganger fakturaen har blitt skrevet ut.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="No. Printed" }
+
+    { 1102601001;2;Field  ;
+                ToolTipML=[ENU=Specifies the date when you created the sales document.;
+                           NOR=Angir datoen da du opprettet salgsdokumentet.];
+                SourceExpr="Document Date";
+                Visible=FALSE }
+
+    { 1102601003;2;Field  ;
+                ToolTipML=[ENU=Specifies a formula that calculates the payment due date, payment discount date, and payment discount amount on the purchase document.;
+                           NOR=Angir en formel som beregner forfallsdatoen for betalingen, kontantrabattdatoen og kontantrabattbelõpet, pÜ kjõpsdokumentet.];
+                SourceExpr="Payment Terms Code";
+                Visible=FALSE }
+
+    { 1102601009;2;Field  ;
+                ToolTipML=[ENU=Specifies the payment discount percentage granted if payment is made by the date entered in the Pmt. Discount Date field.;
+                           NOR=Angir kontantrabattprosenten som gis hvis betaling utfõres innen datoen som er angitt i feltet Kont.rabattdato.];
+                SourceExpr="Payment Discount %";
+                Visible=FALSE }
+
+    { 1102601011;2;Field  ;
+                ToolTipML=[ENU=Specifies the code that represents the shipment method for the invoice.;
+                           NOR=Angir koden for leveringsmÜten som gjelder for fakturaen.];
+                SourceExpr="Shipment Method Code";
+                Visible=FALSE }
+
+    { 39  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies which shipping agent is used to transport the items on the sales document to the customer.;
+                           NOR=Angir hvilken transportõr som skal brukes til Ü transportere varene pÜ salgsdokumentet til kunden.];
+                ApplicationArea=#Suite;
+                SourceExpr="Shipping Agent Code";
+                Visible=FALSE }
+
+    { 26  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if the posted sales invoice is paid. The check box will also be selected if a credit memo for the remaining amount has been applied.;
+                           NOR=Angir om den bokfõrte salgsfakturaen er betalt. Det vil ogsÜ merkes av for hvis en kreditnota for restbelõpet er brukt.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Closed }
+
+    { 28  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if the posted sales invoice has been either corrected or canceled.;
+                           NOR=Angir om den bokfõrte salgsfakturaen er blitt korrigert eller kansellert.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Cancelled;
+                HideValue=NOT Cancelled;
+                Style=Unfavorable;
+                StyleExpr=Cancelled;
+                OnDrillDown=BEGIN
+                              ShowCorrectiveCreditMemo;
+                            END;
+                             }
+
+    { 44  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if the posted sales invoice is a corrective document.;
+                           NOR=Angir om den bokfõrte salgsfakturaen er et korrigerende dokument.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Corrective;
+                HideValue=NOT Corrective;
+                Style=Unfavorable;
+                StyleExpr=Corrective;
+                OnDrillDown=BEGIN
+                              ShowCancelledCreditMemo;
+                            END;
+                             }
+
+    { 1102601013;2;Field  ;
+                ToolTipML=[ENU=Copies the date for this field from the Shipment Date field on the sales header, which is used for planning purposes.;
+                           NOR=Kopierer datoen for dette feltet fra feltet Forsendelsesdato i salgshodet, som brukes til planlegging.];
+                SourceExpr="Shipment Date";
+                Visible=FALSE }
+
+    { 11  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the status of the document if you are using a document exchange service to send it as an electronic document. The status values are reported by the document exchange service.;
+                           NOR=Angir statusen for dokumentet hvis du bruker en dokumentutvekslingstjeneste til Ü sende den som et elektronisk dokument. Statusverdiene rapporteres av dokumentutvekslingstjenesten.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="Document Exchange Status";
+                Visible=DocExchStatusVisible;
+                StyleExpr=DocExchStatusStyle;
+                OnDrillDown=BEGIN
+                              DocExchStatusDrillDown;
+                            END;
+                             }
+
+    { 18  ;2   ;Field     ;
+                Name=<Document Exchange Status>;
+                ToolTipML=[ENU=Specifies that the posted sales order is coupled to a sales order in Microsoft CRM.;
+                           NOR=Angir at den bokfõrte ordren er koblet til en ordre i Microsoft CRM.];
+                ApplicationArea=#All;
+                SourceExpr="Coupled to CRM";
+                Visible=CRMIntegrationEnabled }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 5   ;1   ;Part      ;
+                Name=IncomingDocAttachFactBox;
+                PagePartID=Page193;
+                Visible=NOT IsOfficeAddin;
+                PartType=Page;
+                ShowFilter=No }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+    VAR
+      DocExchStatusStyle@1111 : Text;
+      CRMIntegrationEnabled@1222 : Boolean;
+      CRMIsCoupledToRecord@1001 : Boolean;
+      DocExchStatusVisible@1000 : Boolean;
+      IsOfficeAddin@1002 : Boolean;
+
+    BEGIN
+    END.
+  }
+}
+
+OBJECT Page 360 Document Sending Profile
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26.01.17;
+    Time=09.58.44;
+    Modified=Yes;
+    Version List=NAVW110.00;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Document Sending Profile;
+               NOR=Profil for dokumentsending];
+    SourceTable=Table60;
+    PageType=Card;
+    OnOpenPage=VAR
+                 ElectronicDocumentFormat@1001 : Record 61;
+               BEGIN
+                 ElectronicDocumentsVisible := NOT ElectronicDocumentFormat.ISEMPTY;
+               END;
+
+  }
+  CONTROLS
+  {
+    { 1   ;0   ;Container ;
+                ContainerType=ContentArea }
+
+    { 2   ;1   ;Group     ;
+                CaptionML=[ENU=General;
+                           NOR=Generelt];
+                GroupType=Group }
+
+    { 11  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a code to identify the document sending method in the system.;
+                           NOR=Angir en kode for Ü identifisere dokumentsendingsmetoden i systemet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Code }
+
+    { 3   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the document sending format.;
+                           NOR=Angir dokumentsendingsformatet.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Description }
+
+    { 8   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if this document sending method will be used as the default method for all customers.;
+                           NOR=Angir om denne dokumentsendingsmetoden vil bli brukt som standardmetoden for alle kunder.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Default }
+
+    { 1101103000;2;Field  ;
+                SourceExpr="Hide Sending Profile Dialog" }
+
+    { 9   ;1   ;Group     ;
+                CaptionML=[ENU=Sending Options;
+                           NOR=Sendealternativer];
+                GroupType=Group }
+
+    { 4   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if and how the document is printed when you choose the Post and Send button. If you choose the Yes (Prompt for Settings) option, the document is printed according to settings that you must make on the printer setup dialog.;
+                           NOR=Angir om og hvordan dokumentet skrives ut nÜr du velger Bokfõr og send. Hvis du velger alternativet Ja (spõr om innstillinger), skrives dokumentet ut i henhold til innstillingene du foretar i dialogboksen Skriveroppsett.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr=Printer }
+
+    { 5   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if and how the document is attached as a PDF file to an email to the involved customer when you choose the Post and Send button. If you choose the Yes (Prompt for Settings) option, the document is attached to an email according to settings that you must make in the Send Email window.;
+                           NOR=Angir om og hvordan dokumentet blir lagt ved som en PDF-fil i en e-post til den aktuelle kunden nÜr du velger Bokfõr og send. Hvis du velger alternativet Ja (spõr om innstillinger), blir dokumentet lagt ved i en e-post ut i henhold til innstillingene du foretar i vinduet Send e-post.];
+                ApplicationArea=#Basic,#Suite;
+                SourceExpr="E-Mail" }
+
+    { 15  ;2   ;Group     ;
+                Visible="E-Mail" <> "E-Mail"::No;
+                GroupType=Group }
+
+    { 12  ;3   ;Field     ;
+                SourceExpr="E-Mail Attachment";
+                OnValidate=BEGIN
+                             "E-Mail Format" := GetFormat;
+                           END;
+                            }
+
+    { 16  ;3   ;Group     ;
+                Visible="E-Mail Attachment" <> "E-Mail Attachment"::PDF;
+                GroupType=Group }
+
+    { 13  ;4   ;Field     ;
+                CaptionML=[ENU=Format;
+                           NOR=Format];
+                SourceExpr="E-Mail Format";
+                OnValidate=BEGIN
+                             LastFormat := "E-Mail Format";
+                           END;
+
+                OnLookup=BEGIN
+                           LookupElectronicFormat("E-Mail Format");
+                         END;
+                          }
+
+    { 10  ;2   ;Field     ;
+                ToolTipML=[ENU=Specify if the document is saved as a PDF file when you choose the Post and Send button.;
+                           NOR=Angi om dokumentet skal lagres som en PDF-fil nÜr du velger Bokfõr og send.];
+                SourceExpr=Disk;
+                OnValidate=BEGIN
+                             "Disk Format" := GetFormat;
+                           END;
+                            }
+
+    { 17  ;2   ;Group     ;
+                Visible=(Disk <> Disk::No) AND (Disk <> Disk::PDF);
+                GroupType=Group }
+
+    { 14  ;3   ;Field     ;
+                CaptionML=[ENU=Format;
+                           NOR=Format];
+                SourceExpr="Disk Format";
+                OnValidate=BEGIN
+                             LastFormat := "Disk Format";
+                           END;
+
+                OnLookup=BEGIN
+                           LookupElectronicFormat("Disk Format");
+                         END;
+                          }
+
+    { 6   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies if the document is sent as an electronic document that the customer can import into their system when you choose the Post and Send button. To use this option, you must also fill the Electronic Format field. Alternatively, the file can be saved to disk.;
+                           NOR=Angir om dokumentet sendes som et elektronisk dokument som kunden kan importere til systemet nÜr du velger Bokfõr og send. Hvis du vil bruke dette alternativet, mÜ du ogsÜ fylle ut feltet Elektronisk format. Filen kan eventuelt lagres pÜ en disk.];
+                SourceExpr="Electronic Document";
+                Visible=ElectronicDocumentsVisible;
+                OnValidate=BEGIN
+                             "Electronic Format" := GetFormat;
+                           END;
+                            }
+
+    { 18  ;2   ;Group     ;
+                Visible="Electronic Document" <> "Electronic Document"::No;
+                GroupType=Group }
+
+    { 7   ;3   ;Field     ;
+                CaptionML=[ENU=Format;
+                           NOR=Format];
+                ToolTipML=[ENU=Specifies which format to use for electronic document sending. You must fill this field if you selected the Silent option in the Electronic Document field.;
+                           NOR=Angir hvilket format som skal brukes for sending som elektronisk dokument. Du mÜ fylle ut dette feltet hvis du valget alternativet Stille i feltet Elektronisk dokument.];
+                SourceExpr="Electronic Format";
+                OnValidate=BEGIN
+                             LastFormat := "Electronic Format";
+                           END;
+
+                OnLookup=BEGIN
+                           LookupElectronicFormat("Electronic Format");
+                         END;
+                          }
+
+  }
+  CODE
+  {
+    VAR
+      LastFormat@1000 : Code[20];
+      ElectronicDocumentsVisible@1001 : Boolean;
+
+    LOCAL PROCEDURE LookupElectronicFormat@1(VAR ElectronicFormat@1000 : Code[20]);
+    VAR
+      ElectronicDocumentFormat@1002 : Record 61;
+      ElectronicDocumentFormats@1001 : Page 366;
+    BEGIN
+      ElectronicDocumentFormat.SETRANGE(Usage,Usage);
+      ElectronicDocumentFormats.SETTABLEVIEW(ElectronicDocumentFormat);
+      ElectronicDocumentFormats.LOOKUPMODE := TRUE;
+
+      IF ElectronicDocumentFormats.RUNMODAL = ACTION::LookupOK THEN BEGIN
+        ElectronicDocumentFormats.GETRECORD(ElectronicDocumentFormat);
+        ElectronicFormat := ElectronicDocumentFormat.Code;
+        LastFormat := ElectronicDocumentFormat.Code;
+        EXIT;
+      END;
+
+      ElectronicFormat := GetFormat;
+    END;
+
+    LOCAL PROCEDURE GetFormat@4() : Code[20];
+    VAR
+      ElectronicDocumentFormat@1000 : Record 61;
+      FindNewFormat@1001 : Boolean;
+    BEGIN
+      FindNewFormat := FALSE;
+
+      IF LastFormat = '' THEN
+        FindNewFormat := TRUE
+      ELSE BEGIN
+        ElectronicDocumentFormat.SETRANGE(Code,LastFormat);
+        ElectronicDocumentFormat.SETRANGE(Usage,Usage);
+        IF NOT ElectronicDocumentFormat.FINDFIRST THEN
+          FindNewFormat := TRUE;
+      END;
+
+      IF FindNewFormat THEN BEGIN
+        ElectronicDocumentFormat.SETRANGE(Code);
+        ElectronicDocumentFormat.SETRANGE(Usage,Usage);
+        IF NOT ElectronicDocumentFormat.FINDFIRST THEN
+          LastFormat := ''
+        ELSE
+          LastFormat := ElectronicDocumentFormat.Code;
+      END;
+
+      EXIT(LastFormat);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 26.01.17 JAL Added new field "Show Sending Profile Dialog"
+    }
+    END.
+  }
+}
+
+OBJECT Page 50000 User Report Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=26.01.17;
+    Time=09.59.45;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    SourceTable=Table50000;
+    PageType=List;
+  }
+  CONTROLS
+  {
+    { 1101103000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1101103001;1;Group  ;
+                Name=Group;
+                GroupType=Repeater }
+
+    { 1101103002;2;Field  ;
+                SourceExpr="User ID" }
+
+    { 1101103003;2;Field  ;
+                SourceExpr="Report ID" }
+
+    { 1101103005;2;Field  ;
+                SourceExpr="Hide Email Dialog" }
+
+    { 1101103006;2;Field  ;
+                SourceExpr="Send Email Automatic" }
+
+    { 1101103007;2;Field  ;
+                SourceExpr="Is Printing Started" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+

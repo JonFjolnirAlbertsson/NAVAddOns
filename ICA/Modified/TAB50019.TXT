@@ -1,0 +1,167 @@
+OBJECT Table 50019 Project account
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07.02.17;
+    Time=15.54.44;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Project account;
+               NOR=Prosjektkonto];
+  }
+  FIELDS
+  {
+    { 1   ;   ;Project No.         ;Code20        ;CaptionML=[ENU=Project No.;
+                                                              NOR=Prosjektnr.] }
+    { 2   ;   ;Project Name        ;Text50        ;OnValidate=BEGIN
+                                                                  CLEAR(DimensionValueG);
+                                                                  IF DimensionValueG.GET('Prosjekt',"Project No.") THEN BEGIN
+                                                                    DimensionValueG.Name := Rec."Project Name";
+                                                                    DimensionValueG.MODIFY;
+                                                                  END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Project name;
+                                                              NOR=Prosjektnavn] }
+    { 3   ;   ;Project Manager     ;Code10        ;TableRelation=Salesperson/Purchaser.Code;
+                                                   CaptionML=[ENU=Project manager;
+                                                              NOR=Prosjektleder] }
+    { 4   ;   ;Created Date        ;Date          ;CaptionML=[ENU=Created Date;
+                                                              NOR=Opprettet dato] }
+    { 5   ;   ;Last Changed Date   ;Date          ;CaptionML=[ENU=Last Changed Date;
+                                                              NOR=Sist endret dato] }
+    { 6   ;   ;Customer No.        ;Code20        ;TableRelation=Customer.No.;
+                                                   OnValidate=BEGIN
+                                                                //hhe 02.02.07->
+                                                                IF CustomerG.GET("Customer No.") THEN BEGIN
+                                                                  "Customer Name" := CustomerG.Name;
+                                                                  "Customer Name 2" := CustomerG."Name 2";
+                                                                  "Customer Address" := CustomerG.Address;
+                                                                  "Customer Address 2" := CustomerG."Address 2";
+                                                                  City := CustomerG.City;
+                                                                  "Post Code" := CustomerG."Post Code";
+                                                                  "Country Code" := CustomerG."Country/Region Code";
+                                                                  "VAT Registration No." := CustomerG."VAT Registration No.";
+                                                                END;
+                                                                //hhe 02.02.07<-
+                                                              END;
+
+                                                   CaptionML=[ENU=Custumer No.;
+                                                              NOR=Kundenr.] }
+    { 7   ;   ;Comment             ;Boolean       ;FieldClass=FlowField;
+                                                   CalcFormula=Exist("Comment Line" WHERE (Table Name=CONST(Project),
+                                                                                           No.=FIELD(Project No.)));
+                                                   CaptionML=[ENU=Comment;
+                                                              NOR=Merknad];
+                                                   Editable=No }
+    { 8   ;   ;Calculation No.     ;Code20        ;TableRelation="Price Calc. - Lines"."Calc. No.";
+                                                   CaptionML=[ENU=Calculation No.;
+                                                              NOR=Kalkylenr.] }
+    { 9   ;   ;Expect Sales Amount 1;Decimal      ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Sales Line".Amount WHERE (Shortcut Dimension 2 Code=FIELD(Project No.)));
+                                                   CaptionML=[ENU=Expect Sales Amount 1;
+                                                              NOR=Forventet salgsbel›p 1] }
+    { 10  ;   ;Expect Sales Amount 2;Decimal      ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Sales Line Archive".Amount WHERE (Shortcut Dimension 2 Code=FIELD(Project No.)));
+                                                   CaptionML=[ENU=Expect Sales Amount 2;
+                                                              NOR=Forventet salgsbel›p 2] }
+    { 11  ;   ;Actual Sales Amount ;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Value Entry"."Sales Amount (Actual)" WHERE (Global Dimension 2 Code=FIELD(Project No.)));
+                                                   CaptionML=[ENU=Actual Sales Amount;
+                                                              NOR=Faktisk salgsbel›p] }
+    { 12  ;   ;Expected Material Cost;Decimal     ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Prod. Order Component"."Cost Amount");
+                                                   CaptionML=[ENU=Expected Material Cost;
+                                                              NOR=Forventet materialkost] }
+    { 13  ;   ;Actual Material Cost;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=-Sum("Value Entry"."Cost Amount (Actual)" WHERE (Global Dimension 2 Code=FIELD(Project No.),
+                                                                                                                Item Ledger Entry Type=FILTER(Consumption)));
+                                                   CaptionML=[ENU=Actual Material Cost;
+                                                              NOR=Faktisk materialkost] }
+    { 14  ;   ;Expected Capacity Cost;Decimal     ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Prod. Order Routing Line"."Expected Operation Cost Amt.");
+                                                   CaptionML=[ENU=Expected Capacity Cost;
+                                                              NOR=Forventet kapasitetskost] }
+    { 15  ;   ;Actual Capacity Cost;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Value Entry"."Cost Amount (Actual)" WHERE (Capacity Ledger Entry No.=FILTER(>0),
+                                                                                                               Entry Type=CONST(Direct Cost),
+                                                                                                               Global Dimension 2 Code=FIELD(Project No.)));
+                                                   CaptionML=[ENU=Actual Capacity Cost;
+                                                              NOR=Faktisk kapasitetskost] }
+    { 16  ;   ;Customer Name 2     ;Text50        ;CaptionML=[ENU=Customer Name 2;
+                                                              NOR=Kundenavn 2] }
+    { 17  ;   ;Customer Address    ;Text50        ;CaptionML=[ENU=Customer Address;
+                                                              NOR=Kundeadresse] }
+    { 18  ;   ;Customer Address 2  ;Text50        ;CaptionML=[ENU=Customer Address 2;
+                                                              NOR=Kundeadresse 2] }
+    { 19  ;   ;City                ;Text30        ;OnValidate=BEGIN
+                                                                //PostCode.ValidateCity(City,"Post Code");
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              //PostCode.LookUpCity(City,"Post Code",TRUE);
+                                                            END;
+
+                                                   CaptionML=[ENU=City;
+                                                              NOR=Sted] }
+    { 20  ;   ;VAT Registration No.;Text20        ;OnValidate=VAR
+                                                                VATRegNoFormat@1000 : Record 381;
+                                                              BEGIN
+                                                              END;
+
+                                                   CaptionML=[ENU=VAT Registration No.;
+                                                              NOR=Organisasjonsnr.] }
+    { 21  ;   ;Actual Direct G/L Cost;Decimal     ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("G/L Entry".Amount);
+                                                   CaptionML=NOR=Faktisk kost - direkte p† finanskonto }
+    { 35  ;   ;Country Code        ;Code10        ;TableRelation=Country/Region;
+                                                   CaptionML=[ENU=Country Code;
+                                                              NOR=Landskode] }
+    { 91  ;   ;Post Code           ;Code20        ;TableRelation="Post Code";
+                                                   OnValidate=VAR
+                                                                CountyL@1101103000 : Text[30];
+                                                              BEGIN
+                                                                PostCodeG.ValidatePostCode(City, "Post Code", CountyL, "Country Code", TRUE);
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              //PostCodeg.LookUpPostCode(City,"Post Code",TRUE);
+                                                            END;
+
+                                                   ValidateTableRelation=No;
+                                                   TestTableRelation=No;
+                                                   CaptionML=[ENU=Post Code;
+                                                              NOR=Postnr.] }
+    { 92  ;   ;Project Name 2      ;Text30        ;CaptionML=[ENU=Project name 2;
+                                                              NOR=Prosjektnavn 2] }
+    { 93  ;   ;Customer Name       ;Text50        ;CaptionML=[ENU=Customer name;
+                                                              NOR=Kundenavn] }
+    { 94  ;   ;Project start date  ;Date          ;CaptionML=[ENU=Project start date;
+                                                              NOR=Prosjekt startdato] }
+    { 95  ;   ;Project end date    ;Date          ;CaptionML=[ENU=Project end date;
+                                                              NOR=Prosjekt sluttdato] }
+    { 96  ;   ;Type of project     ;Text80        ;CaptionML=[ENU=Type of project;
+                                                              NOR=Oppdragets art] }
+  }
+  KEYS
+  {
+    {    ;Project No.                             ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      DimensionValueG@1101103002 : Record 349;
+      PostCodeG@1101103001 : Record 225;
+      CustomerG@1101103000 : Record 18;
+
+    BEGIN
+    END.
+  }
+}
+

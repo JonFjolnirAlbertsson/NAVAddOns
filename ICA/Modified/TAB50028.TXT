@@ -1,0 +1,36 @@
+OBJECT Table 50028 Notification types_address
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07.02.17;
+    Time=15.54.37;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+  }
+  FIELDS
+  {
+    { 1   ;   ;Notification Type   ;Option        ;CaptionML=NOR=Varslingstype;
+                                                   OptionCaptionML=NOR=Gjenbestill,Endring salgsordre-›k,Endring salgsordre-prod,Endring salgsordre-tekn,Endring salgsordre-innkj›p,Endring salgsordre-Adm.dir,Endring salgsordre-kval.leder,Bekreft bestilling,Tilbud utl›p;
+                                                   OptionString=Reorder,Sales Order Change-Finance,Sales Order Change-Prod,Sales Order Change-Tech,Sales Order Change-Purch,Sales Order Change-MD,Sales Order Change-QA,Purch Order Confirm, Sales Quote Expire }
+    { 2   ;   ;Send notification to ID;Code20     ;CaptionML=NOR=Send varsel til ID }
+    { 3   ;   ;Send notific. to E-mailaddr.;Text80;CaptionML=NOR=Send varsel til e-postadresse;
+                                                   Description=5.10.10: 30->80 tegn }
+  }
+  KEYS
+  {
+    {    ;Notification Type                       ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+

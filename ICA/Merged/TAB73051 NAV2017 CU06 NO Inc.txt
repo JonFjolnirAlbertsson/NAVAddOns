@@ -1,0 +1,416 @@
+OBJECT Table 73051 Item Calc. Header
+{
+  OBJECT-PROPERTIES
+  {
+    Date=11.09.17;
+    Time=19:15:42;
+    Modified=Yes;
+    Version List=ICA2.01;
+  }
+  PROPERTIES
+  {
+    DataCaptionFields=No.,Item No.,Item Description,Calc. Date,Sales Price;
+    OnInsert=VAR
+               NoSeries@1101103000 : Record 308;
+             BEGIN
+               SelectNoSeriesAllowedG := FALSE;
+               InventorySetupG.GET();
+                IF "No." = '' THEN BEGIN
+                 TestNoSeries;
+                  NoSeries.GET(NoSeriesMgtG.GetNoSeriesWithCheck(InventorySetupG."Item Calculation Nos.", SelectNoSeriesAllowedG, "No. Series"));
+                 IF (NOT NoSeries."Default Nos.") AND SelectNoSeriesAllowedG AND NoSeriesMgtG.IsSeriesSelected THEN
+                   "No." := NoSeriesMgtG.GetNextNo(NoSeries.Code, "Calc. Date",TRUE)
+                 ELSE
+                   NoSeriesMgtG.InitSeries(NoSeries.Code,xRec."No. Series","Calc. Date","No.","No. Series");
+                END;
+               VALIDATE("Calc. Date", WORKDATE);
+               VALIDATE("Calc. by", USERID);
+             END;
+
+    OnDelete=BEGIN
+               CalcLinesG.RESET;
+               CalcLinesG.SETRANGE("Calc. No.", "No.");
+               IF CalcLinesG.FINDFIRST THEN
+                 CalcLinesG.DELETEALL(TRUE);
+             END;
+
+    CaptionML=[ENU=Item Calc. Header;
+               NOR=Kalkylehode];
+    LookupPageID=Page73053;
+    DrillDownPageID=Page73053;
+  }
+  FIELDS
+  {
+    { 1   ;   ;No.                 ;Code20        ;OnValidate=BEGIN
+                                                                IF Rec."No." <> xRec."No." THEN
+                                                                  ERROR(TXT01);
+                                                              END;
+
+                                                   CaptionML=[ENU=No.;
+                                                              NOR=Kalkylenr.] }
+    { 2   ;   ;Item No.            ;Code20        ;TableRelation=Item.No.;
+                                                   OnValidate=VAR
+                                                                ItemL@1101103000 : Record 27;
+                                                              BEGIN
+                                                                IF "Order Quantity" = 0 THEN
+                                                                  ERROR(TXT02);
+
+                                                                IF ItemL.GET("Item No.") THEN BEGIN
+                                                                  "Item Description" := ItemL.Description;
+                                                                  Calculate(Rec."Calc. Date");
+                                                                END;
+
+                                                                IsLocked();
+                                                              END;
+
+                                                   CaptionML=[ENU=Item No.;
+                                                              NOR=Varenr.] }
+    { 3   ;   ;Item Description    ;Text80        ;CaptionML=[ENU=Item Description;
+                                                              NOR=Varebeskrivelse] }
+    { 4   ;   ;Calc. Date          ;Date          ;OnValidate=BEGIN
+                                                                IsLocked();
+                                                              END;
+
+                                                   CaptionML=[ENU=Calc. Date;
+                                                              NOR=Kalkyledato] }
+    { 5   ;   ;Calc. by            ;Code50        ;OnValidate=BEGIN
+                                                                IsLocked();
+                                                              END;
+
+                                                   CaptionML=[ENU=Calc. By;
+                                                              NOR=Kalkulert av] }
+    { 6   ;   ;Tot. Material Cost  ;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Item Calc. Line"."Line Amount" WHERE (Type=CONST(Material),
+                                                                                                          Calc. No.=FIELD(No.)));
+                                                   OnValidate=BEGIN
+                                                                IsLocked();
+                                                              END;
+
+                                                   CaptionML=[ENU=Tot. Material Cost;
+                                                              NOR=Tot. materialkost] }
+    { 7   ;   ;Tot. Capacity Cost  ;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Item Calc. Line"."Line Amount" WHERE (Type=CONST(Capacity),
+                                                                                                          Calc. No.=FIELD(No.)));
+                                                   OnValidate=BEGIN
+                                                                IsLocked();
+                                                              END;
+
+                                                   CaptionML=[ENU=Tot. Capacity Cost;
+                                                              NOR=Tot. arbeidskost] }
+    { 8   ;   ;Tot. Additional Cost;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Item Calc. Line"."Line Amount" WHERE (Type=CONST(Additional),
+                                                                                                          Calc. No.=FIELD(No.)));
+                                                   OnValidate=BEGIN
+                                                                IsLocked();
+                                                              END;
+
+                                                   CaptionML=[ENU=Tot. Additional Cost;
+                                                              NOR=Tot. tilleggskost] }
+    { 9   ;   ;Sales Price         ;Decimal       ;OnValidate=BEGIN
+                                                                IsLocked();
+
+                                                                IF "Sales Price" <> 0 THEN BEGIN
+                                                                  CALCFIELDS("Tot. Cost");
+                                                                  "Calc. Factor" := ("Sales Price")/("Tot. Cost");
+                                                                END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Sales Price;
+                                                              NOR=Salgspris] }
+    { 10  ;   ;Calc. Factor        ;Decimal       ;OnValidate=BEGIN
+                                                                IsLocked();
+
+                                                                IF "Calc. Factor" <> 0 THEN BEGIN
+                                                                  CALCFIELDS("Tot. Cost");
+                                                                  "Sales Price" := ROUND(("Tot. Cost" * ("Calc. Factor")),0.01);
+                                                                END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Calc. Factor;
+                                                              NOR=Kalkylefaktor] }
+    { 11  ;   ;Tot. Cost           ;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Item Calc. Line"."Line Amount" WHERE (Calc. No.=FIELD(No.)));
+                                                   OnValidate=BEGIN
+                                                                IsLocked();
+                                                              END;
+
+                                                   CaptionML=[ENU=Tot. Cost;
+                                                              NOR=Tot. kost] }
+    { 50  ;   ;Lot Size (No. of PCS);Text15       ;OnValidate=BEGIN
+                                                                IsLocked();
+                                                              END;
+
+                                                   CaptionML=[ENU=Lot Size (No. of PCS);
+                                                              NOR=Seriest›rrelse(antall stk)] }
+    { 51  ;   ;Calculation Method  ;Option        ;OnValidate=BEGIN
+                                                                IsLocked();
+
+                                                                IF "Calculation Method" = 0 THEN BEGIN    // Salgspris = Kost * kalkylefaktor
+                                                                  IF "Calc. Factor" <> 0 THEN BEGIN
+                                                                    CALCFIELDS("Tot. Cost");
+                                                                    "Sales Price" :=
+                                                                    ROUND(("Tot. Cost" * "Calc. Factor"),0.01);
+                                                                  END;
+                                                                END;
+                                                                IF "Calculation Method" = 1 THEN BEGIN      // Kalkylefaktor = Salgspris/Kost
+                                                                  IF "Sales Price" <> 0 THEN BEGIN
+                                                                    CALCFIELDS("Tot. Cost");
+                                                                    "Calc. Factor" :=
+                                                                    ("Sales Price"/"Tot. Cost");
+                                                                  END;
+                                                                END;
+                                                              END;
+
+                                                   CaptionML=[ENU=Calculation Method;
+                                                              NOR=Kalkylemetode];
+                                                   OptionCaptionML=[ENU="Sales Price = Cost + CalcFactor,CalcFactor = SalesPrice - Cost";
+                                                                    NOR="Salgspris = Kost + Kalkylefaktor,Kalkylefaktor = Salgspris - Kost"];
+                                                   OptionString=Sales Price = Cost + CalcFactor,CalcFactor = SalesPrice - Cost }
+    { 60  ;   ;Order Quantity      ;Integer       ;InitValue=0;
+                                                   CaptionML=[ENU=Order Quantity;
+                                                              NOR=Ordreantall];
+                                                   MinValue=0;
+                                                   MaxValue=200 }
+    { 70  ;   ;Locked              ;Boolean       ;CaptionML=[ENU=Locked;
+                                                              NOR=L†st] }
+    { 71  ;   ;Project Code        ;Code20        ;CaptionML=[ENU=Project Code;
+                                                              NOR=Prosjekt] }
+    { 80  ;   ;Variant Code        ;Code10        ;TableRelation="Item Variant".Code;
+                                                   CaptionML=[ENU=Variant Code;
+                                                              NOR=Variant] }
+    { 107 ;   ;No. Series          ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=[ENU=No. Series;
+                                                              NOR=Nr.serie];
+                                                   Editable=No }
+  }
+  KEYS
+  {
+    {    ;No.                                     ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      InventorySetupG@1101103012 : Record 313;
+      NoSeriesMgtG@1101103011 : Codeunit 396;
+      CalcLinesG@1101103005 : Record 73052;
+      SelgerG@1101103000 : Record 13;
+      TXT01@1101103013 : TextConst 'ENU=You cannot change the Calc. No.;NOR=Du kan ikke endre kalkylenummer.';
+      TXT02@1101103014 : TextConst 'ENU=You must enter a Order Quantity before you enter the Item No.;NOR=Du m† angi et Ordreantall f›r du legger til Varenr.';
+      TXT03@1101103015 : TextConst 'ENU=You cannot change Price Calculation which is locked.;NOR="Du kan ikke endre en kalkyle som er l†st = Ja."';
+      SelectNoSeriesAllowedG@1101103001 : Boolean;
+
+    PROCEDURE Calculate@1000000000(VAR CalcDate@1000000003 : Date);
+    VAR
+      CalcLinesL@1101103000 : Record 73052;
+      BOMHeaderL@1101103002 : Record 99000771;
+      BOMLineL@1101103001 : Record 99000772;
+      ItemL@1101103006 : Record 27;
+      Item2L@1101103007 : Record 27;
+      RoutingHeaderL@1101103005 : Record 99000763;
+      RoutingLineL@1101103004 : Record 99000764;
+      WorkCenterL@1101103003 : Record 99000754;
+      MaterialLineNoL@1000000001 : Integer;
+      ProductionLineNoL@1000000002 : Integer;
+      NewRoutingNoL@1000000006 : Code[20];
+    BEGIN
+      IsLocked();
+      ItemL.GET(Rec."Item No.");
+      // Sletter gamle kalkyle Hvis den finnes fra f›r
+      CalcLinesL.RESET;
+      CalcLinesL.SETRANGE("Calc. No.", "No.");
+      CalcLinesL.SETRANGE("System Created", TRUE);
+      IF CalcLinesL.FINDFIRST THEN
+        CalcLinesL.DELETEALL(TRUE);
+
+      // Starter ny kalkyle
+      CalcLinesL.RESET;
+      CalcLinesL.SETRANGE("Calc. No.", "No.");
+      CalcLinesL.SETRANGE(Type, CalcLinesL.Type::Material);
+      IF CalcLinesL.FINDLAST THEN
+        MaterialLineNoL := CalcLinesL."Sequence No.";
+      CalcLinesL.RESET;
+      CalcLinesL.SETRANGE("Calc. No.", "No.");
+      CalcLinesL.SETRANGE(Type, CalcLinesL.Type::Capacity);
+      IF CalcLinesL.FINDLAST THEN
+        ProductionLineNoL := CalcLinesL."Sequence No.";
+
+      CalcDate := WORKDATE;
+      BOMHeaderL.RESET;
+      BOMHeaderL.SETRANGE("No.", ItemL."Production BOM No.");      //finner stk.liste fra varekortet
+      IF BOMHeaderL.FINDFIRST THEN BEGIN
+        BOMHeaderL.TESTFIELD(Status);
+        BOMLineL.RESET;
+        BOMLineL.SETRANGE("Production BOM No.",BOMHeaderL."No.");
+        IF BOMLineL.FINDFIRST THEN
+        REPEAT
+          MaterialLineNoL := MaterialLineNoL + 10;
+          CalcLinesL.INIT;
+          CalcLinesL."Calc. No." := "No.";
+          CalcLinesL.Type := CalcLinesL.Type::Material;
+          CalcLinesL."Sequence No." := MaterialLineNoL;
+          IF Item2L.GET(BOMLineL."No.") THEN BEGIN
+            CalcLinesL.VALIDATE("No.", Item2L."No.");
+            CalcLinesL.VALIDATE(Description, Item2L.Description);
+            CalcLinesL.VALIDATE(Quantity, BOMLineL."Quantity per");
+            CalcLinesL.VALIDATE("Unit of Measure", BOMLineL."Unit of Measure Code");
+            CalcLinesL.VALIDATE("Unit Cost", Item2L."Unit Cost");
+            CalcLinesL."Vendor No." := Item2L."Vendor No.";
+          END;
+          CalcLinesL."Line Amount" := CalcLinesL.Quantity * CalcLinesL."Unit Cost";
+          CalcLinesL."System Created" := TRUE;
+          CalcLinesL.INSERT(TRUE);
+        UNTIL BOMLineL.NEXT=0;
+      END;
+
+      NewRoutingNoL := '';
+
+      IF NewRoutingNoL = '' THEN
+        NewRoutingNoL := ItemL."Routing No.";
+      RoutingHeaderL.RESET;
+      RoutingHeaderL.SETRANGE("No.", NewRoutingNoL);    //f›r:Item."Routing No."
+      IF RoutingHeaderL.FINDFIRST THEN BEGIN
+        RoutingHeaderL.TESTFIELD(Status);
+        RoutingLineL.RESET;
+        RoutingLineL.SETRANGE("Routing No.", NewRoutingNoL);  //f›r:Item."Routing No."
+        IF RoutingLineL.FINDFIRST THEN
+        REPEAT
+          ProductionLineNoL := ProductionLineNoL + 10;
+          IF WorkCenterL.GET(RoutingLineL."No.") THEN BEGIN
+            CalcLinesL.INIT;
+            CalcLinesL.VALIDATE("Calc. No.", "No.");
+            CalcLinesL.VALIDATE(Type, CalcLinesL.Type::Capacity);
+            CalcLinesL.VALIDATE("Sequence No.", ProductionLineNoL);
+            CalcLinesL.VALIDATE("No.", RoutingLineL."Operation No.");
+            CalcLinesL.VALIDATE(Description, RoutingLineL.Description);
+            CalcLinesL."Work Center" := RoutingLineL."No.";
+            IF WorkCenterL."Specific Unit Cost" THEN BEGIN
+              CalcLinesL.VALIDATE(Quantity, 1);
+              CalcLinesL.VALIDATE("Unit of Measure", ItemL."Base Unit of Measure");
+              CalcLinesL.VALIDATE("Unit Cost", RoutingLineL."Unit Cost per");
+              CalcLinesL.VALIDATE("Vendor No.", WorkCenterL."Subcontractor No.");
+            END ELSE BEGIN
+              CalcLinesL.VALIDATE(Quantity, RoutingLineL."Run Time");
+              CalcLinesL.VALIDATE("Unit of Measure", RoutingLineL."Run Time Unit of Meas. Code");
+              CalcLinesL.VALIDATE("Unit Cost", WorkCenterL."Unit Cost");
+            END;
+            CalcLinesL."Line Amount" := CalcLinesL.Quantity * CalcLinesL."Unit Cost";
+            CalcLinesL."System Created" := TRUE;
+            CalcLinesL.INSERT(TRUE);
+          END;
+        UNTIL RoutingLineL.NEXT=0;
+      END;
+      CLEAR(CalcLinesL);
+      IF NOT CalcLinesL.GET("No.",CalcLinesL.Type::Additional,10) THEN BEGIN
+        CalcLinesL.INIT;
+        CalcLinesL."Calc. No." := "No.";
+        CalcLinesL.Type      := CalcLinesL.Type::Additional;
+        CalcLinesL."Sequence No." := 10;
+        CalcLinesL.INSERT(TRUE);
+      END;
+      IF "Calculation Method" = 0 THEN BEGIN          // Salgspris = Kost * kalkylefaktor
+        IF "Calc. Factor" <> 0 THEN BEGIN
+          CALCFIELDS("Tot. Cost");
+          "Sales Price" := ROUND(("Tot. Cost")*("Calc. Factor"),0.01);
+        END;
+      END;
+      IF "Calculation Method" = 1 THEN BEGIN          // Kalkylefaktor = Salgspris/Kost
+        IF "Sales Price" <> 0 THEN BEGIN
+          CALCFIELDS("Tot. Cost");
+          "Calc. Factor" := ("Sales Price")/("Tot. Cost");
+        END;
+      END;
+    END;
+
+    PROCEDURE CopyCalculation@1000000001("NewCalcNo."@1000000000 : Code[20];FromCalcNo@1000000001 : Code[20]);
+    VAR
+      CalcLinesL@1101103000 : Record 73052;
+      FromCalcHeaderL@1101103002 : Record 73051;
+      FromCalcLineL@1101103001 : Record 73052;
+    BEGIN
+      IF FromCalcHeaderL.GET(FromCalcNo) THEN BEGIN
+        "Item No." := FromCalcHeaderL."Item No.";
+        "Item Description" := FromCalcHeaderL."Item Description";
+        "Calc. Date" := FromCalcHeaderL."Calc. Date";
+        "Calc. by" := FromCalcHeaderL."Calc. by";
+        "Calculation Method" := FromCalcHeaderL."Calculation Method";
+        "Sales Price" := FromCalcHeaderL."Sales Price";
+        "Calc. Factor" := FromCalcHeaderL."Calc. Factor";
+        "Lot Size (No. of PCS)" := FromCalcHeaderL."Lot Size (No. of PCS)";
+        Rec.MODIFY;
+        FromCalcLineL.RESET;
+        FromCalcLineL.SETRANGE("Calc. No.", FromCalcHeaderL."No.");
+        IF FromCalcLineL.FINDFIRST THEN
+        REPEAT
+          CalcLinesL.INIT;
+          CalcLinesL."Calc. No." := "NewCalcNo.";
+          CalcLinesL.Type  := FromCalcLineL.Type;
+          CalcLinesL."Sequence No." := FromCalcLineL."Sequence No.";
+          CalcLinesL."No." := FromCalcLineL."No.";
+          CalcLinesL.Description := FromCalcLineL.Description;
+          CalcLinesL.Quantity := FromCalcLineL.Quantity;
+          CalcLinesL."Unit of Measure" :=FromCalcLineL."Unit of Measure";
+          CalcLinesL."Unit Cost" := FromCalcLineL."Unit Cost";
+          CalcLinesL."Line Amount" := FromCalcLineL."Line Amount";
+          CalcLinesL."Vendor No." := FromCalcLineL."Vendor No.";
+          CalcLinesL."System Created" := FromCalcLineL."System Created";
+          CalcLinesL.INSERT;
+        UNTIL FromCalcLineL.NEXT=0;
+      END;
+    END;
+
+    PROCEDURE UpdateCalulation@1000000002();
+    VAR
+      CalcLinesL@1000000000 : Record 73052;
+      TotalCostL@1101103000 : Decimal;
+    BEGIN
+      IsLocked();
+
+      TotalCostL := 0;
+      CalcLinesL.RESET;
+      CalcLinesL.SETRANGE("Calc. No.", "No.");
+      IF CalcLinesL.FINDFIRST THEN
+      REPEAT
+        TotalCostL := TotalCostL + CalcLinesL."Line Amount";
+      UNTIL CalcLinesL.NEXT=0;
+      IF "Calculation Method" = 0 THEN BEGIN               // Salgspris = Kost * kalkylefaktor
+        IF "Calc. Factor" <> 0 THEN BEGIN
+          "Sales Price" := ROUND(TotalCostL * ("Calc. Factor"),0.01);
+        END;
+      END;
+      IF "Calculation Method" = 1 THEN BEGIN              // Kalkylefaktor = Salgspris - Kost
+        IF "Sales Price" <> 0 THEN BEGIN
+          "Calc. Factor" := ("Sales Price" / TotalCostL);
+        END;
+      END;
+      Rec.MODIFY;
+    END;
+
+    PROCEDURE IsLocked@1101103000();
+    BEGIN
+      IF Locked THEN
+        ERROR(TXT03);
+    END;
+
+    LOCAL PROCEDURE TestNoSeries@6();
+    VAR
+      InventorySetupG@1101103000 : Record 313;
+    BEGIN
+      InventorySetupG.GET;
+      InventorySetupG.TESTFIELD("Item Calculation Nos.");
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 01.09.17 JAL Item Calculation (Kalkyle)
+    }
+    END.
+  }
+}
+

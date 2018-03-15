@@ -1,0 +1,179 @@
+OBJECT Codeunit 91066 Library - OPC Pages
+{
+  OBJECT-PROPERTIES
+  {
+    Date=05.09.17;
+    Time=12:13:49;
+    Modified=Yes;
+    Version List=OPC6.01,TST1.01;
+  }
+  PROPERTIES
+  {
+    Subtype=Test;
+    OnRun=BEGIN
+            IsInitializedG := TRUE
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      AssertG@1101103002 : Codeunit 130000;
+      C_INC_ErrorNearlyEqual@1101103003 : TextConst 'ENU=There is too much difference between expected value %1 and current %2;NOR=Det er for mye forskjell mellom forventet verdi %1 og n†v‘rende %2';
+      LibraryVariableStorageG@1101103004 : Codeunit 131004;
+      LibraryUtilityIncG@1101103000 : Codeunit 91001;
+      LibraryOPCG@1101103005 : Codeunit 91061;
+      OPCSCMOnlineAdjustmentG@1101103006 : Codeunit 91064;
+      IsInitializedG@1101103001 : Boolean;
+
+    LOCAL PROCEDURE Initialize@6();
+    VAR
+      LibraryERMCountryData@1000 : Codeunit 131305;
+    BEGIN
+      IF IsInitializedG THEN
+        EXIT;
+      LibraryVariableStorageG.Clear;
+      IsInitializedG := TRUE
+    END;
+
+    [Test]
+    PROCEDURE RegisterTimeInPage@1101103003();
+    VAR
+      OPCInformationBoardL@1101103000 : TestPage 83001;
+      OPCTimeRegisterListL@1101103001 : TestPage 83017;
+      TimeL@1101103002 : Time;
+      StartTimeL@1101103003 : Time;
+      StartDateL@1101103004 : Date;
+      MachineCenterNoL@1101103005 : Code[10];
+    BEGIN
+      // [GIVEN] Stored test values are cleared.
+      Initialize();
+      // [GIVEN] Information Board is open
+      OPCInformationBoardL.OPENVIEW;
+      // [GIVEN] Register Time Card is opened from Information Board
+      OPCTimeRegisterListL.TRAP;// The next page that is invoked will be trapped and assigned to the variable.
+      OPCInformationBoardL."Time Register Card".INVOKE;
+      // [GIVEN] Machine Center is selected and not empty
+      MachineCenterNoL := LibraryOPCG.OPCGetRandomMachineCenterClocking();
+      AssertG.AreNotEqual('', MachineCenterNoL,'');
+      OPCTimeRegisterListL.FILTER.SETFILTER("No.", MachineCenterNoL);
+      OPCTimeRegisterListL."No.".ASSERTEQUALS(MachineCenterNoL);
+      // [WHEN] The user clocks in (Register in time).
+      OPCTimeRegisterListL."Register Time".INVOKE();
+      //SLEEP(1000); //To test the TimeAreNearlyEqual
+      TimeL := TIME;
+      OPCTimeRegisterListL."OPC Time Register Subform".LAST;
+      // [THEN] Clocking in time is registered on the last line in the subform
+      EVALUATE(StartTimeL, OPCTimeRegisterListL."OPC Time Register Subform"."Start Time".VALUE);
+      LibraryUtilityIncG.TimeAreNearlyEqual(TimeL, StartTimeL, 1000, '');
+      StartDateL := TODAY;
+      OPCTimeRegisterListL."OPC Time Register Subform"."Start Date".ASSERTEQUALS(StartDateL);
+      OPCTimeRegisterListL.CLOSE;
+      OPCInformationBoardL.CLOSE;
+      LibraryVariableStorageG.Enqueue(StartTimeL);
+      LibraryVariableStorageG.Enqueue(StartDateL);
+      LibraryVariableStorageG.Enqueue(MachineCenterNoL);
+    END;
+
+    [Test]
+    PROCEDURE RegisterTimeOutPage@1101103000();
+    VAR
+      OPCInformationBoardL@1101103000 : TestPage 83001;
+      OPCTimeRegisterListL@1101103001 : TestPage 83017;
+      TimeL@1101103002 : Time;
+      StartTimeL@1101103003 : Time;
+      EndTimeL@1101103005 : Time;
+      StartDateL@1101103004 : Date;
+      MachineCenterNoL@1101103006 : Code[20];
+      DurationL@1101103007 : Duration;
+    BEGIN
+      // [GIVEN] Information Board is open
+      OPCInformationBoardL.OPENVIEW;
+      // [GIVEN] Register Time Card is opened from Information Board
+      OPCTimeRegisterListL.TRAP;// The next page that is invoked will be trapped and assigned to the variable.
+      OPCInformationBoardL."Time Register Card".INVOKE;
+      // [GIVEN] Machine Center is selected and not empty. Get value from stored value or get random value.
+      IF LibraryVariableStorageG.Length > 0 THEN
+        MachineCenterNoL := LibraryVariableStorageG.PeekText(3)
+      ELSE
+        MachineCenterNoL := LibraryOPCG.OPCGetRandomMachineCenterClocking();
+      AssertG.AreNotEqual('', MachineCenterNoL,'');
+      OPCTimeRegisterListL.FILTER.SETFILTER("No.", MachineCenterNoL);
+      OPCTimeRegisterListL."No.".ASSERTEQUALS(MachineCenterNoL);
+      // [GIVEN] Last line has start date and time but end date and time is empty.
+      //         If the function RegisterTimeInPage has been run before this test we get the stored values for date and time,
+      //         else check that start date and time are not empty
+      OPCTimeRegisterListL."OPC Time Register Subform".LAST;
+      IF LibraryVariableStorageG.Length > 0 THEN BEGIN
+        StartTimeL := LibraryVariableStorageG.PeekTime(1);
+        StartDateL := LibraryVariableStorageG.PeekDate(2);
+        OPCTimeRegisterListL."OPC Time Register Subform"."Start Time".ASSERTEQUALS(StartTimeL);
+        OPCTimeRegisterListL."OPC Time Register Subform"."Start Date".ASSERTEQUALS(TODAY);
+      END ELSE BEGIN
+        AssertG.AreNotEqual(0T, OPCTimeRegisterListL."OPC Time Register Subform"."Start Time".VALUE, '');
+        AssertG.AreNotEqual(0T, OPCTimeRegisterListL."OPC Time Register Subform"."Start Time".VALUE, '');
+      END;
+      OPCTimeRegisterListL."OPC Time Register Subform"."End Date".ASSERTEQUALS(0D);
+      OPCTimeRegisterListL."OPC Time Register Subform"."End Time".ASSERTEQUALS(0T);
+      // [WHEN] The user clocks out (Register out time).
+      StartTimeL := TIME;
+      OPCTimeRegisterListL."Register Time".INVOKE();
+      TimeL := TIME;
+      // [THEN] Clocking out time is registered on the last line in the subform
+      OPCTimeRegisterListL."OPC Time Register Subform"."End Date".ASSERTEQUALS(TODAY);
+      EVALUATE(EndTimeL, OPCTimeRegisterListL."OPC Time Register Subform"."End Time".VALUE);
+      DurationL := (TimeL - StartTimeL);
+      IF DurationL < 1000 THEN
+        DurationL := 1000;
+      LibraryUtilityIncG.TimeAreNearlyEqual(StartTimeL, EndTimeL, DurationL, '');
+      OPCTimeRegisterListL.CLOSE;
+      OPCInformationBoardL.CLOSE;
+    END;
+
+    [Test]
+    PROCEDURE PostOutputOnOperationPage@1101103001();
+    VAR
+      OPCInformationBoardL@1101103000 : TestPage 83001;
+      OPCTaskListL@1101103001 : TestPage 83002;
+      OPCOutputRegistrationL@1101103008 : TestPage 83010;
+      ProdOrderRoutingLineL@1101103007 : Record 5409;
+      TimeL@1101103002 : Time;
+      StartTimeL@1101103003 : Time;
+      EndTimeL@1101103005 : Time;
+      StartDateL@1101103004 : Date;
+      MachineCenterNoL@1101103006 : Code[10];
+    BEGIN
+      // [GIVEN] The page OPC Information Board" is open
+      OPCInformationBoardL.OPENVIEW;
+      // [GIVEN] The page "OPC Task List" is opened from Information Board
+      OPCTaskListL.TRAP;
+      OPCInformationBoardL.Tasks.INVOKE;
+      // [GIVEN] Production Order exists
+      // [GIVEN] Machine Center is marked as Show in OPC.
+      OPCSCMOnlineAdjustmentG.OPCCreateProdOrder();
+      // [GIVEN] Production Order Routing Line is selected and exists
+      ProdOrderRoutingLineL.SETRANGE(Status, ProdOrderRoutingLineL.Status::Released);
+      ProdOrderRoutingLineL.SETRANGE(Type, ProdOrderRoutingLineL.Type::"Machine Center");
+      LibraryOPCG.OPCGetRandomProdOrderRoutingLine(ProdOrderRoutingLineL);
+      AssertG.RecordIsNotEmpty(ProdOrderRoutingLineL);
+      // [GIVEN] Machine Center is selected and not empty. Get value from stored value or get random value.
+      MachineCenterNoL := ProdOrderRoutingLineL."No.";
+      AssertG.AreNotEqual('', MachineCenterNoL,'');
+      OPCInformationBoardL.FILTER.SETFILTER("No.", MachineCenterNoL);
+      OPCInformationBoardL."No.".ASSERTEQUALS(MachineCenterNoL);
+      // [GIVEN] The page "OPC Output Registration" is opened from the page "OPC Task List"
+      OPCOutputRegistrationL.TRAP();
+      OPCTaskListL.PostOutputItem.INVOKE();
+      // 1.2.3.1.Angi antall som er ferdig produsert.
+      // 1.2.3.2.Velg OK.
+    END;
+
+    BEGIN
+    {
+      // [FEATURE] [Manufacturing] [Production Order] [OPC]
+      Tests for OPC Pages:
+    }
+    END.
+  }
+}
+

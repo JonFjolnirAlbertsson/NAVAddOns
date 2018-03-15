@@ -1,0 +1,204 @@
+OBJECT Codeunit 73000 E-Invoice Mgt.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=30.08.17;
+    Time=10.00.21;
+    Modified=Yes;
+    Version List=EPDF1.01;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      CBCTxt@1101103004 : TextConst '@@@={Locked};ENU=cbc;NOR=cbc';
+      CACTxt@1101103003 : TextConst '@@@={Locked};ENU=cac;NOR=cac';
+      BasicCompSpaceNameTxt@1101103002 : TextConst '@@@={Locked};ENU=urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2;NOR=urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2';
+      AggregateCompSpaceNameTxt@1101103005 : TextConst '@@@={Locked};ENU=urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2;NOR=urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2';
+      XMLDOMMgtG@1101103006 : Codeunit 6224;
+      DocumentTypeG@1101103007 : 'Invoice,CreditMemo,ServiceInvoice,ServiceCreditMemo';
+
+    LOCAL PROCEDURE AddAttribute@1080021(VAR XMLNode@1080004 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";Name@1080003 : Text[250];Value@1080002 : Text[250]);
+    BEGIN
+      XMLDOMMgtG.AddAttribute(XMLNode,Name,Value);
+    END;
+
+    LOCAL PROCEDURE AddGroupNode@1080000(VAR XMLNode@1080005 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";NodeName@1080004 : Text[250];NameSpace@1080002 : Text[250];Prefix@1080000 : Text[30]);
+    VAR
+      XMLNewChild@1080001 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+    BEGIN
+      XMLDOMMgtG.AddElement(XMLNode,Prefix + ':' + NodeName,'',NameSpace,XMLNewChild);
+      XMLNode := XMLNewChild;
+    END;
+
+    LOCAL PROCEDURE AddNotEmptyNode@1080009(VAR XMLNode@1080000 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";NodeName@1080001 : Text[250];NodeText@1080002 : Text[250];NameSpace@1080003 : Text[250];Prefix@1080005 : Text[30]);
+    BEGIN
+      IF NodeText <> '' THEN
+        AddNodeNA(XMLNode,NodeName,NodeText,NameSpace,Prefix);
+    END;
+
+    LOCAL PROCEDURE AddNodeNA@1080011(VAR XMLNode@1080005 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";NodeName@1080004 : Text[250];NodeText@1080003 : Text[250];NameSpace@1080002 : Text[250];Prefix@1080000 : Text[30]);
+    VAR
+      CreatedXMLNode@1080001 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+    BEGIN
+      IF NodeText = '' THEN
+        NodeText := 'NA';
+      XMLDOMMgtG.AddElement(XMLNode,Prefix + ':' + NodeName,FORMAT(NodeText,0,9),NameSpace,CreatedXMLNode);
+    END;
+
+    LOCAL PROCEDURE SaveReport@1101103006(VAR VariantP@1101103000 : Variant;VAR ReportSelectionsP@1101103002 : Record 77;VAR FileNameP@1101103003 : Text);
+    VAR
+      SalesReceivablesSetupL@1101103001 : Record 311;
+    BEGIN
+      // When printing the records Setup the Report filter just to print 1 Document No.
+      SalesReceivablesSetupL.GET;
+      ReportSelectionsP.FINDFIRST;
+      IF SalesReceivablesSetupL."Include PDF in EHF File" THEN
+        SaveReportAsPDF(VariantP, ReportSelectionsP."Report ID", FileNameP);
+    END;
+
+    LOCAL PROCEDURE SaveReportAsPDF@1101103007(VAR VariantP@1101103003 : Variant;ReportIdP@1101103000 : Integer;VAR FileNameP@1101103001 : Text);
+    VAR
+      FileMgtL@1101103006 : Codeunit 419;
+      TempFileNameL@1101103002 : Text;
+    BEGIN
+      // Prints the invoice document as pdf then imports its as Blob into Table ready for embadding into EHF-Invoice
+      TempFileNameL := FileNameP + '.pdf';
+      FileNameP := FileMgtL.GetDirectoryName(FileMgtL.ServerTempFileName('.pdf')) + '\' +FileNameP + '.pdf';
+      REPORT.SAVEASPDF(ReportIdP, FileNameP , VariantP);
+    END;
+
+    LOCAL PROCEDURE GetFileAsBytes@1101103003(VAR BytesP@1101103003 : DotNet "'mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";FileNameP@1101103006 : Text);
+    VAR
+      FileL@1101103007 : File;
+      InStreamL@1101103000 : InStream;
+      MemoryStreamL@1101103001 : DotNet "'mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.IO.MemoryStream";
+    BEGIN
+      FileL.OPEN(FileNameP);
+      FileL.CREATEINSTREAM(InStreamL);
+      MemoryStreamL := MemoryStreamL.MemoryStream();
+      COPYSTREAM(MemoryStreamL, InStreamL);
+      BytesP := MemoryStreamL.GetBuffer();
+    END;
+
+    LOCAL PROCEDURE AddAdditionalDocumentReference@1101103002(VAR VariantP@1101103006 : Variant;VAR Sender@1101103010 : Codeunit 10628;VAR XMLCurrNode@1101103009 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode");
+    VAR
+      SalesReceivablesSetupL@1101103014 : Record 311;
+      ReportSelectionsL@1101103013 : Record 77;
+      FileManagementL@1101103008 : Codeunit 419;
+      DataTypeManagementL@1101103011 : Codeunit 701;
+      BytesL@1101103003 : DotNet "'mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Array";
+      ConvertL@1101103002 : DotNet "'mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Convert";
+      XMLNewChildL@1101103005 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode";
+      RecordRefL@1101103012 : RecordRef;
+      FileNameL@1101103004 : Text;
+    BEGIN
+      SalesReceivablesSetupL.GET;
+      IF SalesReceivablesSetupL."Include PDF in EHF File" THEN
+      BEGIN
+        DataTypeManagementL.GetRecordRef(VariantP, RecordRefL);
+        PrepareRecord(RecordRefL, ReportSelectionsL, FileNameL);
+        VariantP := RecordRefL;
+        SaveReport(VariantP, ReportSelectionsL, FileNameL);
+        GetFileAsBytes(BytesL, FileNameL);
+
+        AddGroupNode(XMLCurrNode,'AdditionalDocumentReference',AggregateCompSpaceNameTxt,CACTxt);
+        AddNotEmptyNode(XMLCurrNode,'ID','1000139928',BasicCompSpaceNameTxt,CBCTxt);
+        AddNotEmptyNode(XMLCurrNode,'DocumentType','Commercial invoice',BasicCompSpaceNameTxt,CBCTxt);
+        AddGroupNode(XMLCurrNode,'Attachment',AggregateCompSpaceNameTxt,CACTxt);
+        XMLDOMMgtG.AddElement(XMLCurrNode,CBCTxt + ':' + 'EmbeddedDocumentBinaryObject', ConvertL.ToBase64String(BytesL),BasicCompSpaceNameTxt,XMLNewChildL);
+        XMLCurrNode := XMLNewChildL;
+
+        AddAttribute(XMLCurrNode,'mimeCode','application/pdf');
+        AddAttribute(XMLCurrNode,'encodingCode','Base64');
+        AddAttribute(XMLCurrNode,'filename', FileManagementL.GetFileName(FileNameL));
+
+        XMLCurrNode := XMLCurrNode.ParentNode;
+        XMLCurrNode := XMLCurrNode.ParentNode;
+        XMLCurrNode := XMLCurrNode.ParentNode;
+      END;
+    END;
+
+    LOCAL PROCEDURE PrepareRecord@1101103004(VAR RecordRefP@1101103000 : RecordRef;VAR ReportSelectionsP@1101103004 : Record 77;VAR FileNameP@1101103001 : Text);
+    VAR
+      SalesInvoiceHeaderL@1101103002 : Record 112;
+      SalesCrMemoHeaderL@1101103003 : Record 114;
+      EInvoiceExportHeaderL@1101103006 : Record 10604;
+      ServiceCrMemoHeaderL@1101103005 : Record 5994;
+      ServiceInvoiceHeaderL@1101103007 : Record 5992;
+    BEGIN
+      CASE RecordRefP.NUMBER OF
+        DATABASE::"Sales Invoice Header":
+          BEGIN
+            RecordRefP.SETTABLE(SalesInvoiceHeaderL);
+            FileNameP := FORMAT(DocumentTypeG::Invoice) + SalesInvoiceHeaderL."No.";
+            ReportSelectionsP.SETRANGE(Usage, ReportSelectionsP.Usage::"S.Invoice");
+          END;
+        DATABASE::"Sales Cr.Memo Header":
+          BEGIN
+            RecordRefP.SETTABLE(SalesCrMemoHeaderL);
+            FileNameP := FORMAT(DocumentTypeG::CreditMemo) + SalesCrMemoHeaderL."No.";
+            ReportSelectionsP.SETRANGE(Usage, ReportSelectionsP.Usage::"S.Cr.Memo");
+          END;
+        DATABASE::"Service Invoice Header":
+          BEGIN
+            RecordRefP.SETTABLE(ServiceInvoiceHeaderL);
+            FileNameP := FORMAT(DocumentTypeG::ServiceInvoice) + ServiceInvoiceHeaderL."No.";
+            ReportSelectionsP.SETRANGE(Usage, ReportSelectionsP.Usage::"SM.Invoice");
+          END;
+        DATABASE::"Service Cr.Memo Header":
+          BEGIN
+            RecordRefP.SETTABLE(ServiceCrMemoHeaderL);
+            FileNameP := FORMAT(DocumentTypeG::ServiceCreditMemo) + ServiceCrMemoHeaderL."No.";
+            ReportSelectionsP.SETRANGE(Usage, ReportSelectionsP.Usage::"SM.Credit Memo");
+          END;
+        DATABASE::"E-Invoice Export Header":
+          BEGIN
+            RecordRefP.SETTABLE(EInvoiceExportHeaderL);
+            CASE EInvoiceExportHeaderL."Schema Name" OF
+              'Invoice':
+                BEGIN
+                  SalesInvoiceHeaderL.GET(EInvoiceExportHeaderL."No.");
+                  RecordRefP.GETTABLE(SalesInvoiceHeaderL);
+                  ReportSelectionsP.SETRANGE(Usage, ReportSelectionsP.Usage::"S.Invoice");
+                END;
+              'CreditNote':
+                BEGIN
+                  SalesCrMemoHeaderL.GET(EInvoiceExportHeaderL."No.");
+                  RecordRefP.GETTABLE(SalesCrMemoHeaderL);
+                  FileNameP := EInvoiceExportHeaderL."Schema Name" + EInvoiceExportHeaderL."No.";
+                  ReportSelectionsP.SETRANGE(Usage, ReportSelectionsP.Usage::"S.Cr.Memo");
+                END;
+              END;
+              FileNameP := EInvoiceExportHeaderL."Schema Name" + EInvoiceExportHeaderL."No.";
+          END;
+      END;
+    END;
+
+    [EventSubscriber(Codeunit,10628,OnAddAdditionalDocumentReference)]
+    LOCAL PROCEDURE COD10628OnAddAdditionalDocumentReference@1101103000(VAR Sender@1101103000 : Codeunit 10628;VariantP@1101103001 : Variant;VAR XMLDOMMgt@1101103003 : Codeunit 6224;VAR XMLCurrNode@1101103002 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlNode");
+    BEGIN
+      XMLDOMMgtG := XMLDOMMgt;
+      AddAdditionalDocumentReference(VariantP, Sender, XMLCurrNode);
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 28.08.17 JAL E-Invoice addon to include PDF in EHF.
+                       Event EventSubscribers
+                       Local Functions
+                       Copied Add... function from CodeUnit 10628, because they are local there.
+    }
+    END.
+  }
+}
+

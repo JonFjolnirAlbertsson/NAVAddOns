@@ -1,0 +1,276 @@
+OBJECT Page 99000868 Finished Prod. Order Lines
+{
+  OBJECT-PROPERTIES
+  {
+    Date=05.09.17;
+    Time=16:15:02;
+    Modified=Yes;
+    Version List=NAVW110.00,ICA2.01;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=[ENU=Lines;
+               NOR=Linjer];
+    LinksAllowed=No;
+    SourceTable=Table5406;
+    SourceTableView=WHERE(Status=CONST(Finished));
+    PageType=ListPart;
+    OnAfterGetRecord=BEGIN
+                       DescriptionIndent := 0;
+                       DescriptionOnFormat;
+                     END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1907935204;1 ;ActionGroup;
+                      CaptionML=[ENU=&Line;
+                                 NOR=&Linje];
+                      Image=Line }
+      { 1901288104;2 ;Action    ;
+                      AccessByPermission=TableData 348=R;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=[ENU=Dimensions;
+                                 NOR=Dimensjoner];
+                      ToolTipML=[ENU=View or edit dimensions, such as area, project, or department, that you can assign to sales and purchase documents to distribute costs and analyze transaction history.;
+                                 NOR=Vis eller rediger dimensjoner, for eksempel omr†de, prosjekt eller avdeling, som du kan tilordne til salgs- og kj›psdokumenter for † distribuere kostnader og analysere transaksjonshistorikk.];
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 ShowDimensions;
+                               END;
+                                }
+      { 1903098604;2 ;Action    ;
+                      CaptionML=[ENU=Ro&uting;
+                                 NOR=R&ute];
+                      Image=Route;
+                      OnAction=BEGIN
+                                 ShowRouting;
+                               END;
+                                }
+      { 1901991404;2 ;Action    ;
+                      CaptionML=[ENU=Components;
+                                 NOR=Komponenter];
+                      Image=Components;
+                      OnAction=BEGIN
+                                 ShowComponents;
+                               END;
+                                }
+      { 1905987604;2 ;Action    ;
+                      ShortCutKey=Shift+Ctrl+I;
+                      CaptionML=[ENU=Item &Tracking Lines;
+                                 NOR=Vare&sporingslinjer];
+                      Image=ItemTrackingLines;
+                      OnAction=BEGIN
+                                 OpenItemTrackingLines;
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                IndentationColumnName=DescriptionIndent;
+                IndentationControls=Description;
+                GroupType=Repeater }
+
+    { 2   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of the item that is to be produced.;
+                           NOR=Angir nummeret for varen som skal produseres.];
+                SourceExpr="Item No." }
+
+    { 4   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a code if you have set up variant codes in the Item Variants window.;
+                           NOR=Angir en kode hvis du har definert variantkoder i vinduet Varevarianter.];
+                SourceExpr="Variant Code";
+                Visible=FALSE }
+
+    { 8   ;2   ;Field     ;
+                ToolTipML=[ENU=Copies the date in this field from the corresponding field on the production order header.;
+                           NOR=Kopierer datoen i dette feltet fra tilh›rende felt i produksjonsordrehodet.];
+                SourceExpr="Due Date" }
+
+    { 6   ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the value of the Description field on the item card. If you enter a variant code, the variant description is copied to this field instead.;
+                           NOR=Angir verdien i feltet Beskrivelse p† varekortet. Hvis du angir en variantkode, kopieres variantbeskrivelsen i stedet.];
+                SourceExpr=Description }
+
+    { 10  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies an additional description.;
+                           NOR=Angir en tilleggsbeskrivelse.];
+                SourceExpr="Description 2";
+                Visible=FALSE }
+
+    { 46  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of the production BOM that is the basis for creating the Prod. Order Component list for this line.;
+                           NOR=Angir nummeret p† produksjonsstykklisten som er grunnlaget for † opprette listen Prod.ordrekomponent for denne linjen.];
+                SourceExpr="Production BOM No.";
+                Visible=FALSE }
+
+    { 44  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the number of the routing used as the basis for creating the production order routing for this line.;
+                           NOR=Angir nummeret p† ruten som brukes for † opprette produksjonsordrerute for denne linjen.];
+                SourceExpr="Routing No.";
+                Visible=FALSE }
+
+    { 42  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the version number of the routing.;
+                           NOR=Angir versjonsnummeret for ruten.];
+                SourceExpr="Routing Version Code";
+                Visible=FALSE }
+
+    { 38  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the version code of the production BOM.;
+                           NOR=Angir versjonskoden for produksjonsstykklisten.];
+                SourceExpr="Production BOM Version Code";
+                Visible=FALSE }
+
+    { 24  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the location code, if the produced items should be stored in a specific location.;
+                           NOR=Angir lokasjonskoden, hvis de produserte varene blir lagret p† en bestemt lokasjon.];
+                SourceExpr="Location Code";
+                Visible=FALSE }
+
+    { 26  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the bin that the produced item is posted to as output, and from where it can be taken to storage or cross-docked.;
+                           NOR=Angir hyllen som den produserte varen er postert til som avgang, og hvor den kan tas fra til lager eller kryssoverf›ring.];
+                SourceExpr="Bin Code";
+                Visible=FALSE }
+
+    { 54  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the starting date and the starting time, which are combined in a format called "starting date-time".;
+                           NOR=Angir startdatoen og starttidspunktet som er kombinert i et format som kalles "Startdato-tidsp.".];
+                SourceExpr="Starting Date-Time" }
+
+    { 16  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the entry's starting time, which is retrieved from the production order routing.;
+                           NOR=Angir postens startklokkeslett, som hentes fra produksjonsordreruten.];
+                SourceExpr="Starting Time";
+                Visible=FALSE }
+
+    { 14  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the entry's starting date, which is retrieved from the production order routing.;
+                           NOR=Angir postens startdato, som hentes fra produksjonsordreruten.];
+                SourceExpr="Starting Date";
+                Visible=FALSE }
+
+    { 56  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the ending date and the ending time, which are combined in a format called "ending date-time".;
+                           NOR=Angir sluttdatoen og sluttidspunktet som er kombinert i et format som kalles "Sluttdato-tidsp.".];
+                SourceExpr="Ending Date-Time" }
+
+    { 20  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the entry's ending time, which is retrieved from the production order routing.;
+                           NOR=Angir postens sluttklokkeslett, som hentes fra produksjonsordreruten.];
+                SourceExpr="Ending Time";
+                Visible=FALSE }
+
+    { 18  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the entry's ending date, which is retrieved from the production order routing.;
+                           NOR=Angir postens sluttdato, som hentes fra produksjonsordreruten.];
+                SourceExpr="Ending Date";
+                Visible=FALSE }
+
+    { 1101103001;2;Field  ;
+                SourceExpr="Calculation No.";
+                Editable=FALSE }
+
+    { 40  ;2   ;Field     ;
+                ToolTipML=[ENU=Copies the value in this field from the Scrap Percentage field on the item card when the Item No. field is filled in.;
+                           NOR=Kopierer verdien i dette feltet fra feltet Vrakprosent p† varekortet n†r feltet Varenr. fylles ut.];
+                SourceExpr="Scrap %";
+                Visible=FALSE }
+
+    { 28  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the quantity to be produced if you manually fill in this line.;
+                           NOR=Angir antallet som skal produseres hvis du fyller ut denne linjen manuelt.];
+                SourceExpr=Quantity }
+
+    { 48  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies the base unit of measure code for the item.;
+                           NOR=Angir lagerenhetskoden for varen.];
+                SourceExpr="Unit of Measure Code" }
+
+    { 30  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies how much of the quantity on this line has been produced.;
+                           NOR=Angir hvor mye av antallet p† linjen som har blitt produsert.];
+                SourceExpr="Finished Quantity" }
+
+    { 34  ;2   ;Field     ;
+                ToolTipML=[ENU=Calculates the unit cost, based on the cost of the components in the production order component list, and the routing, if the costing method is not standard.;
+                           NOR=Beregner enhetskosten, basert p† kosten for komponenter i listen over produksjonsordrekomponenter, og ruten, hvis kostmetoden ikke er standard.];
+                SourceExpr="Unit Cost" }
+
+    { 36  ;2   ;Field     ;
+                ToolTipML=[ENU=Calculates the amount by multiplying the Unit Cost by the Quantity.;
+                           NOR=Beregner bel›pet ved † multiplisere enhetskosten med antallet.];
+                SourceExpr="Cost Amount" }
+
+    { 12  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a dimension value code for a dimension.;
+                           NOR=Angir en dimensjonsverdikode for en dimensjon.];
+                SourceExpr="Shortcut Dimension 1 Code";
+                Visible=FALSE }
+
+    { 22  ;2   ;Field     ;
+                ToolTipML=[ENU=Specifies a dimension value code for a dimension.;
+                           NOR=Angir en dimensjonsverdikode for en dimensjon.];
+                SourceExpr="Shortcut Dimension 2 Code";
+                Visible=FALSE }
+
+  }
+  CODE
+  {
+    VAR
+      DescriptionIndent@19057867 : Integer INDATASET;
+
+    LOCAL PROCEDURE ShowComponents@1();
+    VAR
+      ProdOrderComp@1000 : Record 5407;
+    BEGIN
+      ProdOrderComp.SETRANGE(Status,Status);
+      ProdOrderComp.SETRANGE("Prod. Order No.","Prod. Order No.");
+      ProdOrderComp.SETRANGE("Prod. Order Line No.","Line No.");
+
+      PAGE.RUN(PAGE::"Prod. Order Components",ProdOrderComp);
+    END;
+
+    LOCAL PROCEDURE ShowRouting@2();
+    VAR
+      ProdOrderRtngLine@1000 : Record 5409;
+    BEGIN
+      ProdOrderRtngLine.SETRANGE(Status,Status);
+      ProdOrderRtngLine.SETRANGE("Prod. Order No.","Prod. Order No.");
+      ProdOrderRtngLine.SETRANGE("Routing Reference No.","Routing Reference No.");
+      ProdOrderRtngLine.SETRANGE("Routing No.","Routing No.");
+
+      PAGE.RUN(PAGE::"Prod. Order Routing",ProdOrderRtngLine);
+    END;
+
+    LOCAL PROCEDURE OpenItemTrackingLines@6500();
+    BEGIN
+      OpenItemTrackingLines;
+    END;
+
+    LOCAL PROCEDURE DescriptionOnFormat@19023855();
+    BEGIN
+      DescriptionIndent := "Planning Level Code";
+    END;
+
+    BEGIN
+    {
+      +---------------------------------------------+
+      | Incadea Norge AS                            |
+      +---------------------------------------------+
+      No. Date     Id  Description
+      01. 05.09.17 JAL Item Calculation (Kalkyle)
+                       New field "Calulation No."
+    }
+    END.
+  }
+}
+

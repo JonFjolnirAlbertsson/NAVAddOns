@@ -1,0 +1,367 @@
+OBJECT Report 15000003 Rem. payment order - import
+{
+  OBJECT-PROPERTIES
+  {
+    Date=24.05.17;
+    Time=09:59:41;
+    Modified=Yes;
+    Version List=NAVNO10.00.00.15140,INCBF1.0;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Rem. payment order - import;
+               NOR=Remitteringsoppdrag - les inn];
+    ProcessingOnly=Yes;
+    OnInitReport=BEGIN
+                   NextFileNo := 10000;
+                 END;
+
+    OnPreReport=BEGIN
+                  // Make sure the journal is empty:
+                  GenJnlLine.SETRANGE("Journal Template Name",CurrentJournal."Journal Template Name");
+                  GenJnlLine.SETRANGE("Journal Batch Name",CurrentJournal."Journal Batch Name");
+                  IF NOT GenJnlLine.ISEMPTY THEN
+                    ERROR(Text000,CurrentJournal."Journal Batch Name");
+                END;
+
+    OnPostReport=BEGIN
+                   IF ControlBatch THEN
+                     ERROR(Text001);
+
+                   // Edit used filenames:
+                   ReturnFiles.RESET;
+                   ReturnFiles.SETRANGE(Import,TRUE);
+                   IF ReturnFiles.FIND('-') THEN
+                     REPEAT
+                       RemAgreement.GET(ReturnFiles."Agreement Code");
+                       IF RemAgreement."Save Return File" THEN
+                         RemTools.NewFilename(ReturnFiles."File Name");
+                     UNTIL ReturnFiles.NEXT = 0;
+                 END;
+
+  }
+  DATASET
+  {
+    { 5444;    ;DataItem;                    ;
+               DataItemTable=Table2000000026;
+               DataItemTableView=SORTING(Number);
+               MaxIteration=1;
+               OnPreDataItem=BEGIN
+                               IF ReturnFiles.COUNT = 0 THEN
+                                 ERROR(Text002);
+                             END;
+
+               OnAfterGetRecord=VAR
+                                  ImportBankRep@1080001 : Report 15000062;
+                                  ImportBBSRep@1080000 : Report 15000063;
+                                  ImportPain002@1080002 : Codeunit 10636;
+                                  ImportCAMT054@1080003 : Codeunit 10637;
+                                BEGIN
+                                  // Import all files:
+                                  ReturnFiles.RESET;
+                                  ReturnFiles.SETRANGE(Import,TRUE);
+                                  IF ReturnFiles.FINDSET THEN
+                                    REPEAT
+                                      CASE ReturnFiles.Format OF
+                                        ReturnFiles.Format::Telepay:
+                                          BEGIN
+                                            CLEAR(ImportBankRep);
+                                            ImportBankRep.Initialize(CurrentJournal,ReturnFiles."File Name",Note);
+                                            ImportBankRep.RUNMODAL;
+                                            ImportBankRep.ReadStatus(NumberApproved,NumberRejected,NumberSettled,MoreReturnJournals,PaymOrder);
+                                          END;
+                                        ReturnFiles.Format::BBS:
+                                          BEGIN
+                                            CLEAR(ImportBBSRep);
+                                            ImportBBSRep.Initialize(CurrentJournal,ReturnFiles."File Name",Note);
+                                            ImportBBSRep.RUNMODAL;
+                                            ImportBBSRep.ReadStatus(NumberApproved,NumberRejected,NumberSettled,MoreReturnJournals,PaymOrder);
+                                          END;
+                                        ReturnFiles.Format::Pain002:
+                                          BEGIN
+                                            ImportPain002.ImportAndHandlePain002File(CurrentJournal,ReturnFiles."File Name",Note);
+                                            ImportPain002.ReadStatus(NumberApproved,NumberRejected,NumberSettled,MoreReturnJournals,PaymOrder);
+                                          END;
+                                        ReturnFiles.Format::CAMT054:
+                                          BEGIN
+                                            ImportCAMT054.ImportAndHandleCAMT054File(CurrentJournal,ReturnFiles."File Name",Note);
+                                            ImportCAMT054.ReadStatus(NumberApproved,NumberRejected,NumberSettled,MoreReturnJournals,PaymOrder);
+                                          END
+                                      END;
+                                    UNTIL ReturnFiles.NEXT = 0;
+                                  IF (NumberSettled > 0) AND MoreReturnJournals THEN BEGIN
+                                    COMMIT;
+                                    SettlementStatus.SetPaymOrder(PaymOrder);
+                                    SettlementStatus.RUNMODAL;
+                                  END;
+                                END;
+                                 }
+
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+      CaptionML=[ENU=Remittance payment order - import;
+                 NOR=Remitteringsoppdrag - les inn];
+      OnOpenPage=VAR
+                   FileManagement@1080000 : Codeunit 419;
+                 BEGIN
+                   // Denne kode er her, da Init-triggere ikke gir mulighet for  endre tabeller:
+                   // Slette Tabell s den er klar til bruk:
+                   ReturnFiles.RESET;
+                   ReturnFiles.DELETEALL;
+                   // Import all filenames:
+                   IF NOT ReturnFileSetup.FIND('-') AND NOT FileManagement.IsWebClient THEN
+                     ERROR(Text003,RemAgreement.TABLECAPTION);
+                   REPEAT
+                     FindFiles(ReturnFileSetup);
+                   UNTIL ReturnFileSetup.NEXT = 0;
+
+                   SetStatusText;
+                 END;
+
+    }
+    CONTROLS
+    {
+      { 1900000001;0;Container;
+                  ContainerType=ContentArea }
+
+      { 1900000002;1;Group  ;
+                  CaptionML=[ENU=Options;
+                             NOR=Alternativer] }
+
+      { 1080002;2;Field     ;
+                  CaptionML=[ENU=Payment order note;
+                             NOR=Oppdragsbemerkning];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=Note }
+
+      { 1080003;2;Field     ;
+                  CaptionML=[ENU=Control batch;
+                             NOR=Kontrollkj›rsel];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=ControlBatch;
+                  OnValidate=BEGIN
+                               ControlBatchOnPush;
+                             END;
+                              }
+
+      { 1080012;2;Field     ;
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=StatusText;
+                  Editable=FALSE;
+                  MultiLine=Yes }
+
+      { 1080013;2;Field     ;
+                  CaptionML=[ENU=Re&turn files;
+                             NOR=Re&turfiler];
+                  ApplicationArea=#Basic,#Suite;
+                  SourceExpr=Filenames;
+                  Editable=FALSE;
+                  OnAssistEdit=BEGIN
+                                 CLEAR(FileList);
+                                 ReturnFiles.RESET;
+                                 FileList.SETRECORD(ReturnFiles);
+                                 FileList.SETTABLEVIEW(ReturnFiles);
+                                 FileList.RUNMODAL;
+                                 SetStatusText;
+                               END;
+                                }
+
+    }
+  }
+  LABELS
+  {
+  }
+  CODE
+  {
+    VAR
+      Text000@1080019 : TextConst 'ENU=" %1 journal should be empty before import.";NOR=" Kladden %1 m† v‘re tom f›r den leses inn."';
+      Text001@1080020 : TextConst 'ENU=This was a check.\Import of return data is cancelled.;NOR=Dette var en kontroll.\Innlesning av returdata er avbrutt.';
+      Text002@1080021 : TextConst 'ENU=There are no return files to import.;NOR=Ingen returfiler † lese inn.';
+      Text003@1080022 : TextConst 'ENU=Return file setup is not specified in %1.;NOR=Det er ikke angitt returfiloppsett i %1.';
+      Text004@1080023 : TextConst '@@@=%1 - product name;ENU=Note:\With Control, return files are read in advance to check if the import can be made.\Return data is not imported to %1.;NOR=Obs!:  \N†r Kontroll brukes, leses returfilene p† forh†nd for † sjekke om importen kan foretas.\Returdata importeres ikke til %1.';
+      Text007@1080026 : TextConst 'ENU=Return file format "%1" is unknown.\Import is aborted.;NOR=Returfilen "%1" er et ukjent format.\Innlesning av returfiler stoppes.';
+      Text009@1080028 : TextConst 'ENU=*.tmp|*~;NOR=*TMP|*~';
+      Text012@1080031 : TextConst 'ENU=Number of files found: %1.\Number of files selected for import: %2.;NOR=Antall filer som ble funnet: %1.\Antall filer valgt for innlesing: %2.';
+      Text013@1080032 : TextConst 'ENU=AH;NOR=AH';
+      Text014@1080033 : TextConst 'ENU=NY;NOR=NY';
+      RemAgreement@1080034 : Record 15000000;
+      CurrentJournal@1080035 : Record 81;
+      GenJnlLine@1080036 : Record 81;
+      ReturnFiles@1080037 : Record 15000005;
+      ReturnFileSetup@1080038 : Record 15000006;
+      PaymOrder@1080039 : Record 15000001;
+      RemTools@1080001 : Codeunit 15000002;
+      FileList@1080040 : Page 15000008;
+      SettlementStatus@1080041 : Page 15000012;
+      Note@1080042 : Text[50];
+      ControlBatch@1080043 : Boolean;
+      StatusText@1080044 : Text[200];
+      NextFileNo@1080048 : Integer;
+      NumberSettled@1080049 : Integer;
+      NumberRejected@1080050 : Integer;
+      NumberApproved@1080051 : Integer;
+      MoreReturnJournals@1080052 : Boolean;
+      Filenames@1080000 : Code[10];
+
+    LOCAL PROCEDURE FindFiles@1080001(ReturnFileSetup@1080000 : Record 15000006);
+    VAR
+      TempNameValueBuffer@1080001 : TEMPORARY Record 823;
+      FileCopy@1080002 : TEMPORARY Record 2000000022;
+      FileMgt@1080004 : Codeunit 419;
+      FilePath@1080003 : Text[150];
+    BEGIN
+      // Two options:
+      // 1. Exact filename.
+      // Example: c:\bank\return.txt. is specified in file list and FileNumber
+      // is counted (global var).
+      // 2. Filename specified in search format.
+      // Example: c:\bank\return.*. this includes all files starting with 'ret'. For instance, files
+      // ret.001, ret.002 etc. Files with this format are created by Kreditkassen.
+      // All existing files are placed in filelist and FileNumber is updates.
+
+      IF ReturnFileSetup."Return File Name" = '' THEN
+        EXIT;
+
+      // Note: File.Name is case-sensitive. Names are therefore copied to a temporary table:
+      FilePath := FileMgt.GetDirectoryName(ReturnFileSetup."Return File Name") + '\';
+
+      FileCopy.DELETEALL;
+
+      IF FileMgt.ClientDirectoryExists(FilePath) THEN BEGIN
+        FileMgt.GetClientDirectoryFilesList(TempNameValueBuffer,FilePath);
+        IF TempNameValueBuffer.FINDSET THEN
+          REPEAT
+            FileCopy.Name := LOWERCASE(FileMgt.GetFileName(TempNameValueBuffer.Name));
+            FileMgt.GetClientFileProperties(TempNameValueBuffer.Name,FileCopy.Date,FileCopy.Time,FileCopy.Size);
+            FileCopy.INSERT;
+          UNTIL TempNameValueBuffer.NEXT = 0;
+      END;
+
+      // From now on use copies of file names :
+      FileCopy.SETFILTER(Name,LOWERCASE(FileMgt.GetFileName(ReturnFileSetup."Return File Name")));
+      IF FileCopy.FINDSET THEN
+        REPEAT
+          ReturnFiles.INIT;
+          ReturnFiles."Line No." := NextFileNo;
+          NextFileNo := NextFileNo + 10000;
+          ReturnFiles."File Name" := FilePath + FileCopy.Name;
+          ReturnFiles.Date := FileCopy.Date;
+          ReturnFiles.Time := FileCopy.Time;
+          ReturnFiles.Size := FileCopy.Size;
+          ReturnFiles.Import := TRUE;
+          ReturnFiles."Agreement Code" := ReturnFileSetup."Agreement Code";
+          CASE FileFormat(FileMgt.UploadFileSilent(ReturnFiles."File Name")) OF
+            ReturnFiles.Format::Telepay:
+              ReturnFiles.Format := ReturnFiles.Format::Telepay;
+            ReturnFiles.Format::BBS:
+              ReturnFiles.Format := ReturnFiles.Format::BBS;
+            ReturnFiles.Format::Pain002:
+              ReturnFiles.Format := ReturnFiles.Format::Pain002;
+            ReturnFiles.Format::CAMT054:
+              ReturnFiles.Format := ReturnFiles.Format::CAMT054;
+            ELSE
+              ERROR(Text007);
+          END;
+          ReturnFiles.INSERT;
+        UNTIL FileCopy.NEXT = 0;
+
+      // Note: file name must not end with .tmp and '~'. Delete all such names :
+      ReturnFiles.RESET;
+      ReturnFiles.SETFILTER("File Name",Text009);
+      ReturnFiles.DELETEALL;
+      ReturnFiles.RESET;
+    END;
+
+    PROCEDURE SetJournal@1080002(GenJnlLine@1080000 : Record 81);
+    BEGIN
+      // Specify variables used for import
+      // Called from external function which imports upon return.
+      CurrentJournal := GenJnlLine;
+    END;
+
+    LOCAL PROCEDURE SetStatusText@1080003();
+    VAR
+      FileNumber1@1080002 : Integer;
+      FileNumber2@1080003 : Integer;
+    BEGIN
+      ReturnFiles.RESET;
+      FileNumber1 := ReturnFiles.COUNT;
+
+      ReturnFiles.SETRANGE(Import,TRUE);
+      FileNumber2 := ReturnFiles.COUNT;
+
+      IF (FileNumber1 > 0) OR (FileNumber2 > 0) THEN
+        Filenames := '*'
+      ELSE
+        Filenames := '';
+
+      StatusText := STRSUBSTNO(Text012,FileNumber1,FileNumber2);
+    END;
+
+    PROCEDURE FileFormat@1080004(Filename@1080000 : Text[250]) : Integer;
+    VAR
+      File@1080001 : File;
+      Line@1080002 : Text[250];
+      NumberOFChars@1080003 : Integer;
+      FileStreamL@1000000001 : InStream;
+    BEGIN
+      // Return value refers to Option in Return Files field.
+      // Return: 0 = Telepay, 1 = BBS, 2 = Pain002, 3 = CAMT 054, -1 unknown file format.
+      File.OPEN(Filename);
+      File.TEXTMODE(TRUE);
+      NumberOFChars := File.READ(Line);
+      //JAL
+      IF NumberOFChars = 0 THEN BEGIN
+        File.CREATEINSTREAM(FileStreamL);
+        NumberOFChars := FileStreamL.READTEXT(Line, 250);
+      END;
+      //JAL
+
+      CASE TRUE OF
+        NumberOFChars < 2:
+          EXIT(-1);
+        COPYSTR(Line,1,2) = Text013:
+          EXIT(ReturnFiles.Format::Telepay);
+        COPYSTR(Line,1,2) = Text014:
+          EXIT(ReturnFiles.Format::BBS);
+        STRPOS(UPPERCASE(Line),'XML') <> 0:
+          EXIT(DetermineFileType(Filename));
+        ELSE
+          EXIT(-1);
+      END;
+    END;
+
+    LOCAL PROCEDURE ControlBatchOnPush@19007709();
+    BEGIN
+      IF ControlBatch THEN
+        MESSAGE(Text004,PRODUCTNAME.FULL);
+    END;
+
+    LOCAL PROCEDURE DetermineFileType@1080005(Filename@1080004 : Text[250]) : Integer;
+    VAR
+      XMLDOMManagement@1080002 : Codeunit 6224;
+      ImportPain002@1080000 : Codeunit 10636;
+      ImportCAMT054@1080001 : Codeunit 10637;
+      XmlDocument@1080003 : DotNet "'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.System.Xml.XmlDocument";
+    BEGIN
+      XMLDOMManagement.LoadXMLDocumentFromFile(Filename,XmlDocument);
+      CASE XmlDocument.DocumentElement.NamespaceURI OF
+        ImportPain002.GetNamespace:
+          EXIT(ReturnFiles.Format::Pain002);
+        ImportCAMT054.GetNamespace:
+          EXIT(ReturnFiles.Format::CAMT054);
+      END;
+      EXIT(-1);
+    END;
+
+    BEGIN
+    END.
+  }
+  RDLDATA
+  {
+  }
+}
+
