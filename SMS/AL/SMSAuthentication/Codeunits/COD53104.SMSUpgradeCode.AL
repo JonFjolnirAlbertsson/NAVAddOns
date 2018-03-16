@@ -27,34 +27,57 @@ codeunit 53104 SMSUpgradeCode
         // If the code needs to be upgraded
         if CurrModuleInfoL.DataVersion().Major() = 1 then
             case CurrModuleInfoL.DataVersion().Revision() of
+                1 :
+                begin
+                    if SMSSetupL.get() then
+                        SMSSetupL.DeleteAll(true)
+                    else
+                        SMSSetupInitL.InsertDefaultSMSSetup();
+                end;
                 2 :
                 begin
-                    SMSSetupL.Get();
-                    SMSSetupL."Company Name" := 'Upgraded ' + format(CurrModuleInfoL.DataVersion().Revision());
-                    SMSSetupL.Modify();
+                    //SMSSetupL.DeleteAll(true);
+                    //SMSSetupInitL.InsertDefaultSMSSetup();
+                    // SMSSetupL.Get();
+                    // SMSSetupL."Company Name" := 'Upgraded ' + format(CurrModuleInfoL.DataVersion().Revision());
+                    // SMSSetupL.Modify();
                 end;
                 3 :
                 begin
-                    SMSSetupL.DeleteAll(true);
-                    SMSSetupInitL.InsertDefaultSMSSetup();
+                    //SMSSetupL.DeleteAll(true);
+                    //SMSSetupInitL.InsertDefaultSMSSetup();
                 end;
                 4 :
                 begin
-                    SMSSetupL.Get();
-                    SMSSetupL."Company Name" := 'Upgraded ' + format(CurrModuleInfoL.DataVersion().Revision());
-                    SMSSetupL.Modify();
+                    // SMSSetupL.Get();
+                    // SMSSetupL."Company Name" := 'Upgraded ' + format(CurrModuleInfoL.DataVersion().Revision());
+                    // SMSSetupL.Modify();
                 end;
                  5 :
                 begin
-                    SMSSetupL.Get();
-                    SMSSetupL."Company Name" := 'Upgraded ' + format(CurrModuleInfoL.DataVersion().Revision());
-                    SMSSetupL.Modify();
+                    // SMSSetupL.Get();
+                    // SMSSetupL."Company Name" := 'Upgraded ' + format(CurrModuleInfoL.DataVersion().Revision());
+                    // SMSSetupL.Modify();
                 end;
-                 6 :
+                6 :
                 begin
-                    SMSSetupL.Get();
-                    SMSSetupL."Company Name" := 'Upgraded ' + format(CurrModuleInfoL.DataVersion().Revision());
-                    SMSSetupL.Modify();
+                    // SMSSetupL.Get();
+                    // SMSSetupL."Company Name" := 'Upgraded ' + format(CurrModuleInfoL.DataVersion().Revision());
+                    // SMSSetupL.Password := 'sid321';
+                    // SMSSetupL.Modify(true);
+                    //SMSSetupL.DeleteAll;
+                end;
+                7 :
+                begin
+                    //SMSSetupL.DeleteAll;
+                    // SMSSetupL.Get();
+                    // SMSSetupL."Company Name" := 'Upgraded ' + format(CurrModuleInfoL.DataVersion().Revision());
+                    // SMSSetupL.Password := 'sid321';
+                    // SMSSetupL.Modify(true);
+                end;
+                8 :
+                begin
+                    //SMSSetupL.DeleteAll;
                 end;
             end;
     end;

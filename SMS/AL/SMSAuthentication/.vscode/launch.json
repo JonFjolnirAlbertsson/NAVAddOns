@@ -4,13 +4,19 @@
         {
             "type": "al",
             "request": "launch",
-             "name": "no01dev03.si-dev.local",
-             "server": "http://no01dev03.si-dev.local",
-            //"name": "localhost",
-            //"server": "http://localhost",
-            "serverInstance": "DynamicsNAV110",
+             //"name": "no01dev03.si-dev.local",
+             //"server": "http://no01dev03.si-dev.local",
+            "name": "localhost",
+            "server": "http://localhost",
+            //"name": "oas-app.overasen.local",
+            //"server": "http://oas-app.overasen.local",    
+            //"serverInstance": "Customer",
+            "serverInstance": "Resource",
+            //"serverInstance": "DynamicsNAV110",
+            //"authentication": "UserPassword",
             "authentication": "Windows",
-            "startupObjectId": 53101
+            "schemaUpdateMode": "Recreate",
+            "startupObjectId": 21
         }
     ]
 }

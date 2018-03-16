@@ -52,7 +52,7 @@ page 53100 SMSSetup
     trigger OnAfterGetRecord()
     begin
         PasswordTemp := '';
-        if("User Name" <> '') and(not IsNullGuid("Password Key")) then
+        if("User Name" <> '') and (Password <> '') then
             PasswordTemp := '***************';
     end;
 

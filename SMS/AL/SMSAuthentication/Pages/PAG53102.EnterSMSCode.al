@@ -2,6 +2,7 @@ page 53102 EnterSMSCode
 {
     Caption = 'Enter SMS Code';
     PageType = StandardDialog;
+    
     layout
     {
         area(Content)

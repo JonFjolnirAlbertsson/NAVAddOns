@@ -1,6 +1,5 @@
 table 53100 "SMS Setup"
 {
-
     fields
     {
         field(1; "Primary Key"; Code[10])
@@ -15,7 +14,11 @@ table 53100 "SMS Setup"
         {
             Caption = 'User Name';
         }
-        field(50; "Password Key"; GUID)
+        // field(50; "Password Key"; GUID)
+        // {
+        //     Caption = 'Password';
+        // }
+        field(55; Password; Text[250])
         {
             Caption = 'Password';
         }
@@ -51,27 +54,27 @@ table 53100 "SMS Setup"
 
     procedure SetPassword(PasswordTextP: Text)
     var
-        ServicePasswordL: Record "Service Password";
+        //ServicePasswordL: Record "Service Password";
     begin
-        IF ISNULLGUID("Password Key") OR NOT ServicePasswordL.GET("Password Key") THEN BEGIN
-            ServicePasswordL.SavePassword(PasswordTextP);
-            ServicePasswordL.INSERT(TRUE);
-            "Password Key" := ServicePasswordL.Key;
-        END ELSE BEGIN
-            ServicePasswordL.SavePassword(PasswordTextP);
-            ServicePasswordL.MODIFY(true);
-        END;
+        //  IF ISNULLGUID("Password Key") OR NOT ServicePasswordL.GET("Password Key") THEN BEGIN
+        //     ServicePasswordL.SavePassword(PasswordTextP);
+        //     ServicePasswordL.INSERT(TRUE);
+        //     "Password Key" := ServicePasswordL.Key;
+        // END ELSE BEGIN
+        //     ServicePasswordL.SavePassword(PasswordTextP);
+        //     ServicePasswordL.MODIFY(true);
+        // END; 
+        Password := PasswordTextP;
     end;
-
     procedure GetPassword(): Text
     var
-        ServicePasswordL: Record "Service Password";
+        //ServicePasswordL: Record "Service Password";
     begin
-        IF NOT ISNULLGUID("Password Key") THEN
-            IF ServicePasswordL.GET("Password Key") THEN
-                EXIT(ServicePasswordL.GetPassword());
+        // IF NOT ISNULLGUID("Password Key") THEN
+        //     IF ServicePasswordL.GET("Password Key") THEN
+        //         EXIT(ServicePasswordL.GetPassword());
+        exit(Password);
     end;
-
     procedure SendSMS(PhoneNumber: Code[30]; Value: Text[450])
     var
         SMSWebServiceL: Codeunit "SMS Web Service";

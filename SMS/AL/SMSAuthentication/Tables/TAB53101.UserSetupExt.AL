@@ -10,7 +10,6 @@ tableextension 53101 UserSetupExt extends "User Setup"
         {
             Caption = 'Use SMS Authentication';
         }
-
     }
     
 }

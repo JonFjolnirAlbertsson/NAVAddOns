@@ -24,12 +24,13 @@ codeunit 53100 "WS Management"
         LangTmpL: Integer;
         UsernameL: Text;
         PasswordL: Text;
+        CompanyName: Text;
         UrlL: Text;
         RequestXMLL: Text;
     begin
-        SMSSetupL.GET();
+        SMSSetupL.Get();
         SMSSetupL.TESTFIELD("User Name");
-        SMSSetupL.TESTFIELD("Password Key");
+        SMSSetupL.TESTFIELD(Password);
         // Use Norwegian Language to correct date and currency formats.
         MessageSentR := FALSE;
         LangTmpL := GLOBALLANGUAGE();
@@ -51,6 +52,7 @@ codeunit 53100 "WS Management"
         //MessageP := SanitizeString(MessageP); //6388 16.02.16 SMA
         UsernameL := SMSSetupL."User Name";
         PasswordL := SMSSetupL.GetPassword();
+        CompanyName := SMSSetupL."Company Name";
         UrlL := SMSSetupL."Base URL";
 
         HttpClientL.SetBaseAddress(UrlL);
@@ -60,7 +62,7 @@ codeunit 53100 "WS Management"
         RequestXMLL += '<MSGLST><MSG>';
         RequestXMLL += '<ID>' + FORMAT('1') + '</ID>';
         RequestXMLL += '<TEXT>' + TypeHelperL.HtmlEncode(MessageP) + '</TEXT>';
-        RequestXMLL += '<SND>' + 'BOS' + '</SND>'; //Add field to setup
+        RequestXMLL += '<SND>' + TypeHelperL.HtmlEncode(CompanyName) + '</SND>'; //Add field to setup
         RequestXMLL += '<RCV>' + RecipientPhoneNoP + '</RCV>'; //PSWinComSetupG."Default Country Code"+ RecipientPhoneNoP
         RequestXMLL += '</MSG></MSGLST></SESSION>';
 
@@ -77,5 +79,17 @@ codeunit 53100 "WS Management"
         HttpResponseContentL := HttpResponseMessageL.Content();
 
         EXIT(HttpResponseMessageL.IsSuccessStatusCode());
+    end;
+
+    procedure InsertSMSSetup(CompanyNameP: Text[250]; UserNameP: Text[250]; PasswordP: Text; BaseUrlP: Text[250]);
+    var
+        SMSSetupL: Record "SMS Setup";
+    begin
+        SMSSetupL.Init();
+        SMSSetupL."Base URL" := BaseUrlP;
+        SMSSetupL."Company Name" := CompanyNameP;
+        SMSSetupL."User Name" := UserNameP;
+        SMSSetupL.SetPassword(PasswordP);
+        SMSSetupL.Insert(true);
     end;
 }

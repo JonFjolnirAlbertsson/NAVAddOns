@@ -5,55 +5,55 @@
       <group id="body">
         <trans-unit id="Codeunit 4170686321 - NamedType 2168303242" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>The message is empty.</source>
-	      <target>Meldingen er tom.</target>
+	        <target>Meldingen er tom.</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>
         <trans-unit id="Codeunit 4170686321 - NamedType 246854407" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Recipient's mobile no. is not specified.</source>
-	      <target>Mottakers mobilnr. er ikke angitt.</target>
+	        <target>Mottakers mobilnr. er ikke angitt.</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>
         <trans-unit id="Codeunit 4170686321 - NamedType 304793288" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>User ID does not exist</source>
-	      <target>Bruker-ID eksisterer ikke</target>
+	        <target>Bruker-ID eksisterer ikke</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>
         <trans-unit id="Codeunit 4170686321 - NamedType 3243361549" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Salesperson %1 %2 does not have a valid email address and valid name</source>
-	      <target>Selger% 1% 2 har ikke en gyldig e-postadresse og gyldig navn</target>
+	        <target>Selger% 1% 2 har ikke en gyldig e-postadresse og gyldig navn</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>
         <trans-unit id="Page 3964702590 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>SMS Setup</source>
-	      <target>SMS oppsett</target>
+	        <target>SMS oppsett</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Page</note>
         </trans-unit>
         <trans-unit id="Page 3964702590 - Control 910509061 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Password</source>
-	      <target>Passord</target>
+	        <target>Passord</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Control</note>
         </trans-unit>
         <trans-unit id="Page 1493577790 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>SMS Send Message</source>
-	      <target>SMS Send melding</target>
+	        <target>SMS Send melding</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Page</note>
         </trans-unit>
         <trans-unit id="Page 1493577790 - Control 3080177079 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Phone No.</source>
-	      <target>Telefonnr.</target>
+	        <target>Telefonnr.</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Control</note>
         </trans-unit>
         <trans-unit id="Page 1493577790 - Control 3076946130 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Message</source>
-	      <target>Melding</target>
+	        <target>Melding</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Control</note>
         </trans-unit>
