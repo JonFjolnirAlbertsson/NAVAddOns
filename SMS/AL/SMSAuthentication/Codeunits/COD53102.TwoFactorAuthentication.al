@@ -9,7 +9,7 @@ codeunit 53102 TwoFactorAuthentication
     [EventSubscriber(ObjectType::Codeunit, 1, 'OnBeforeCompanyOpen', '', true, true)]
     local procedure TwoFactorAuthentication_OnBeforeCompanyOpen()
     var
-        User: Record User;
+        UserSetup: Record "User Setup";
         SMSSetup: Record "SMS Setup";
         EnterSMSCode: Page EnterSMSCode;
         SMSCode: Text;
@@ -21,10 +21,10 @@ codeunit 53102 TwoFactorAuthentication
     begin
         if not GuiAllowed() then
             exit;
-        if not User.get(UserId) then
-            Error(C_INC_UserNotFoundTxt);
-
-        if not User."Use SMS Authentication" then
+         if not UserSetup.get(UserId) then
+            exit;
+            //  Error(C_INC_UserNotFoundTxt);
+        if not UserSetup."Use SMS Authentication" then
             exit;
 
         if not SMSSetup.Get() then
@@ -33,7 +33,7 @@ codeunit 53102 TwoFactorAuthentication
         SMSCode := Format(Random(100000000));
         MessageText := StrSubstNo(C_INC_EnterSMSCode, SMSCode, CompanyName);
 
-        SMSSetup.SendSMS(User."Phone No.", MessageText);
+        SMSSetup.SendSMS(UserSetup."Phone No.", MessageText);
         TryAgain := true;
 
         while TryAgain do

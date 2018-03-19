@@ -4,20 +4,20 @@
         {
             "type": "al",
             "request": "launch",
-             //"name": "no01dev03.si-dev.local",
-             //"server": "http://no01dev03.si-dev.local",
+            //"name": "no01dev03.si-dev.local",
+            //"server": "http://no01dev03.si-dev.local",
             // "name": "localhost",
             // "server": "http://localhost",
             "name": "oas-nav.overasen.local",
             "server": "http://oas-nav.overasen.local",    
-        //    "serverInstance": "NAVOASCustomerTest",
+            // "serverInstance": "NAVOASCustomerTest",
             // "serverInstance": "ResourceTest",
             "serverInstance": "navoastest",
             //"serverInstance": "DynamicsNAV110",
-        //    "authentication": "UserPassword",
+            // "authentication": "UserPassword",
             "authentication": "Windows",
-            "schemaUpdateMode": "Recreate",
-            "startupObjectId": 53100
+            // "schemaUpdateMode": "Recreate",
+            "startupObjectId": 53101
         }
     ]
 }
