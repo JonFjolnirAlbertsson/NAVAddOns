@@ -5,61 +5,85 @@
       <group id="body">
         <trans-unit id="Codeunit 4170686321 - NamedType 2168303242" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>The message is empty.</source>
-	        <target>Meldingen er tom.</target>
+	      <target>Meldingen er tom.</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>
         <trans-unit id="Codeunit 4170686321 - NamedType 246854407" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
-          <source>Recipient's mobile no. is not specified.</source>
-	        <target>Mottakers mobilnr. er ikke angitt.</target>
+          <source>Recipient mobile no. is not specified.</source>
+	      <target>Mottakers mobilnr. er ikke angitt.</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>
         <trans-unit id="Codeunit 4170686321 - NamedType 304793288" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>User ID does not exist</source>
-	        <target>Bruker-ID eksisterer ikke</target>
+	      <target>Bruker-ID eksisterer ikke</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>
         <trans-unit id="Codeunit 4170686321 - NamedType 3243361549" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Salesperson %1 %2 does not have a valid email address and valid name</source>
-	        <target>Selger% 1% 2 har ikke en gyldig e-postadresse og gyldig navn</target>
+	      <target>Selger% 1% 2 har ikke en gyldig e-postadresse og gyldig navn</target>																						   
+          <note from="Developer" annotates="general" priority="2" />
+          <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
+        </trans-unit>
+        <trans-unit id="Codeunit 3323571419 - NamedType 300611679" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
+          <source>User does not exists.</source>
+		  <target>Brukeroppsett mangler</target>	
+          <note from="Developer" annotates="general" priority="2" />
+          <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
+        </trans-unit>
+        <trans-unit id="Codeunit 3323571419 - NamedType 1479170049" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Enter %1 to login in to the %2 company.</source>
+		  <target>Enter %1 to login in to the %2 company.</target>
+          <note from="Developer" annotates="general" priority="2" />
+          <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
+        </trans-unit>
+        <trans-unit id="Codeunit 3323571419 - NamedType 2545243405" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
+          <source>You canceled the login procedure</source>
+		  <target>You canceled the login procedure</target>
+          <note from="Developer" annotates="general" priority="2" />
+          <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
+        </trans-unit>
+        <trans-unit id="Codeunit 3323571419 - NamedType 487310583" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
+          <source>You entered an invalid code for %1 times</source>
+		  <target>You entered an invalid code for %1 times</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Codeunit - Label</note>
         </trans-unit>
         <trans-unit id="Page 3964702590 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>SMS Setup</source>
-	        <target>SMS oppsett</target>
+	      <target>SMS oppsett</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Page</note>
         </trans-unit>
         <trans-unit id="Page 3964702590 - Control 910509061 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Password</source>
-	        <target>Passord</target>
+	      <target>Passord</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Control</note>
         </trans-unit>
         <trans-unit id="Page 1493577790 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>SMS Send Message</source>
-	        <target>SMS Send melding</target>
+	      <target>SMS Send melding</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Page</note>
         </trans-unit>
         <trans-unit id="Page 1493577790 - Control 3080177079 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Phone No.</source>
-	        <target>Telefonnr.</target>
+	      <target>Telefonnr.</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Control</note>
         </trans-unit>
         <trans-unit id="Page 1493577790 - Control 3076946130 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Message</source>
-	        <target>Melding</target>
+	      <target>Melding</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Control</note>
         </trans-unit>
         <trans-unit id="Page 1493577790 - Action 1514883969 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Setup</source>
-	        <target>Oppsett</target>
+	      <target>Oppsett</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Page - Action</note>
         </trans-unit>
@@ -98,7 +122,7 @@
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Table - Field</note>
         </trans-unit>
-        <trans-unit id="Table 3985815838 - Field 204649572 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
+        <trans-unit id="Table 3985815838 - Field 2575460289 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Password</source>
           <target>Passord</target>
           <note from="Developer" annotates="general" priority="2" />
@@ -110,15 +134,21 @@
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">Table - Field</note>
         </trans-unit>
-        <trans-unit id="TableExtension 1452375833 - Field 3986423421 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
+        <trans-unit id="TableExtension 1663419260 - Field 3986423421 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Phone No.</source>
-          <target>Mobilnr.</target>
+		  <target>Telefonnr.</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">TableExtension - Field</note>
         </trans-unit>
-        <trans-unit id="TableExtension 1452375833 - Field 4009244010 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
+        <trans-unit id="TableExtension 1663419260 - Field 4009244010 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
           <source>Use SMS Authentication</source>
-          <target>Bruk SMS godkjenning</target>
+		  <target>Bruk SMS godkjenning</target>
+          <note from="Developer" annotates="general" priority="2" />
+          <note from="Xliff Generator" annotates="general" priority="3">TableExtension - Field</note>
+        </trans-unit>
+        <trans-unit id="TableExtension 1663419260 - Field 1173669634 - Property 2879900210" maxWidth="999" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Use Service Web</source>
+		  <target>Bruk Serviceweb</target>
           <note from="Developer" annotates="general" priority="2" />
           <note from="Xliff Generator" annotates="general" priority="3">TableExtension - Field</note>
         </trans-unit>

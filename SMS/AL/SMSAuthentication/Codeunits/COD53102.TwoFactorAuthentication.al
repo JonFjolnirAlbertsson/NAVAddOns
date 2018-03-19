@@ -2,11 +2,14 @@ codeunit 53102 TwoFactorAuthentication
 {
     var
         C_INC_UserNotFoundTxt: Label 'User does not exists.';
+        C_INC_EnterSMSCode: Label 'Enter %1 to login in to the %2 company.';
+        C_INC_LoginCanceled: Label 'You canceled the login procedure';
+        C_INC_LoginInvalid: Label 'You entered an invalid code for %1 times';
 
     [EventSubscriber(ObjectType::Codeunit, 1, 'OnBeforeCompanyOpen', '', true, true)]
     local procedure TwoFactorAuthentication_OnBeforeCompanyOpen()
     var
-        UserSetup: Record "User Setup";
+        User: Record User;
         SMSSetup: Record "SMS Setup";
         EnterSMSCode: Page EnterSMSCode;
         SMSCode: Text;
@@ -18,26 +21,26 @@ codeunit 53102 TwoFactorAuthentication
     begin
         if not GuiAllowed() then
             exit;
-        if not UserSetup.get(UserId) then
+        if not User.get(UserId) then
             Error(C_INC_UserNotFoundTxt);
 
-        if not UserSetup."Use SMS Authentication" then
+        if not User."Use SMS Authentication" then
             exit;
 
         if not SMSSetup.Get() then
             exit;
 
         SMSCode := Format(Random(100000000));
-        MessageText := StrSubstNo('Enter %1 to login in to the %2 company.', SMSCode, CompanyName);
+        MessageText := StrSubstNo(C_INC_EnterSMSCode, SMSCode, CompanyName);
 
-        SMSSetup.SendSMS(UserSetup."Phone No.", MessageText);
+        SMSSetup.SendSMS(User."Phone No.", MessageText);
         TryAgain := true;
 
         while TryAgain do
         begin
             clear(EnterSMSCode);
             if EnterSMSCode.RunModal() <> "Action"::OK then
-                error('You canceled the login procedure');
+                error(C_INC_LoginCanceled);
 
             UserResponse := EnterSMSCode.GetSMSCode();
 
@@ -47,6 +50,6 @@ codeunit 53102 TwoFactorAuthentication
         end;
 
         if not CodeIsValid then
-            error('You entered an invalid code for %1 times', Counter);
+            error(C_INC_LoginInvalid, Counter);
     end;
 }

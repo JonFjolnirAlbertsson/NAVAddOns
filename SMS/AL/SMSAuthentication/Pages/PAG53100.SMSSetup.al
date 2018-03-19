@@ -2,7 +2,7 @@ page 53100 SMSSetup
 {
     PageType = Card;
     Caption = 'SMS Setup';
-    UsageCategory = Administration;
+    UsageCategory = Tasks;
     ApplicationArea = All;
     Editable = true;
     SourceTable = "SMS Setup";

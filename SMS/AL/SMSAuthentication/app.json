@@ -4,8 +4,8 @@
   "publisher": "Incadea Norge aS",
   "brief": "",
   "description": "SMS two way authentication.",
-  "version": "1.0.0.1",
-  "compatibilityId": "1.0.0.1",
+  "version": "1.0.0.2",
+  "compatibilityId": "1.0.0.2",
   "privacyStatement": "",
   "EULA": "",
   "help": "",
@@ -17,6 +17,7 @@
   "platform": "11.0.0.0",
   "application": "11.0.0.0",
   "features": "TranslationFile",
+  "showMyCode": true,
   "idRange": {
     "from": 53100,
     "to": 53110
